@@ -16,10 +16,4 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class Greeting {
-    private val platform = getPlatform()
-
-    fun greet(): String {
-        return "Hello, ${platform.name}!"
-    }
-}
+package ui
