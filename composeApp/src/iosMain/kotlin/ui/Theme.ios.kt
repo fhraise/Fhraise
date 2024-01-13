@@ -16,26 +16,11 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import ui.AppTheme
+package ui
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.runtime.Composable
+
 @Composable
-fun App() {
-    AppTheme {
-        Scaffold(topBar = {
-            TopAppBar(title = { Text("Compose App") })
-        }) {
-            Column(modifier = Modifier.padding(it)) {
-                Text("Hello, world!")
-            }
-        }
-    }
+actual fun AppTheme(dark: Boolean, content: @Composable () -> Unit) {
+    DayNightTheme(dark = dark, content = content)
 }
