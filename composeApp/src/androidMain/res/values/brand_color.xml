@@ -17,5 +17,7 @@
   -->
 
 <resources>
-    <color name="ic_launcher_background">#FFF1D4</color>
+    <color name="brand_foreground_color">#002D55</color>
+    <color name="brand_foreground_secondary_color">#5B80A1</color>
+    <color name="brand_background_color">#FFF1D4</color>
 </resources>

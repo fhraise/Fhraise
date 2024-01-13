@@ -19,6 +19,7 @@
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import java.util.*
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -51,8 +52,9 @@ kotlin {
         val desktopMain by getting
 
         androidMain.dependencies {
-            implementation(compose.preview)
+            implementation(libs.androidx.core.splashscreen)
             implementation(libs.androidx.activity.compose)
+            implementation(compose.preview)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -95,7 +97,8 @@ android {
         }
     }
     buildTypes {
-        getByName("release") {}
+        getByName("release") {
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

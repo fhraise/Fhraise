@@ -16,7 +16,8 @@
   ~ with Fhraise. If not, see <https://www.gnu.org/licenses/>.
   -->
 
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/brand_background_color" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
-</adaptive-icon>
+<resources>
+    <color name="brand_foreground_color">#C0E1FF</color>
+    <color name="brand_foreground_secondary_color">#618EB6</color>
+    <color name="brand_background_color">#202020</color>
+</resources>

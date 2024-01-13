@@ -22,9 +22,19 @@
 
     <style name="AppTheme" parent="Theme.DayNight">
         <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+
+    <style name="AppTheme.Splash" parent="Theme.SplashScreen">
+        <item name="android:windowSplashScreenBehavior" tools:targetApi="tiramisu">icon_preferred</item>
+        <item name="android:windowSplashScreenBrandingImage" tools:targetApi="s">@drawable/fhraise_text</item>
+        <item name="windowSplashScreenBackground">@color/brand_background_color</item>
+        <item name="windowSplashScreenAnimatedIcon" tools:ignore="DuplicateDefinition">
+            @drawable/ic_launcher_foreground
+        </item>
+        <item name="windowSplashScreenAnimatedIcon" tools:ignore="DuplicateDefinition" tools:targetApi="s">
+            @drawable/splash_icon
+        </item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 </resources>
