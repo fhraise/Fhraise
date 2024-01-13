@@ -16,14 +16,14 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import androidx.compose.runtime.Composable
-import data.components.RootComponent
-import ui.AppTheme
-import ui.pages.Root
+package xyz.xfqlittlefan.fhraise.utils
 
-@Composable
-fun App(rootComponent: RootComponent) {
-    AppTheme {
-        Root(component = rootComponent)
+import android.annotation.SuppressLint
+import kotlin.reflect.full.declaredFunctions
+
+val isMiui: Boolean
+    @SuppressLint("PrivateApi") get() {
+        val clazz = Class.forName("android.os.SystemProperties").kotlin
+        val method = clazz.declaredFunctions.firstOrNull { it.name == "get" && it.parameters.size == 1 }
+        return method?.call("ro.miui.ui.version.name") != ""
     }
-}

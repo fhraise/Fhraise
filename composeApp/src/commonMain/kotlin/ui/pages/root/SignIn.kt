@@ -16,14 +16,27 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import androidx.compose.runtime.Composable
-import data.components.RootComponent
-import ui.AppTheme
-import ui.pages.Root
+package ui.pages.root
 
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import data.components.root.SignInComponent
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
-fun App(rootComponent: RootComponent) {
-    AppTheme {
-        Root(component = rootComponent)
+fun SignIn(component: SignInComponent) {
+    Scaffold(topBar = {
+        CenterAlignedTopAppBar(title = {
+            Icon(
+                painter = painterResource("drawable/fhraise_logo.xml"), contentDescription = ""
+            )
+        })
+    }) {
+
     }
 }

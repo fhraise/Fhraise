@@ -21,34 +21,41 @@ package xyz.xfqlittlefan.fhraise
 import App
 import android.graphics.Color
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.view.WindowCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.arkivanov.decompose.defaultComponentContext
+import data.components.AppRootComponent
+import xyz.xfqlittlefan.fhraise.utils.isMiui
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
-        super.onCreate(savedInstanceState)
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT)
         )
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        @Suppress("DEPRECATION") if (isMiui) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS, WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
+            )
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION,
+                WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
+            )
+        }
+
+        super.onCreate(savedInstanceState)
+
+        val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
 
         setContent {
-            App()
+            App(rootComponent = rootComponent)
         }
     }
-}
-
-@Preview
-@Composable
-fun AppAndroidPreview() {
-    App()
 }

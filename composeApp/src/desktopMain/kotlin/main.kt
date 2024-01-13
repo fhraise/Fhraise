@@ -16,19 +16,47 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.decompose.ExperimentalDecomposeApi
+import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import data.components.AppRootComponent
+import javax.swing.SwingUtilities
 
-fun main() = application {
-    Window(onCloseRequest = ::exitApplication, title = "Fhraise") {
-        App()
+@OptIn(ExperimentalDecomposeApi::class)
+fun main() {
+    val lifecycleRegistry = LifecycleRegistry()
+
+    val rootComponent = runOnUiThread {
+        AppRootComponent(
+            componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry)
+        )
+    }
+
+    application {
+        val windowState = rememberWindowState()
+
+        LifecycleController(lifecycleRegistry, windowState)
+
+        Window(onCloseRequest = ::exitApplication, state = windowState, title = "Fhraise") {
+            App(rootComponent = rootComponent)
+        }
     }
 }
 
-@Preview
-@Composable
-fun AppDesktopPreview() {
-    App()
+private fun <T> runOnUiThread(block: () -> T): T {
+    if (SwingUtilities.isEventDispatchThread()) {
+        return block()
+    }
+
+    var result: T? = null
+
+    SwingUtilities.invokeAndWait {
+        result = block()
+    }
+
+    return result!!
 }

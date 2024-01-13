@@ -18,8 +18,41 @@
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.arkivanov.essenty.lifecycle.resume
+import com.arkivanov.essenty.lifecycle.stop
+import data.components.AppRootComponent
+import kotlinx.browser.document
+import org.w3c.dom.Document
+import org.w3c.dom.get
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") { App() }
+    val lifecycleRegistry = LifecycleRegistry()
+
+    val rootComponent = AppRootComponent(
+        componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry)
+    )
+
+    lifecycleRegistry.attachToDocument()
+
+    CanvasBasedWindow(canvasElementId = "ComposeTarget") { App(rootComponent = rootComponent) }
 }
+
+private fun LifecycleRegistry.attachToDocument() {
+    fun onVisibilityChanged() {
+        if (document.visibilityState == "visible") {
+            resume()
+        } else {
+            stop()
+        }
+    }
+
+    onVisibilityChanged()
+
+    document.addEventListener(type = "visibilitychange", callback = { onVisibilityChanged() })
+}
+
+private val Document.visibilityState: String
+    get() = get("visibilityState")?.unsafeCast<JsString>().toString()

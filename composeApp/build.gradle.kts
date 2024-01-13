@@ -23,6 +23,7 @@ import java.util.*
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
 }
@@ -52,6 +53,7 @@ kotlin {
         val desktopMain by getting
 
         androidMain.dependencies {
+            implementation(libs.kotlin.reflect)
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.androidx.activity.compose)
             implementation(compose.preview)
@@ -63,6 +65,8 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             @OptIn(ExperimentalComposeLibrary::class) implementation(compose.components.resources)
+            implementation(libs.decompose)
+            implementation(libs.decompose.extensions.compose)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.auth)
@@ -96,8 +100,38 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    signingConfigs {
+        val store = file("key.jks")
+        if (store.exists()) {
+            val properties = Properties()
+            file("key.properties").run {
+                if (exists()) {
+                    properties.load(inputStream())
+
+                    create("release") {
+                        storeFile = store
+                        storePassword = properties.getProperty("storePassword")
+                        keyAlias = properties.getProperty("keyAlias")
+                        keyPassword = properties.getProperty("keyPassword")
+                    }
+                }
+            }
+        }
+    }
     buildTypes {
         getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            )
+
+            try {
+                signingConfig = signingConfigs.getByName("release")
+            } catch (e: UnknownDomainObjectException) {
+                logger.error("${e.message} Maybe a key.jks or key.properties file is missing?")
+            }
         }
     }
     compileOptions {

@@ -16,14 +16,24 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+package ui.pages
+
 import androidx.compose.runtime.Composable
+import com.arkivanov.decompose.extensions.compose.stack.Children
+import com.arkivanov.decompose.extensions.compose.stack.animation.fade
+import com.arkivanov.decompose.extensions.compose.stack.animation.plus
+import com.arkivanov.decompose.extensions.compose.stack.animation.scale
+import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import data.components.RootComponent
-import ui.AppTheme
-import ui.pages.Root
+import ui.pages.root.SignIn
 
 @Composable
-fun App(rootComponent: RootComponent) {
-    AppTheme {
-        Root(component = rootComponent)
+fun Root(component: RootComponent) {
+    Children(
+        stack = component.stack, animation = stackAnimation(fade() + scale())
+    ) {
+        when (val child = it.instance) {
+            is RootComponent.Child.SignIn -> SignIn(component = child.component)
+        }
     }
 }
