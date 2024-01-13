@@ -8,11 +8,6 @@
           "compose"
         ]
       },
-      "ios": {
-        "ui": [
-          "compose"
-        ]
-      },
       "desktop": {
         "ui": [
           "compose"

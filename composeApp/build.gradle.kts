@@ -47,28 +47,25 @@ kotlin {
 
     jvm("desktop")
 
-    listOf(
-        iosX64(), iosArm64(), iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-        }
-    }
-
     sourceSets {
         val desktopMain by getting
 
         androidMain.dependencies {
-            implementation(libs.compose.ui.tooling.preview)
+            implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
+            implementation(compose.animation)
             implementation(compose.material3)
             implementation(compose.ui)
             @OptIn(ExperimentalComposeLibrary::class) implementation(compose.components.resources)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.auth)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.client.websockets)
             implementation(projects.shared)
         }
         desktopMain.dependencies {
@@ -105,7 +102,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
     dependencies {
-        debugImplementation(libs.compose.ui.tooling)
+        debugImplementation(compose.uiTooling)
     }
 }
 
