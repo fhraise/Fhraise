@@ -17,7 +17,7 @@
   -->
 
 <resources>
-    <color name="brand_foreground_color">#C0E1FF</color>
-    <color name="brand_foreground_secondary_color">#618EB6</color>
-    <color name="brand_background_color">#202020</color>
+    <color name="brand_foreground_color">@color/brand_foreground_color_dark</color>
+    <color name="brand_foreground_secondary_color">@color/brand_foreground_secondary_color_dark</color>
+    <color name="brand_background_color">@color/brand_background_color_dark</color>
 </resources>

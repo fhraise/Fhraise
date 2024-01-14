@@ -17,7 +17,15 @@
   -->
 
 <resources>
-    <color name="brand_foreground_color">#002D55</color>
-    <color name="brand_foreground_secondary_color">#5B80A1</color>
-    <color name="brand_background_color">#FFF1D4</color>
+    <color name="brand_foreground_color_light">#002D55</color>
+    <color name="brand_foreground_secondary_color_light">#5B80A1</color>
+    <color name="brand_background_color_light">#FFF1D4</color>
+
+    <color name="brand_foreground_color_dark">#C0E1FF</color>
+    <color name="brand_foreground_secondary_color_dark">#618EB6</color>
+    <color name="brand_background_color_dark">#202020</color>
+
+    <color name="brand_foreground_color">@color/brand_foreground_color_light</color>
+    <color name="brand_foreground_secondary_color">@color/brand_foreground_secondary_color_light</color>
+    <color name="brand_background_color">@color/brand_background_color_light</color>
 </resources>
