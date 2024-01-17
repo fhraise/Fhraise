@@ -18,7 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import App
 import android.graphics.Color
 import android.os.Bundle
 import android.view.WindowManager
@@ -26,9 +25,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import data.AppComponentContext
 import data.components.AppRootComponent
+import data.components.RootComponent.ColorMode.*
+import ui.pages.Root
 import xyz.xfqlittlefan.fhraise.utils.isMiui
 
 class MainActivity : ComponentActivity() {
@@ -36,7 +41,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
 
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT)
         )
 
@@ -52,10 +56,28 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
-        val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
+        val rootComponent =
+            AppRootComponent(componentContext = AppComponentContext(componentContext = defaultComponentContext()))
 
         setContent {
-            App(rootComponent = rootComponent)
+            val colorMode by rootComponent.colorMode.subscribeAsState()
+
+            LaunchedEffect(colorMode) {
+                val systemBarStyle = when (colorMode) {
+                    LIGHT -> SystemBarStyle.light(scrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT)
+                    DARK -> SystemBarStyle.dark(scrim = Color.TRANSPARENT)
+                    SYSTEM -> SystemBarStyle.auto(
+                        lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT
+                    )
+                }
+
+                enableEdgeToEdge(
+                    statusBarStyle = systemBarStyle,
+                    navigationBarStyle = systemBarStyle,
+                )
+            }
+
+            Root(component = rootComponent)
         }
     }
 }

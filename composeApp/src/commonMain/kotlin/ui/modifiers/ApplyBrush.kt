@@ -16,14 +16,21 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+package ui.modifiers
+
 import androidx.compose.runtime.Composable
-import data.components.RootComponent
-import ui.AppTheme
-import ui.pages.Root
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
-fun App(rootComponent: RootComponent) {
-    AppTheme {
-        Root(component = rootComponent)
+fun Modifier.applyBrush(brush: Brush) =
+    this.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.drawWithCache {
+        onDrawWithContent {
+            drawContent()
+            drawRect(brush = brush, blendMode = BlendMode.SrcAtop)
+        }
     }
-}

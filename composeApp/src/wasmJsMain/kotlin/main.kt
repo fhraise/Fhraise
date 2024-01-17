@@ -22,22 +22,24 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.lifecycle.stop
+import data.AppComponentContext
 import data.components.AppRootComponent
 import kotlinx.browser.document
 import org.w3c.dom.Document
 import org.w3c.dom.get
+import ui.pages.Root
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     val lifecycleRegistry = LifecycleRegistry()
 
     val rootComponent = AppRootComponent(
-        componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry)
+        componentContext = AppComponentContext(componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry))
     )
 
     lifecycleRegistry.attachToDocument()
 
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") { App(rootComponent = rootComponent) }
+    CanvasBasedWindow(canvasElementId = "ComposeTarget") { Root(component = rootComponent) }
 }
 
 private fun LifecycleRegistry.attachToDocument() {

@@ -18,26 +18,35 @@
 
 package data.components.root
 
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.value.Value
+import data.FhraiseComponentContext
+import data.components.RootComponent
 
 interface SignInComponent {
+    val colorMode: Value<RootComponent.ColorMode>
+    fun nextColorMode()
+
     val state: State
 
     sealed interface State {
-        interface Common {
-            fun submit()
-        }
+        fun submit()
 
-        interface SignIn : Common {
+        interface SignIn : State {
             var username: String
             var password: String
             var showPassword: Boolean
+
+            fun switchShowPassword()
+
+            val onDone: KeyboardActionScope.() -> Unit
         }
 
-        interface SignUp : Common {
+        interface SignUp : State {
             var email: String
             var username: String
             var password: String
@@ -46,11 +55,25 @@ interface SignInComponent {
             var showConfirmPassword: Boolean
         }
     }
+
+    val scrollState: ScrollState
 }
 
 class AppSignInComponent(
-    componentContext: ComponentContext, override val state: State.SignIn = State.SignIn()
-) : SignInComponent, ComponentContext by componentContext {
+    componentContext: FhraiseComponentContext, state: State = State.SignIn()
+) : SignInComponent, FhraiseComponentContext by componentContext {
+    override var state: State by mutableStateOf(state)
+
+    override fun nextColorMode() {
+        changeColorMode(
+            when (colorMode.value) {
+                RootComponent.ColorMode.LIGHT -> RootComponent.ColorMode.DARK
+                RootComponent.ColorMode.DARK -> RootComponent.ColorMode.SYSTEM
+                RootComponent.ColorMode.SYSTEM -> RootComponent.ColorMode.LIGHT
+            }
+        )
+    }
+
     sealed class State : SignInComponent.State {
         class SignIn(username: String = "", password: String = "", showPassword: Boolean = false) : State(),
             SignInComponent.State.SignIn {
@@ -58,8 +81,16 @@ class AppSignInComponent(
             override var password by mutableStateOf(password)
             override var showPassword by mutableStateOf(showPassword)
 
+            override fun switchShowPassword() {
+                showPassword = !showPassword
+            }
+
             override fun submit() {
                 // TODO
+            }
+
+            override val onDone: KeyboardActionScope.() -> Unit = {
+                submit()
             }
         }
 
@@ -83,4 +114,6 @@ class AppSignInComponent(
             }
         }
     }
+
+    override val scrollState: ScrollState = ScrollState(initial = 0)
 }

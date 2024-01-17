@@ -22,7 +22,10 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
+import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import data.AppComponentContext
+import data.FhraiseComponentContext
 import data.components.root.AppSignInComponent
 import data.components.root.SignInComponent
 import kotlinx.serialization.Serializable
@@ -33,12 +36,25 @@ interface RootComponent {
     sealed class Child {
         class SignIn(val component: SignInComponent) : Child()
     }
+
+    val colorMode: Value<ColorMode>
+    fun changeAppColorMode(colorMode: ColorMode)
+
+    enum class ColorMode {
+        LIGHT, DARK, SYSTEM
+    }
 }
 
 class AppRootComponent(
-    componentContext: ComponentContext,
-) : RootComponent, ComponentContext by componentContext {
+    componentContext: FhraiseComponentContext,
+) : RootComponent, FhraiseComponentContext by componentContext {
     private val navigation = StackNavigation<Configuration>()
+
+    override val colorMode: MutableValue<RootComponent.ColorMode> = MutableValue(componentContext.colorMode.value)
+
+    override fun changeAppColorMode(colorMode: RootComponent.ColorMode) {
+        this.colorMode.value = colorMode
+    }
 
     override val stack: Value<ChildStack<*, RootComponent.Child>> = childStack(
         source = navigation,
@@ -48,10 +64,16 @@ class AppRootComponent(
         childFactory = ::createChild
     )
 
-    private fun createChild(config: Configuration, componentContext: ComponentContext): RootComponent.Child =
-        when (config) {
-            is Configuration.SignIn -> RootComponent.Child.SignIn(component = AppSignInComponent(componentContext))
+    private fun createChild(config: Configuration, componentContext: ComponentContext): RootComponent.Child {
+        val childComponentContext = AppComponentContext(
+            componentContext = componentContext,
+            colorMode = colorMode,
+            changeColorMode = ::changeAppColorMode,
+        )
+        return when (config) {
+            is Configuration.SignIn -> RootComponent.Child.SignIn(component = AppSignInComponent(componentContext = childComponentContext))
         }
+    }
 
     @Serializable
     private sealed class Configuration {

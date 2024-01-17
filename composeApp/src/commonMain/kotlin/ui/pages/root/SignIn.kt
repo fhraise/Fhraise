@@ -18,25 +18,142 @@
 
 package ui.pages.root
 
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import data.components.RootComponent
 import data.components.root.SignInComponent
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import ui.modifiers.applyBrush
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 fun SignIn(component: SignInComponent) {
-    Scaffold(topBar = {
-        CenterAlignedTopAppBar(title = {
-            Icon(
-                painter = painterResource("drawable/fhraise_logo.xml"), contentDescription = ""
-            )
-        })
-    }) {
+    val colorMode by component.colorMode.subscribeAsState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(connection = scrollBehavior.nestedScrollConnection),
+        topBar = {
+            CenterAlignedTopAppBar(title = {
+                Icon(
+                    modifier = Modifier.applyBrush(
+                        Brush.horizontalGradient(
+                            listOf(Color.Magenta.copy(alpha = 0.8f), Color.Cyan.copy(alpha = 0.8f))
+                        )
+                    ),
+                    painter = painterResource("drawable/fhraise_logo.xml"),
+                    contentDescription = "Fhraise Logo",
+                )
+            }, actions = {
+                IconButton(
+                    onClick = component::nextColorMode,
+                    content = {
+                        Icon(
+                            imageVector = when (colorMode) {
+                                RootComponent.ColorMode.LIGHT -> Icons.Default.LightMode
+                                RootComponent.ColorMode.DARK -> Icons.Default.DarkMode
+                                RootComponent.ColorMode.SYSTEM -> Icons.Default.Adjust
+                            },
+                            contentDescription = "改变颜色模式",
+                        )
+                    },
+                )
+            }, scrollBehavior = scrollBehavior
+            )
+        },
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(state = component.scrollState).padding(paddingValues)
+                .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            val state = component.state
+
+            Text(
+                text = "开启你的\n 美食之旅_",
+                style = MaterialTheme.typography.displayMedium.copy(
+                    brush = Brush.horizontalGradient(
+                        listOf(
+                            Color.Red.copy(alpha = 0.7f), Color.Blue.copy(alpha = 0.7f)
+                        )
+                    )
+                ),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.padding(horizontal = 32.dp).fillMaxWidth(),
+            ) {
+                if (state is SignInComponent.State.SignIn) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = state.username,
+                        onValueChange = state::username::set,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        label = { Text(text = "用户名") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                        maxLines = 1,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = state.password,
+                        onValueChange = state::password::set,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        label = { Text(text = "密码") },
+                        trailingIcon = {
+                            IconButton(
+                                onClick = state::switchShowPassword,
+                                content = {
+                                    Icon(
+                                        imageVector = if (state.showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = "Show Password",
+                                    )
+                                },
+                            )
+                        },
+                        visualTransformation = if (state.showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = state.onDone),
+                        maxLines = 1,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Button(
+                    onClick = state::submit,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = "登录",
+                    )
+                }
+            }
+        }
     }
 }

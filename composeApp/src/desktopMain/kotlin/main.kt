@@ -23,7 +23,9 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import data.AppComponentContext
 import data.components.AppRootComponent
+import ui.pages.Root
 import javax.swing.SwingUtilities
 
 @OptIn(ExperimentalDecomposeApi::class)
@@ -32,7 +34,7 @@ fun main() {
 
     val rootComponent = runOnUiThread {
         AppRootComponent(
-            componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry)
+            componentContext = AppComponentContext(componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry))
         )
     }
 
@@ -42,7 +44,7 @@ fun main() {
         LifecycleController(lifecycleRegistry, windowState)
 
         Window(onCloseRequest = ::exitApplication, state = windowState, title = "Fhraise") {
-            App(rootComponent = rootComponent)
+            Root(component = rootComponent)
         }
     }
 }

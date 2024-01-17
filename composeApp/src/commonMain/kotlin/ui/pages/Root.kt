@@ -18,22 +18,37 @@
 
 package ui.pages
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.fade
 import com.arkivanov.decompose.extensions.compose.stack.animation.plus
 import com.arkivanov.decompose.extensions.compose.stack.animation.scale
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import data.components.RootComponent
+import ui.AppTheme
 import ui.pages.root.SignIn
 
 @Composable
 fun Root(component: RootComponent) {
-    Children(
-        stack = component.stack, animation = stackAnimation(fade() + scale())
+    val colorMode by component.colorMode.subscribeAsState()
+
+    AppTheme(
+        dark = when (colorMode) {
+            RootComponent.ColorMode.LIGHT -> false
+            RootComponent.ColorMode.DARK -> true
+            RootComponent.ColorMode.SYSTEM -> isSystemInDarkTheme()
+        },
     ) {
-        when (val child = it.instance) {
-            is RootComponent.Child.SignIn -> SignIn(component = child.component)
+        Children(
+            stack = component.stack,
+            animation = stackAnimation(fade() + scale()),
+        ) {
+            when (val child = it.instance) {
+                is RootComponent.Child.SignIn -> SignIn(component = child.component)
+            }
         }
     }
 }
