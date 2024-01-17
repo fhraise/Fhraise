@@ -40,8 +40,8 @@ interface RootComponent {
     val colorMode: Value<ColorMode>
     fun changeAppColorMode(colorMode: ColorMode)
 
-    enum class ColorMode {
-        LIGHT, DARK, SYSTEM
+    enum class ColorMode(val displayName: String) {
+        LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统")
     }
 }
 

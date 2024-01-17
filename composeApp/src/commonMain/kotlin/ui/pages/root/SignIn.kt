@@ -53,31 +53,34 @@ fun SignIn(component: SignInComponent) {
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(connection = scrollBehavior.nestedScrollConnection),
         topBar = {
-            CenterAlignedTopAppBar(title = {
-                Icon(
-                    modifier = Modifier.applyBrush(
-                        Brush.horizontalGradient(
-                            listOf(Color.Magenta.copy(alpha = 0.8f), Color.Cyan.copy(alpha = 0.8f))
-                        )
-                    ),
-                    painter = painterResource("drawable/fhraise_logo.xml"),
-                    contentDescription = "Fhraise Logo",
-                )
-            }, actions = {
-                IconButton(
-                    onClick = component::nextColorMode,
-                    content = {
-                        Icon(
-                            imageVector = when (colorMode) {
-                                RootComponent.ColorMode.LIGHT -> Icons.Default.LightMode
-                                RootComponent.ColorMode.DARK -> Icons.Default.DarkMode
-                                RootComponent.ColorMode.SYSTEM -> Icons.Default.Adjust
-                            },
-                            contentDescription = "改变颜色模式",
-                        )
-                    },
-                )
-            }, scrollBehavior = scrollBehavior
+            CenterAlignedTopAppBar(
+                title = {
+                    Icon(
+                        modifier = Modifier.applyBrush(
+                            Brush.horizontalGradient(
+                                listOf(Color.Magenta.copy(alpha = 0.8f), Color.Cyan.copy(alpha = 0.8f))
+                            )
+                        ),
+                        painter = painterResource("drawable/fhraise_logo.xml"),
+                        contentDescription = "Fhraise Logo",
+                    )
+                },
+                actions = {
+                    IconButton(
+                        onClick = component::switchColorMode,
+                        content = {
+                            Icon(
+                                imageVector = when (colorMode) {
+                                    RootComponent.ColorMode.LIGHT -> Icons.Default.LightMode
+                                    RootComponent.ColorMode.DARK -> Icons.Default.DarkMode
+                                    RootComponent.ColorMode.SYSTEM -> Icons.Default.Adjust
+                                },
+                                contentDescription = "当前颜色模式：${component.colorMode.value.displayName}，改变到：${component.nextColorMode.displayName}",
+                            )
+                        },
+                    )
+                },
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { paddingValues ->
@@ -88,17 +91,19 @@ fun SignIn(component: SignInComponent) {
         ) {
             val state = component.state
 
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "开启你的\n 美食之旅_",
-                style = MaterialTheme.typography.displayMedium.copy(
+                modifier = Modifier.applyBrush(
                     brush = Brush.horizontalGradient(
                         listOf(
                             Color.Red.copy(alpha = 0.7f), Color.Blue.copy(alpha = 0.7f)
                         )
                     )
-                ),
+                ).padding(horizontal = 32.dp),
+                style = MaterialTheme.typography.displayMedium,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             Card(
                 modifier = Modifier.padding(horizontal = 32.dp).fillMaxWidth(),
             ) {
@@ -124,7 +129,7 @@ fun SignIn(component: SignInComponent) {
                                 content = {
                                     Icon(
                                         imageVector = if (state.showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = "Show Password",
+                                        contentDescription = if (state.showPassword) "隐藏密码" else "显示密码",
                                     )
                                 },
                             )
@@ -154,6 +159,7 @@ fun SignIn(component: SignInComponent) {
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

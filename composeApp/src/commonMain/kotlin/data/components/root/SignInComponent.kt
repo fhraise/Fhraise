@@ -26,10 +26,18 @@ import androidx.compose.runtime.setValue
 import com.arkivanov.decompose.value.Value
 import data.FhraiseComponentContext
 import data.components.RootComponent
+import data.components.RootComponent.ColorMode.*
 
 interface SignInComponent {
     val colorMode: Value<RootComponent.ColorMode>
-    fun nextColorMode()
+    val nextColorMode: RootComponent.ColorMode
+        get() = when (colorMode.value) {
+            LIGHT -> DARK
+            DARK -> SYSTEM
+            SYSTEM -> LIGHT
+        }
+
+    fun switchColorMode()
 
     val state: State
 
@@ -41,7 +49,9 @@ interface SignInComponent {
             var password: String
             var showPassword: Boolean
 
-            fun switchShowPassword()
+            fun switchShowPassword() {
+                showPassword = !showPassword
+            }
 
             val onDone: KeyboardActionScope.() -> Unit
         }
@@ -64,12 +74,12 @@ class AppSignInComponent(
 ) : SignInComponent, FhraiseComponentContext by componentContext {
     override var state: State by mutableStateOf(state)
 
-    override fun nextColorMode() {
+    override fun switchColorMode() {
         changeColorMode(
             when (colorMode.value) {
-                RootComponent.ColorMode.LIGHT -> RootComponent.ColorMode.DARK
-                RootComponent.ColorMode.DARK -> RootComponent.ColorMode.SYSTEM
-                RootComponent.ColorMode.SYSTEM -> RootComponent.ColorMode.LIGHT
+                LIGHT -> DARK
+                DARK -> SYSTEM
+                SYSTEM -> LIGHT
             }
         )
     }
@@ -80,10 +90,6 @@ class AppSignInComponent(
             override var username by mutableStateOf(username)
             override var password by mutableStateOf(password)
             override var showPassword by mutableStateOf(showPassword)
-
-            override fun switchShowPassword() {
-                showPassword = !showPassword
-            }
 
             override fun submit() {
                 // TODO
