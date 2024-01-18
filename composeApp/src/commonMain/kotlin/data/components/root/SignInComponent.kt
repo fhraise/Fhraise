@@ -47,12 +47,19 @@ interface SignInComponent {
         interface SignIn : State {
             var username: String
             var password: String
-            var showPassword: Boolean
 
+            var showPassword: Boolean
             fun switchShowPassword() {
                 showPassword = !showPassword
             }
 
+            var showMoreSignInOptions: Boolean
+            fun switchShowMoreSignInOptions() {
+                showMoreSignInOptions = !showMoreSignInOptions
+            }
+
+            fun onGuestSignIn()
+            fun onAdminSignIn()
             val onDone: KeyboardActionScope.() -> Unit
         }
 
@@ -90,8 +97,17 @@ class AppSignInComponent(
             override var username by mutableStateOf(username)
             override var password by mutableStateOf(password)
             override var showPassword by mutableStateOf(showPassword)
+            override var showMoreSignInOptions by mutableStateOf(false)
 
             override fun submit() {
+                // TODO
+            }
+
+            override fun onGuestSignIn() {
+                // TODO
+            }
+
+            override fun onAdminSignIn() {
                 // TODO
             }
 

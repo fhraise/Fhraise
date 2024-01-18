@@ -18,6 +18,8 @@
 
 package ui.pages.root
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,6 +51,8 @@ import ui.modifiers.applyBrush
 fun SignIn(component: SignInComponent) {
     val colorMode by component.colorMode.subscribeAsState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+
+    val state = component.state
 
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(connection = scrollBehavior.nestedScrollConnection),
@@ -83,14 +87,35 @@ fun SignIn(component: SignInComponent) {
                 scrollBehavior = scrollBehavior,
             )
         },
+        bottomBar = {
+            Column {
+                Spacer(
+                    modifier = Modifier.fillMaxWidth().height(4.dp).background(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                            )
+                        )
+                    )
+                )
+                Box(
+                    modifier = Modifier.background(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                        .padding(horizontal = 32.dp)
+                        .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                ) {
+                    if (state is SignInComponent.State.SignIn) {
+                        state.MoreMethods()
+                    }
+                }
+
+            }
+        },
     ) { paddingValues ->
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(state = component.scrollState).padding(paddingValues)
                 .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal)),
             verticalArrangement = Arrangement.Center,
         ) {
-            val state = component.state
-
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "开启你的\n 美食之旅_",
@@ -160,6 +185,52 @@ fun SignIn(component: SignInComponent) {
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun SignInComponent.State.SignIn.MoreMethods() {
+    Column {
+        FilledTonalButton(
+            onClick = ::onGuestSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = "游客登录",
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "游客登录")
+        }
+        TextButton(
+            onClick = ::switchShowMoreSignInOptions,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreHoriz,
+                contentDescription = "更多登录选项",
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "更多登录选项")
+        }
+        AnimatedVisibility(
+            visible = showMoreSignInOptions,
+        ) {
+            FilledTonalButton(
+                onClick = ::onAdminSignIn,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AdminPanelSettings,
+                    contentDescription = "管理员登录",
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "管理员登录")
+            }
         }
     }
 }
