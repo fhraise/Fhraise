@@ -154,6 +154,15 @@ compose.desktop {
             packageName = "xyz.xfqlittlefan.fhraise"
             packageVersion = "1.0.0"
         }
+
+        buildTypes {
+            release {
+                proguard {
+                    version = "7.4.1"
+                    optimize = false
+                }
+            }
+        }
     }
 }
 
