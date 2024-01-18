@@ -16,6 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -23,6 +24,7 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import compositionLocals.LocalWindowSize
 import data.AppComponentContext
 import data.components.AppRootComponent
 import ui.pages.Root
@@ -44,7 +46,9 @@ fun main() {
         LifecycleController(lifecycleRegistry, windowState)
 
         Window(onCloseRequest = ::exitApplication, state = windowState, title = "Fhraise") {
-            Root(component = rootComponent)
+            CompositionLocalProvider(LocalWindowSize provides windowState.size) {
+                Root(component = rootComponent)
+            }
         }
     }
 }

@@ -55,6 +55,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.kotlin.reflect)
             implementation(libs.androidx.core.splashscreen)
+            implementation(libs.androidx.window)
             implementation(libs.androidx.activity.compose)
             implementation(compose.preview)
         }

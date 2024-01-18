@@ -18,7 +18,7 @@
 
 package ui.pages.root
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -51,6 +51,8 @@ import data.components.RootComponent
 import data.components.root.SignInComponent
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import ui.LocalWindowSizeClass
+import ui.WindowWidthSizeClass
 import ui.modifiers.applyBrush
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
@@ -95,50 +97,57 @@ fun SignIn(component: SignInComponent) {
             )
         },
         bottomBar = {
-            val animation = animateFloatAsState(
-                targetValue = if (WindowInsets.ime.getBottom(LocalDensity.current) == 0) 0f else 1f,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-            )
-
-            Layout(
+            AnimatedVisibility(
+                visible = LocalWindowSizeClass.current.widthSizeClass < WindowWidthSizeClass.Expanded,
                 modifier = Modifier.fillMaxWidth(),
-                content = {
-                    if (state is SignInComponent.State.SignIn) {
-                        Column(modifier = Modifier.layoutId("background")) {
-                            Spacer(
-                                modifier = Modifier.fillMaxWidth().height(4.dp).background(
-                                    brush = Brush.verticalGradient(
-                                        listOf(
-                                            Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+            ) {
+                val animation by animateFloatAsState(
+                    targetValue = if (WindowInsets.ime.getBottom(LocalDensity.current) == 0) 0f else 1f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                )
+
+                Layout(
+                    modifier = Modifier.fillMaxWidth(),
+                    content = {
+                        if (state is SignInComponent.State.SignIn) {
+                            Column(modifier = Modifier.layoutId("background")) {
+                                Spacer(
+                                    modifier = Modifier.fillMaxWidth().height(4.dp).background(
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                                            )
                                         )
                                     )
                                 )
-                            )
-                            Spacer(
-                                modifier = Modifier.fillMaxSize()
-                                    .background(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                                Spacer(
+                                    modifier = Modifier.fillMaxSize()
+                                        .background(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                                )
+                            }
+                            state.MoreMethods(
+                                modifier = Modifier.layoutId("moreMethods").padding(horizontal = 32.dp)
+                                    .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                             )
                         }
-                        state.MoreMethods(
-                            modifier = Modifier.layoutId("moreMethods").padding(horizontal = 32.dp)
-                                .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                        )
+                    },
+                ) { measurables, constraints ->
+                    val background = measurables.find { it.layoutId == "background" }
+                    val moreMethods = measurables.find { it.layoutId == "moreMethods" }
+
+                    val moreMethodsPlaceable = moreMethods?.measure(constraints)
+
+                    val width = constraints.maxWidth
+                    val height = moreMethodsPlaceable?.height ?: 0
+
+                    val backgroundPlaceable = background?.measure(Constraints.fixed(width, height))
+
+                    layout(width, height) {
+                        backgroundPlaceable?.placeRelative(0, (height * animation).toInt())
+                        moreMethodsPlaceable?.placeRelative(0, (height * animation).toInt())
                     }
-                },
-            ) { measurables, constraints ->
-                val background = measurables.find { it.layoutId == "background" }
-                val moreMethods = measurables.find { it.layoutId == "moreMethods" }
-
-                val moreMethodsPlaceable = moreMethods?.measure(constraints)
-
-                val width = constraints.maxWidth
-                val height = moreMethodsPlaceable?.height ?: 0
-
-                val backgroundPlaceable = background?.measure(Constraints.fixed(width, height))
-
-                layout(width, height) {
-                    backgroundPlaceable?.placeRelative(0, (height * animation.value).toInt())
-                    moreMethodsPlaceable?.placeRelative(0, (height * animation.value).toInt())
                 }
             }
         },
