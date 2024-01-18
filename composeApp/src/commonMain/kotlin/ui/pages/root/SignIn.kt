@@ -19,6 +19,9 @@
 package ui.pages.root
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
@@ -34,10 +37,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import data.components.RootComponent
@@ -88,26 +95,51 @@ fun SignIn(component: SignInComponent) {
             )
         },
         bottomBar = {
-            Column {
-                Spacer(
-                    modifier = Modifier.fillMaxWidth().height(4.dp).background(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                            )
-                        )
-                    )
-                )
-                Box(
-                    modifier = Modifier.background(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
-                        .padding(horizontal = 32.dp)
-                        .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                ) {
-                    if (state is SignInComponent.State.SignIn) {
-                        state.MoreMethods()
-                    }
-                }
+            val animation = animateFloatAsState(
+                targetValue = if (WindowInsets.ime.getBottom(LocalDensity.current) == 0) 0f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            )
 
+            Layout(
+                modifier = Modifier.fillMaxWidth(),
+                content = {
+                    if (state is SignInComponent.State.SignIn) {
+                        Column(modifier = Modifier.layoutId("background")) {
+                            Spacer(
+                                modifier = Modifier.fillMaxWidth().height(4.dp).background(
+                                    brush = Brush.verticalGradient(
+                                        listOf(
+                                            Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                                        )
+                                    )
+                                )
+                            )
+                            Spacer(
+                                modifier = Modifier.fillMaxSize()
+                                    .background(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                            )
+                        }
+                        state.MoreMethods(
+                            modifier = Modifier.layoutId("moreMethods").padding(horizontal = 32.dp)
+                                .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                        )
+                    }
+                },
+            ) { measurables, constraints ->
+                val background = measurables.find { it.layoutId == "background" }
+                val moreMethods = measurables.find { it.layoutId == "moreMethods" }
+
+                val moreMethodsPlaceable = moreMethods?.measure(constraints)
+
+                val width = constraints.maxWidth
+                val height = moreMethodsPlaceable?.height ?: 0
+
+                val backgroundPlaceable = background?.measure(Constraints.fixed(width, height))
+
+                layout(width, height) {
+                    backgroundPlaceable?.placeRelative(0, (height * animation.value).toInt())
+                    moreMethodsPlaceable?.placeRelative(0, (height * animation.value).toInt())
+                }
             }
         },
     ) { paddingValues ->
@@ -190,8 +222,8 @@ fun SignIn(component: SignInComponent) {
 }
 
 @Composable
-fun SignInComponent.State.SignIn.MoreMethods() {
-    Column {
+fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
         FilledTonalButton(
             onClick = ::onGuestSignIn,
             modifier = Modifier.fillMaxWidth(),
