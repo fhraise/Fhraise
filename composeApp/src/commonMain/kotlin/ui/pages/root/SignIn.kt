@@ -86,7 +86,7 @@ fun SignIn(component: SignInComponent) {
     ) { paddingValues ->
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(state = component.scrollState).padding(paddingValues)
-                .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)),
+                .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal)),
             verticalArrangement = Arrangement.Center,
         ) {
             val state = component.state
