@@ -87,7 +87,7 @@ class AppRootComponent(
                 component = AppSignInComponent(
                     componentContext = childComponentContext, state = AppSignInComponent.ComponentState.SignIn(
                         onGuestSignIn = {},
-                        onPhoneSignIn = {},
+                        onUsernameSignIn = {},
                         onFaceSignIn = {},
                         onSignUp = {
                             navigation.push(Configuration.SignUp)

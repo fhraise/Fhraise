@@ -46,7 +46,28 @@ interface SignInComponent {
     sealed interface ComponentState {
         fun submit()
 
-        interface UsernamePasswordState : ComponentState {
+        interface KeyboardNextState : ComponentState {
+            val onNext: KeyboardActionScope.() -> Unit
+        }
+
+        interface KeyboardDoneState : ComponentState {
+            val onDone: KeyboardActionScope.() -> Unit
+        }
+
+        interface PhoneNumberVerifyCodeState : ComponentState, KeyboardNextState, KeyboardDoneState {
+            var phoneNumber: String
+            var verifyCode: String
+            var canInputVerifyCode: Boolean
+
+            fun switchCanInputVerifyCode() {
+                canInputVerifyCode = !canInputVerifyCode
+                if (!canInputVerifyCode) {
+                    verifyCode = ""
+                }
+            }
+        }
+
+        interface UsernamePasswordState : ComponentState, KeyboardDoneState {
             var username: String
             var password: String
             var showPassword: Boolean
@@ -56,11 +77,7 @@ interface SignInComponent {
             }
         }
 
-        interface KeyboardActionState : ComponentState {
-            val onDone: KeyboardActionScope.() -> Unit
-        }
-
-        interface SignIn : ComponentState, UsernamePasswordState, KeyboardActionState {
+        interface SignIn : ComponentState, PhoneNumberVerifyCodeState {
             var showMoreSignInOptions: Boolean
 
             fun switchShowMoreSignInOptions() {
@@ -68,13 +85,13 @@ interface SignInComponent {
             }
 
             val onGuestSignIn: () -> Unit
-            val onPhoneSignIn: () -> Unit
+            val onUsernameSignIn: () -> Unit
             val onFaceSignIn: () -> Unit
             val onSignUp: () -> Unit
             val onAdminSignIn: () -> Unit
         }
 
-        interface SignUp : ComponentState, UsernamePasswordState, KeyboardActionState {
+        interface SignUp : ComponentState, UsernamePasswordState {
             var email: String
             var confirmPassword: String
             var showConfirmPassword: Boolean
@@ -105,22 +122,26 @@ class AppSignInComponent(
 
     sealed class ComponentState : SignInComponent.ComponentState {
         class SignIn(
-            username: String = "",
-            password: String = "",
-            showPassword: Boolean = false,
+            phoneNumber: String = "",
+            verifyCode: String = "",
+            canInputVerifyCode: Boolean = false,
             showMoreSignInOptions: Boolean = false,
             override val onGuestSignIn: () -> Unit,
-            override val onPhoneSignIn: () -> Unit,
+            override val onUsernameSignIn: () -> Unit,
             override val onFaceSignIn: () -> Unit,
             override val onSignUp: () -> Unit,
             override val onAdminSignIn: () -> Unit,
         ) : ComponentState(), SignInComponent.ComponentState.SignIn {
-            override var username by mutableStateOf(username)
-            override var password by mutableStateOf(password)
-            override var showPassword by mutableStateOf(showPassword)
+            override var phoneNumber by mutableStateOf(phoneNumber)
+            override var verifyCode by mutableStateOf(verifyCode)
+            override var canInputVerifyCode by mutableStateOf(canInputVerifyCode)
             override var showMoreSignInOptions by mutableStateOf(showMoreSignInOptions)
 
             override fun submit() {
+                // TODO
+            }
+
+            override val onNext: KeyboardActionScope.() -> Unit = {
                 // TODO
             }
 

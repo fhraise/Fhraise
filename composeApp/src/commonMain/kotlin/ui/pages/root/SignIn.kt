@@ -142,40 +142,9 @@ fun SignIn(component: SignInComponent) {
                     ) {
                         if (state is SignInComponent.ComponentState.SignIn) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedTextField(
-                                value = state.username,
-                                onValueChange = state::username::set,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                label = { Text(text = "用户名") },
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Text, imeAction = ImeAction.Next
-                                ),
-                                maxLines = 1,
-                            )
+                            state.PhoneNumber()
                             Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedTextField(
-                                value = state.password,
-                                onValueChange = state::password::set,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                label = { Text(text = "密码") },
-                                trailingIcon = {
-                                    IconButton(
-                                        onClick = state::switchShowPassword,
-                                        content = {
-                                            Icon(
-                                                imageVector = if (state.showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                                contentDescription = if (state.showPassword) "隐藏密码" else "显示密码",
-                                            )
-                                        },
-                                    )
-                                },
-                                visualTransformation = if (state.showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
-                                ),
-                                keyboardActions = KeyboardActions(onDone = state.onDone),
-                                maxLines = 1,
-                            )
+                            state.VerifyCode()
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
@@ -506,23 +475,23 @@ fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modif
             shape = MaterialTheme.shapes.large,
         ) {
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = Icons.Default.NoAccounts,
                 contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "游客登录")
         }
         FilledTonalButton(
-            onClick = onPhoneSignIn,
+            onClick = onUsernameSignIn,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
         ) {
             Icon(
-                imageVector = Icons.Default.Phone,
+                imageVector = Icons.Default.Person,
                 contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "手机号登录")
+            Text(text = "用户名登录")
         }
         FilledTonalButton(
             onClick = onFaceSignIn,
@@ -577,4 +546,75 @@ fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modif
             }
         }
     }
+}
+
+@Composable
+fun SignInComponent.ComponentState.UsernamePasswordState.UserName() {
+    OutlinedTextField(
+        value = username,
+        onValueChange = ::username::set,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        label = { Text(text = "用户名") },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Text, imeAction = ImeAction.Next
+        ),
+        maxLines = 1,
+    )
+}
+
+@Composable
+fun SignInComponent.ComponentState.UsernamePasswordState.Password() {
+    OutlinedTextField(
+        value = password,
+        onValueChange = ::password::set,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        label = { Text(text = "密码") },
+        trailingIcon = {
+            IconButton(
+                onClick = ::switchShowPassword,
+                content = {
+                    Icon(
+                        imageVector = if (showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (showPassword) "隐藏密码" else "显示密码",
+                    )
+                },
+            )
+        },
+        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onDone = onDone),
+        maxLines = 1,
+    )
+}
+
+@Composable
+fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.PhoneNumber() {
+    OutlinedTextField(
+        value = phoneNumber,
+        onValueChange = ::phoneNumber::set,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        label = { Text(text = "手机号") },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next
+        ),
+        keyboardActions = KeyboardActions(onNext = onNext),
+        maxLines = 1,
+    )
+}
+
+@Composable
+fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.VerifyCode() {
+    OutlinedTextField(
+        value = verifyCode,
+        onValueChange = ::verifyCode::set,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        label = { Text(text = "验证码") },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onDone = onDone),
+        maxLines = 1,
+    )
 }
