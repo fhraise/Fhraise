@@ -482,6 +482,30 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "游客登录")
         }
+        FilledTonalButton(
+            onClick = ::onPhoneSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Phone,
+                contentDescription = "手机号登录",
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "手机号登录")
+        }
+        FilledTonalButton(
+            onClick = ::onRegister,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.PersonAdd,
+                contentDescription = "注册",
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "注册")
+        }
         TextButton(
             onClick = ::switchShowMoreSignInOptions,
             modifier = Modifier.fillMaxWidth(),
