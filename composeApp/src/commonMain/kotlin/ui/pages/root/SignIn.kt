@@ -19,23 +19,25 @@
 package ui.pages.root
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -46,12 +48,13 @@ import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import data.components.RootComponent
 import data.components.root.SignInComponent
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import ui.LocalWindowSizeClass
 import ui.WindowSizeClass
 import ui.WindowWidthSizeClass
 import ui.modifiers.applyBrush
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
@@ -95,10 +98,11 @@ fun SignIn(component: SignInComponent) {
                 scrollBehavior = scrollBehavior,
             )
         },
+        contentWindowInsets = WindowInsets.safeContent,
     ) { paddingValues ->
         SignInLayout(
-            modifier = Modifier.fillMaxSize().padding(paddingValues)
-                .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Horizontal)),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues,
             header = {
                 Text(
                     text = "开启你的\n 美食之旅_",
@@ -178,7 +182,6 @@ fun SignIn(component: SignInComponent) {
                     state.MoreMethods(modifier = Modifier.fillMaxWidth())
                 }
             },
-            initialWindowSizeClass = LocalWindowSizeClass.current.widthSizeClass,
         )
     }
 }
@@ -186,126 +189,50 @@ fun SignIn(component: SignInComponent) {
 @Composable
 fun SignInLayout(
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
     header: @Composable () -> Unit,
     content: @Composable () -> Unit,
     additionalContent: @Composable () -> Unit,
-    initialWindowSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
 ) {
-    var windowSizeClass by remember { mutableStateOf(initialWindowSizeClass) }
-    val animation by animateFloatAsState(
-        targetValue = when (windowSizeClass) {
-            WindowWidthSizeClass.Medium -> 1f
-            WindowWidthSizeClass.Expanded -> 2f
-            else -> 0f
-        },
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+    var windowSizeClass: WindowWidthSizeClass? by remember { mutableStateOf(null) }
+    val animationTargetValue = when (windowSizeClass) {
+        WindowWidthSizeClass.Compact -> 0f
+        WindowWidthSizeClass.Medium -> 1f
+        WindowWidthSizeClass.Expanded -> 2f
+        else -> null
+    }
+
+    var animatable: Animatable<Float, AnimationVector1D>? by remember { mutableStateOf(null) }
+    val animation = animatable?.value
+    val firstPrintAnimation by animateFloatAsState(
+        targetValue = if (animation == null) 0f else 1f, animationSpec = spring(stiffness = Spring.StiffnessLow)
     )
 
-    Layout(
-        content = {
-            Box(modifier = Modifier.layoutId("header")) { header() }
-            Box(modifier = Modifier.layoutId("content")) { content() }
-            Box(modifier = Modifier.layoutId("additionalContent")) { additionalContent() }
-        },
-        modifier = modifier,
-    ) { measurables, constraints ->
-        val headerMeasurable = measurables.find { it.layoutId == "header" }!!
-        val contentMeasurable = measurables.find { it.layoutId == "content" }!!
-        val additionalContentMeasurable = measurables.find { it.layoutId == "additionalContent" }!!
+    SubcomposeLayout(
+        modifier = Modifier.alpha(firstPrintAnimation).offset(y = 32.dp * (1f - firstPrintAnimation)).then(modifier)
+    ) { constraints ->
+        // == Content padding ==
+        val contentPaddingLeft = contentPadding.calculateLeftPadding(layoutDirection).toPx()
+        val contentPaddingTop = contentPadding.calculateTopPadding().toPx()
+        val contentPaddingRight = contentPadding.calculateRightPadding(layoutDirection).toPx()
+        val contentPaddingBottom = contentPadding.calculateBottomPadding().toPx()
+        val contentPaddingVertical = contentPaddingTop + contentPaddingBottom
 
-        // Layout sizes
+        // == Layout sizes ==
         val width = constraints.maxWidth
         val height = constraints.maxHeight
+        val safeHeight = height - contentPaddingVertical
         windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(width.toDp(), height.toDp())).widthSizeClass
 
-        // Animation
-        val animationFirstStage = animation.coerceAtMost(1f)
-        val animationFirstStageReversed = 1f - animationFirstStage
+        // == Animation ==
+        if (animatable == null && animationTargetValue != null) animatable = Animatable(animationTargetValue)
+        if (animation == null) return@SubcomposeLayout layout(width, height) {}
         val animationSecondStage = (animation - 1f).coerceAtLeast(0f)
+        val animationSecondStageReversed = 1f - animationSecondStage
 
-        // Header
-        val headerPaddingLeft = 32.dp.toPx()
+        // == Measure additional content ==
+        val additionalContentMeasurable = subcompose(slotId = "additionalContent", content = additionalContent).first()
 
-        val headerPaddingTop = 24.dp.toPx() * animationFirstStageReversed
-
-        val headerCompatPaddingRight = 32.dp.toPx()
-        val headerMediumExpandedPaddingRight = 16.dp.toPx()
-        val headerPaddingRight =
-            headerCompatPaddingRight + (headerMediumExpandedPaddingRight - headerCompatPaddingRight) * animationFirstStage
-
-        val headerCompatPaddingBottom = 8.dp.toPx()
-        val headerPaddingBottom = headerCompatPaddingBottom * animationFirstStageReversed
-
-        val headerCompatWidth = width.toFloat()
-        val headerMediumWidth = width * 4f / 9f
-        val headerExpandedWidth = width * 3f / 9f
-        val headerWidth = when {
-            animation == 0f -> headerCompatWidth
-            animation < 1f -> headerCompatWidth + (headerMediumWidth - headerCompatWidth) * animationFirstStage
-            animation == 1f -> headerMediumWidth
-            animation < 2f -> headerMediumWidth + (headerExpandedWidth - headerMediumWidth) * animationSecondStage
-            else -> headerExpandedWidth
-        } - (headerPaddingLeft + headerPaddingRight)
-
-        val headerHeight = height - (headerPaddingTop + headerPaddingBottom)
-
-        val headerConstraints = Constraints(
-            minWidth = 0, maxWidth = headerWidth.roundToInt(), minHeight = 0, maxHeight = headerHeight.roundToInt()
-        )
-        val headerPlaceable = headerMeasurable.measure(headerConstraints)
-
-        val headerX = (headerWidth - headerPlaceable.width) * animationFirstStage + headerPaddingLeft
-
-        val headerY = (height - headerPlaceable.height) / 2f * animationFirstStage + headerPaddingTop
-
-        val headerActualWidth = headerWidth + headerPaddingLeft + headerPaddingRight
-        val headerActualHeight = headerPlaceable.height + headerPaddingTop + headerPaddingBottom
-
-        // Content
-        val contentCompatPaddingLeft = 32.dp.toPx()
-        val contentMediumExpandedPaddingLeft = 16.dp.toPx()
-        val contentPaddingLeft =
-            contentCompatPaddingLeft + (contentMediumExpandedPaddingLeft - contentCompatPaddingLeft) * animationFirstStage
-
-        val contentCompatPaddingTop = 8.dp.toPx()
-        val contentPaddingTop = contentCompatPaddingTop * animationFirstStageReversed
-
-        val contentCompatMediumPaddingRight = 32.dp.toPx()
-        val contentExpandedPaddingRight = 16.dp.toPx()
-        val contentPaddingRight =
-            contentCompatMediumPaddingRight + (contentExpandedPaddingRight - contentCompatMediumPaddingRight) * animationSecondStage
-
-        val contentCompatWidth = width.toFloat()
-        val contentMediumWidth = width * 5f / 9f
-        val contentExpandedWidth = width * 4f / 9f
-        val contentWidth = when {
-            animation == 0f -> contentCompatWidth
-            animation < 1f -> contentCompatWidth + (contentMediumWidth - contentCompatWidth) * animationFirstStage
-            animation == 1f -> contentMediumWidth
-            animation < 2f -> contentMediumWidth + (contentExpandedWidth - contentMediumWidth) * animationSecondStage
-            else -> contentExpandedWidth
-        } - (contentPaddingLeft + contentPaddingRight)
-
-        val contentHeight =
-            height - headerActualHeight * animationFirstStageReversed - (contentPaddingTop + headerCompatPaddingBottom)
-
-        val contentConstraints = Constraints(
-            minWidth = contentWidth.roundToInt(),
-            maxWidth = contentWidth.roundToInt(),
-            minHeight = 0,
-            maxHeight = contentHeight.roundToInt()
-        )
-        val contentPlaceable = contentMeasurable.measure(contentConstraints)
-
-        val contentX = headerActualWidth * animationFirstStage + contentPaddingLeft
-
-        val contentMediumExpandedY = (height - contentPlaceable.height) / 2f
-        val contentY =
-            headerActualHeight + (contentMediumExpandedY - headerActualHeight) * animationFirstStage + contentPaddingTop
-
-        val contentActualWidth = contentWidth + contentPaddingLeft + contentPaddingRight
-
-        // Additional content
         val additionalContentCompatMediumPaddingLeft = 32.dp.toPx()
         val additionalContentExpandedPaddingLeft = 16.dp.toPx()
         val additionalContentPaddingLeft =
@@ -313,32 +240,229 @@ fun SignInLayout(
 
         val additionalContentPaddingRight = 32.dp.toPx()
 
+        val additionalContentPaddingBottom = 16.dp.toPx() * animationSecondStageReversed
+
         val additionalContentCompatMediumWidth = width.toFloat()
         val additionalContentExpandedWidth = width * 2f / 9f
         val additionalContentWidth =
             additionalContentCompatMediumWidth + (additionalContentExpandedWidth - additionalContentCompatMediumWidth) * animationSecondStage - (additionalContentPaddingLeft + additionalContentPaddingRight)
 
-        val additionalContentConstraints = Constraints(
-            minWidth = additionalContentWidth.roundToInt(),
-            maxWidth = additionalContentWidth.roundToInt(),
-            minHeight = 0
-        )
+        val additionalContentConstraints = Constraints.fixedWidth(width = additionalContentWidth.roundToInt())
         val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
-        val additionalContentCompatMediumX = 0f
-        val additionalContentExpandedX = headerActualWidth + contentActualWidth
-        val additionalContentX =
-            additionalContentCompatMediumX + (additionalContentExpandedX - additionalContentCompatMediumX) * animationSecondStage + additionalContentPaddingLeft
+        // == Measure main ==
+        val mainMeasurable = subcompose("main") {
+            SignInMainLayout(
+                animation = animation,
+                animationSecondStage = animationSecondStage,
+                scrollState = rememberScrollState(),
+                contentPaddingLeft = contentPaddingLeft,
+                contentPaddingTop = contentPaddingTop,
+                contentPaddingRight = contentPaddingRight,
+                contentPaddingBottom = contentPaddingBottom,
+                bottomSpace = (additionalContentPlaceable.height * animationSecondStageReversed).roundToInt(),
+                header = header,
+                mainContent = content,
+            )
+        }.first()
 
-        val additionalContentCompatMediumY = (height - additionalContentPlaceable.height).toFloat()
-        val additionalContentExpandedY = (height - additionalContentPlaceable.height) / 2f
+        val mainCompatWidth = width.toFloat()
+        val mainMediumExpandedWidth = width * 7f / 9f
+        val mainWidth = mainCompatWidth + (mainMediumExpandedWidth - mainCompatWidth) * animationSecondStage
+
+        val mainConstraints = Constraints.fixed(width = mainWidth.roundToInt(), height = height)
+        val mainPlaceable = mainMeasurable.measure(mainConstraints)
+
+        val mainActualWidth = mainPlaceable.width
+
+        // == Place ==
+        val additionalContentCompatMediumX = 0f
+        val additionalContentX =
+            additionalContentCompatMediumX + (mainActualWidth - additionalContentCompatMediumX) * animationSecondStage + additionalContentPaddingLeft
+
+        val additionalContentCompatMediumY =
+            (height - additionalContentPlaceable.height).toFloat() - additionalContentPaddingBottom - contentPaddingBottom
+        val additionalContentExpandedY = (safeHeight - additionalContentPlaceable.height) / 2f + contentPaddingTop
         val additionalContentY =
             additionalContentCompatMediumY + (additionalContentExpandedY - additionalContentCompatMediumY) * animationSecondStage
 
+        val additionalContentBackgroundPlaceable = subcompose("additionalContentBackground") {
+            val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+            Column(modifier = Modifier.fillMaxSize()) {
+                Spacer(
+                    modifier = Modifier.fillMaxWidth().height(32.dp).background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent, backgroundColor
+                            )
+                        )
+                    )
+                )
+                Spacer(modifier = Modifier.fillMaxSize().background(color = backgroundColor))
+            }
+        }.first().measure(Constraints.fixed(width = width, height = (height - additionalContentY).roundToInt()))
+
+        val additionalContentBackgroundY = additionalContentY + (height - additionalContentY) * animationSecondStage
+
         layout(width, height) {
-            headerPlaceable.placeRelative(headerX.roundToInt(), headerY.roundToInt())
-            contentPlaceable.placeRelative(contentX.roundToInt(), contentY.roundToInt())
+            mainPlaceable.placeRelative(0, 0)
+            additionalContentBackgroundPlaceable.placeRelative(0, additionalContentBackgroundY.roundToInt())
             additionalContentPlaceable.placeRelative(additionalContentX.roundToInt(), additionalContentY.roundToInt())
+        }
+    }
+
+    LaunchedEffect(windowSizeClass) {
+        if (animation != null && animationTargetValue != null && animation != animationTargetValue) {
+            launch {
+                animatable?.animateTo(
+                    targetValue = animationTargetValue, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SignInMainLayout(
+    animation: Float,
+    animationSecondStage: Float,
+    scrollState: ScrollState,
+    contentPaddingLeft: Float,
+    contentPaddingTop: Float,
+    contentPaddingRight: Float,
+    contentPaddingBottom: Float,
+    bottomSpace: Int,
+    header: @Composable () -> Unit,
+    mainContent: @Composable () -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val boxHeight = constraints.maxHeight.toFloat() - bottomSpace
+
+        SubcomposeLayout(
+            modifier = Modifier.fillMaxSize().verticalScroll(state = scrollState)
+        ) { layoutConstraints ->
+            val headerMeasurable = subcompose("header", header).first()
+            val mainContentMeasurable = subcompose("mainContent", mainContent).first()
+
+            // == Layout size ==
+            val width = layoutConstraints.maxWidth
+
+            // == Animation ==
+            val animationFirstStage = animation.coerceAtMost(1f)
+            val animationFirstStageReversed = 1f - animationFirstStage
+
+            // == Header's padding and width ==
+            val headerPaddingLeft = 32.dp.toPx() + contentPaddingLeft
+
+            // 24dp if compact, 0dp otherwise
+            val headerPaddingTop = 24.dp.toPx() * animationFirstStageReversed + contentPaddingTop
+
+            val headerCompatPaddingRight = 32.dp.toPx() + contentPaddingRight
+            val headerMediumExpandedPaddingRight = 16.dp.toPx()
+            val headerPaddingRight =
+                headerCompatPaddingRight + (headerMediumExpandedPaddingRight - headerCompatPaddingRight) * animationFirstStage
+
+            val headerCompatPaddingBottom = 8.dp.toPx()
+            val headerPaddingBottom =
+                headerCompatPaddingBottom + (contentPaddingBottom - headerCompatPaddingBottom) * animationFirstStage
+
+            val headerPaddingHorizontal = headerPaddingLeft + headerPaddingRight
+            val headerPaddingVertical = headerPaddingTop + headerPaddingBottom
+
+            val headerCompatWidth = width.toFloat()
+            val headerMediumWidth = width * 4f / 9f
+            val headerExpandedWidth = width * 3f / 7f
+            val headerWidth = when {
+                animation == 0f -> headerCompatWidth
+                animation < 1f -> headerCompatWidth + (headerMediumWidth - headerCompatWidth) * animationFirstStage
+                animation == 1f -> headerMediumWidth
+                animation < 2f -> headerMediumWidth + (headerExpandedWidth - headerMediumWidth) * animationSecondStage
+                else -> headerExpandedWidth
+            } - headerPaddingHorizontal
+
+            // == Main content's padding and width ==
+            val mainContentCompatPaddingLeft = 32.dp.toPx() + contentPaddingLeft
+            val mainContentMediumExpandedPaddingLeft = 16.dp.toPx()
+            val mainContentPaddingLeft =
+                mainContentCompatPaddingLeft + (mainContentMediumExpandedPaddingLeft - mainContentCompatPaddingLeft) * animationFirstStage
+
+            val mainContentCompatPaddingTop = 8.dp.toPx()
+            val mainContentMediumExpandedPaddingTop = 16.dp.toPx() + contentPaddingTop
+            val mainContentPaddingTop =
+                mainContentCompatPaddingTop + (mainContentMediumExpandedPaddingTop - mainContentCompatPaddingTop) * animationFirstStage
+
+            val mainContentCompatMediumPaddingRight = 32.dp.toPx() + contentPaddingRight
+            val mainContentExpandedPaddingRight = 16.dp.toPx()
+            val mainContentPaddingRight =
+                mainContentCompatMediumPaddingRight + (mainContentExpandedPaddingRight - mainContentCompatMediumPaddingRight) * animationSecondStage
+
+            val mainContentPaddingBottom = 16.dp.toPx() + contentPaddingBottom
+
+            val mainContentPaddingHorizontal = mainContentPaddingLeft + mainContentPaddingRight
+            val mainContentPaddingVertical = mainContentPaddingTop + mainContentPaddingBottom
+
+            val mainContentMaxWidth = 512.dp.toPx()
+            val mainContentCompatWidth = width.toFloat()
+            val mainContentMediumWidth = width * 5f / 9f
+            val mainContentExpandedWidth = width * 4f / 7f
+            val mainContentWidth = when {
+                animation == 0f -> mainContentCompatWidth
+                animation < 1f -> mainContentCompatWidth + (mainContentMediumWidth - mainContentCompatWidth) * animationFirstStage
+                animation == 1f -> mainContentMediumWidth
+                animation < 2f -> mainContentMediumWidth + (mainContentExpandedWidth - mainContentMediumWidth) * animationSecondStage
+                else -> mainContentExpandedWidth
+            } - mainContentPaddingHorizontal
+
+            // == Intrinsic height ==
+            val headerIntrinsicHeight = headerMeasurable.minIntrinsicHeight(headerWidth.roundToInt()).toFloat()
+            val mainContentIntrinsicHeight =
+                mainContentMeasurable.minIntrinsicHeight(mainContentWidth.roundToInt()).toFloat()
+            val headerIntrinsicActualHeight = headerIntrinsicHeight + headerPaddingVertical
+            val mainContentIntrinsicActualHeight = mainContentIntrinsicHeight + mainContentPaddingVertical
+            val requiredColumnIntrinsicHeight = headerIntrinsicActualHeight + mainContentIntrinsicActualHeight
+            val requiredRowIntrinsicHeight = max(headerIntrinsicActualHeight, mainContentIntrinsicActualHeight)
+            val requiredIntrinsicHeight =
+                requiredColumnIntrinsicHeight + (requiredRowIntrinsicHeight - requiredColumnIntrinsicHeight) * animationFirstStage
+            val requiredBoxHeight = max(boxHeight, requiredIntrinsicHeight)
+
+            // == Measure header ==
+            val headerHeight = headerIntrinsicHeight.roundToInt()
+
+            val headerConstraints = Constraints(
+                maxWidth = headerWidth.roundToInt(), minHeight = headerHeight, maxHeight = headerHeight
+            )
+            val headerPlaceable = headerMeasurable.measure(headerConstraints)
+
+            val headerActualWidth = headerWidth + headerPaddingHorizontal
+            val headerActualHeight = headerPlaceable.height + headerPaddingVertical
+
+            val headerX = (headerWidth - headerPlaceable.width) * animationFirstStage + headerPaddingLeft
+
+            val headerY =
+                ((boxHeight - headerActualHeight) / 2f + scrollState.value) * animationFirstStage + headerPaddingTop
+
+            // == Measure main content ==
+            val mainContentHeight = mainContentIntrinsicHeight.roundToInt()
+
+            val mainContentConstraintWidth = mainContentWidth.coerceAtMost(mainContentMaxWidth).roundToInt()
+            val mainContentConstraints =
+                Constraints.fixed(width = mainContentConstraintWidth, height = mainContentHeight)
+            val mainContentPlaceable = mainContentMeasurable.measure(mainContentConstraints)
+
+            val mainContentActualHeight = mainContentPlaceable.height + mainContentPaddingVertical
+
+            val mainContentX =
+                headerActualWidth * animationFirstStage + (mainContentWidth - mainContentConstraintWidth) / 2f + mainContentPaddingLeft
+
+            val mainContentMediumExpandedY = (requiredBoxHeight - mainContentActualHeight) / 2f
+            val mainContentY =
+                headerActualHeight + (mainContentMediumExpandedY - headerActualHeight) * animationFirstStage + mainContentPaddingTop
+
+            val requiredMainContentHeight = requiredBoxHeight.roundToInt() + bottomSpace
+            layout(width, requiredMainContentHeight) {
+                headerPlaceable.placeRelative(headerX.roundToInt(), headerY.roundToInt())
+                mainContentPlaceable.placeRelative(mainContentX.roundToInt(), mainContentY.roundToInt())
+            }
         }
     }
 }
