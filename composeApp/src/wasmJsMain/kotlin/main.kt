@@ -22,7 +22,6 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.lifecycle.stop
-import data.AppComponentContext
 import data.components.AppRootComponent
 import kotlinx.browser.document
 import org.w3c.dom.Document
@@ -33,9 +32,7 @@ import ui.pages.Root
 fun main() {
     val lifecycleRegistry = LifecycleRegistry()
 
-    val rootComponent = AppRootComponent(
-        componentContext = AppComponentContext(componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry))
-    )
+    val rootComponent = AppRootComponent(componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry))
 
     lifecycleRegistry.attachToDocument()
 

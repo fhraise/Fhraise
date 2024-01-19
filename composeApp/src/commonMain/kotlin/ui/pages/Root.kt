@@ -22,21 +22,23 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.fade
 import com.arkivanov.decompose.extensions.compose.stack.animation.plus
+import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.scale
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
-import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import data.components.RootComponent
 import ui.AppTheme
 import ui.LocalWindowSizeClass
 import ui.pages.root.SignIn
 import ui.windowSizeClass
 
+@OptIn(ExperimentalDecomposeApi::class)
 @Composable
 fun Root(component: RootComponent) {
-    val colorMode by component.colorMode.subscribeAsState()
+    val colorMode by component.colorMode
 
     CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
         AppTheme(
@@ -48,7 +50,11 @@ fun Root(component: RootComponent) {
         ) {
             Children(
                 stack = component.stack,
-                animation = stackAnimation(fade() + scale()),
+                animation = predictiveBackAnimation(
+                    backHandler = component.backHandler,
+                    fallbackAnimation = stackAnimation(fade() + scale()),
+                    onBack = component::onBack
+                ),
             ) {
                 when (val child = it.instance) {
                     is RootComponent.Child.SignIn -> SignIn(component = child.component)

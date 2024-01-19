@@ -25,7 +25,6 @@ import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import compositionLocals.LocalWindowSize
-import data.AppComponentContext
 import data.components.AppRootComponent
 import ui.pages.Root
 import javax.swing.SwingUtilities
@@ -36,7 +35,7 @@ fun main() {
 
     val rootComponent = runOnUiThread {
         AppRootComponent(
-            componentContext = AppComponentContext(componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry))
+            componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry)
         )
     }
 

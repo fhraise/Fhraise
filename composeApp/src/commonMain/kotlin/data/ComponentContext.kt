@@ -18,18 +18,15 @@
 
 package data
 
+import androidx.compose.runtime.State
 import com.arkivanov.decompose.ComponentContext
-import com.arkivanov.decompose.value.MutableValue
-import com.arkivanov.decompose.value.Value
 import data.components.RootComponent
 
-interface FhraiseComponentContext : ComponentContext {
-    val colorMode: Value<RootComponent.ColorMode>
-    val changeColorMode: (RootComponent.ColorMode) -> Unit
-}
+interface AppComponentContext : ComponentContext, AppComponentContextValues
 
-class AppComponentContext(
-    componentContext: ComponentContext,
-    override val colorMode: Value<RootComponent.ColorMode> = MutableValue(RootComponent.ColorMode.SYSTEM),
-    override val changeColorMode: (RootComponent.ColorMode) -> Unit = {},
-) : FhraiseComponentContext, ComponentContext by componentContext
+interface AppComponentContextValues {
+    val colorMode: State<RootComponent.ColorMode>
+    fun changeColorMode(colorMode: RootComponent.ColorMode)
+
+    val pop: State<(() -> Unit)?>
+}

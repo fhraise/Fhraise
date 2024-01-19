@@ -20,16 +20,16 @@ package data.components.root
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.text.KeyboardActionScope
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.arkivanov.decompose.value.Value
-import data.FhraiseComponentContext
+import data.AppComponentContext
 import data.components.RootComponent
 import data.components.RootComponent.ColorMode.*
 
 interface SignInComponent {
-    val colorMode: Value<RootComponent.ColorMode>
+    val colorMode: State<RootComponent.ColorMode>
     val nextColorMode: RootComponent.ColorMode
         get() = when (colorMode.value) {
             LIGHT -> DARK
@@ -39,40 +39,49 @@ interface SignInComponent {
 
     fun switchColorMode()
 
-    val state: State
+    val pop: State<(() -> Unit)?>
 
-    sealed interface State {
+    val state: ComponentState
+
+    sealed interface ComponentState {
         fun submit()
 
-        interface SignIn : State {
+        interface UsernamePasswordState : ComponentState {
             var username: String
             var password: String
-
             var showPassword: Boolean
+
             fun switchShowPassword() {
                 showPassword = !showPassword
             }
+        }
 
+        interface KeyboardActionState : ComponentState {
+            val onDone: KeyboardActionScope.() -> Unit
+        }
+
+        interface SignIn : ComponentState, UsernamePasswordState, KeyboardActionState {
             var showMoreSignInOptions: Boolean
+
             fun switchShowMoreSignInOptions() {
                 showMoreSignInOptions = !showMoreSignInOptions
             }
 
-            fun onGuestSignIn()
-            fun onPhoneSignIn()
-            fun onFaceSignIn()
-            fun onRegister()
-            fun onAdminSignIn()
-            val onDone: KeyboardActionScope.() -> Unit
+            val onGuestSignIn: () -> Unit
+            val onPhoneSignIn: () -> Unit
+            val onFaceSignIn: () -> Unit
+            val onSignUp: () -> Unit
+            val onAdminSignIn: () -> Unit
         }
 
-        interface SignUp : State {
+        interface SignUp : ComponentState, UsernamePasswordState, KeyboardActionState {
             var email: String
-            var username: String
-            var password: String
-            var showPassword: Boolean
             var confirmPassword: String
             var showConfirmPassword: Boolean
+
+            fun switchShowConfirmPassword() {
+                showConfirmPassword = !showConfirmPassword
+            }
         }
     }
 
@@ -80,9 +89,9 @@ interface SignInComponent {
 }
 
 class AppSignInComponent(
-    componentContext: FhraiseComponentContext, state: State = State.SignIn()
-) : SignInComponent, FhraiseComponentContext by componentContext {
-    override var state: State by mutableStateOf(state)
+    componentContext: AppComponentContext, state: ComponentState
+) : SignInComponent, AppComponentContext by componentContext {
+    override var state: ComponentState by mutableStateOf(state)
 
     override fun switchColorMode() {
         changeColorMode(
@@ -94,35 +103,24 @@ class AppSignInComponent(
         )
     }
 
-    sealed class State : SignInComponent.State {
-        class SignIn(username: String = "", password: String = "", showPassword: Boolean = false) : State(),
-            SignInComponent.State.SignIn {
+    sealed class ComponentState : SignInComponent.ComponentState {
+        class SignIn(
+            username: String = "",
+            password: String = "",
+            showPassword: Boolean = false,
+            showMoreSignInOptions: Boolean = false,
+            override val onGuestSignIn: () -> Unit,
+            override val onPhoneSignIn: () -> Unit,
+            override val onFaceSignIn: () -> Unit,
+            override val onSignUp: () -> Unit,
+            override val onAdminSignIn: () -> Unit,
+        ) : ComponentState(), SignInComponent.ComponentState.SignIn {
             override var username by mutableStateOf(username)
             override var password by mutableStateOf(password)
             override var showPassword by mutableStateOf(showPassword)
-            override var showMoreSignInOptions by mutableStateOf(false)
+            override var showMoreSignInOptions by mutableStateOf(showMoreSignInOptions)
 
             override fun submit() {
-                // TODO
-            }
-
-            override fun onGuestSignIn() {
-                // TODO
-            }
-
-            override fun onPhoneSignIn() {
-                // TODO
-            }
-
-            override fun onFaceSignIn() {
-                // TODO
-            }
-
-            override fun onRegister() {
-                // TODO
-            }
-
-            override fun onAdminSignIn() {
                 // TODO
             }
 
@@ -138,7 +136,7 @@ class AppSignInComponent(
             showPassword: Boolean = false,
             confirmPassword: String = "",
             showConfirmPassword: Boolean = false
-        ) : State(), SignInComponent.State.SignUp {
+        ) : ComponentState(), SignInComponent.ComponentState.SignUp {
             override var email by mutableStateOf(email)
             override var username by mutableStateOf(username)
             override var password by mutableStateOf(password)
@@ -148,6 +146,10 @@ class AppSignInComponent(
 
             override fun submit() {
                 // TODO
+            }
+
+            override val onDone: KeyboardActionScope.() -> Unit = {
+                submit()
             }
         }
     }

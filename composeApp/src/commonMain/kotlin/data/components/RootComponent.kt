@@ -18,41 +18,44 @@
 
 package data.components
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import com.arkivanov.decompose.ComponentContext
-import com.arkivanov.decompose.router.stack.ChildStack
-import com.arkivanov.decompose.router.stack.StackNavigation
-import com.arkivanov.decompose.router.stack.childStack
-import com.arkivanov.decompose.value.MutableValue
+import com.arkivanov.decompose.router.stack.*
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.essenty.backhandler.BackHandlerOwner
 import data.AppComponentContext
-import data.FhraiseComponentContext
+import data.AppComponentContextValues
 import data.components.root.AppSignInComponent
 import data.components.root.SignInComponent
 import kotlinx.serialization.Serializable
 
-interface RootComponent {
+interface RootComponent : BackHandlerOwner {
     val stack: Value<ChildStack<*, Child>>
 
     sealed class Child {
         class SignIn(val component: SignInComponent) : Child()
     }
 
-    val colorMode: Value<ColorMode>
-    fun changeAppColorMode(colorMode: ColorMode)
+    val colorMode: State<ColorMode>
+    fun changeColorMode(colorMode: ColorMode)
 
     enum class ColorMode(val displayName: String) {
         LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统")
     }
+
+    fun onBack()
 }
 
 class AppRootComponent(
-    componentContext: FhraiseComponentContext,
-) : RootComponent, FhraiseComponentContext by componentContext {
+    componentContext: ComponentContext,
+) : RootComponent, AppComponentContext, ComponentContext by componentContext {
     private val navigation = StackNavigation<Configuration>()
 
-    override val colorMode: MutableValue<RootComponent.ColorMode> = MutableValue(componentContext.colorMode.value)
+    override val colorMode: MutableState<RootComponent.ColorMode> = mutableStateOf(RootComponent.ColorMode.SYSTEM)
 
-    override fun changeAppColorMode(colorMode: RootComponent.ColorMode) {
+    override fun changeColorMode(colorMode: RootComponent.ColorMode) {
         this.colorMode.value = colorMode
     }
 
@@ -64,14 +67,41 @@ class AppRootComponent(
         childFactory = ::createChild
     )
 
+    override val pop: MutableState<(() -> Unit)?> = mutableStateOf(null)
+
+    init {
+        stack.subscribe { childStack ->
+            if (childStack.backStack.isEmpty()) {
+                pop.value = null
+            } else {
+                pop.value = { navigation.pop() }
+            }
+        }
+    }
+
     private fun createChild(config: Configuration, componentContext: ComponentContext): RootComponent.Child {
-        val childComponentContext = AppComponentContext(
-            componentContext = componentContext,
-            colorMode = colorMode,
-            changeColorMode = ::changeAppColorMode,
-        )
+        val childComponentContext =
+            object : ComponentContext by componentContext, AppComponentContextValues by this, AppComponentContext {}
         return when (config) {
-            is Configuration.SignIn -> RootComponent.Child.SignIn(component = AppSignInComponent(componentContext = childComponentContext))
+            is Configuration.SignIn -> RootComponent.Child.SignIn(
+                component = AppSignInComponent(
+                    componentContext = childComponentContext, state = AppSignInComponent.ComponentState.SignIn(
+                        onGuestSignIn = {},
+                        onPhoneSignIn = {},
+                        onFaceSignIn = {},
+                        onSignUp = {
+                            navigation.push(Configuration.SignUp)
+                        },
+                        onAdminSignIn = {},
+                    )
+                )
+            )
+
+            is Configuration.SignUp -> RootComponent.Child.SignIn(
+                component = AppSignInComponent(
+                    componentContext = childComponentContext, state = AppSignInComponent.ComponentState.SignUp()
+                )
+            )
         }
     }
 
@@ -79,5 +109,10 @@ class AppRootComponent(
     private sealed class Configuration {
         @Serializable
         data object SignIn : Configuration()
+
+        @Serializable
+        data object SignUp : Configuration()
     }
+
+    override fun onBack() = navigation.pop()
 }

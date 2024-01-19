@@ -20,6 +20,8 @@ package ui.pages.root
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -45,7 +47,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import data.components.RootComponent
 import data.components.root.SignInComponent
 import kotlinx.coroutines.launch
@@ -60,7 +61,8 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 fun SignIn(component: SignInComponent) {
-    val colorMode by component.colorMode.subscribeAsState()
+    val colorMode by component.colorMode
+    val pop by component.pop
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     val state = component.state
@@ -79,6 +81,23 @@ fun SignIn(component: SignInComponent) {
                         painter = painterResource("drawable/fhraise_logo.xml"),
                         contentDescription = "Fhraise Logo",
                     )
+                },
+                navigationIcon = {
+                    AnimatedVisibility(
+                        visible = pop != null,
+                        enter = slideInHorizontally { -it },
+                        exit = slideOutHorizontally { -it },
+                    ) {
+                        IconButton(
+                            onClick = pop ?: {},
+                            content = {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBack,
+                                    contentDescription = "返回",
+                                )
+                            },
+                        )
+                    }
                 },
                 actions = {
                     IconButton(
@@ -121,7 +140,7 @@ fun SignIn(component: SignInComponent) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        if (state is SignInComponent.State.SignIn) {
+                        if (state is SignInComponent.ComponentState.SignIn) {
                             Spacer(modifier = Modifier.height(16.dp))
                             OutlinedTextField(
                                 value = state.username,
@@ -178,7 +197,7 @@ fun SignIn(component: SignInComponent) {
                 }
             },
             additionalContent = {
-                if (state is SignInComponent.State.SignIn) {
+                if (state is SignInComponent.ComponentState.SignIn) {
                     state.MoreMethods(modifier = Modifier.fillMaxWidth())
                 }
             },
@@ -226,12 +245,14 @@ fun SignInLayout(
 
         // == Animation ==
         if (animatable == null && animationTargetValue != null) animatable = Animatable(animationTargetValue)
-        if (animation == null) return@SubcomposeLayout layout(width, height) {}
+        if (animation == null) return@SubcomposeLayout layout(0, 0) {}
         val animationSecondStage = (animation - 1f).coerceAtLeast(0f)
         val animationSecondStageReversed = 1f - animationSecondStage
 
         // == Measure additional content ==
-        val additionalContentMeasurable = subcompose(slotId = "additionalContent", content = additionalContent).first()
+        val additionalContentMeasurable =
+            subcompose(slotId = "additionalContent", content = additionalContent).firstOrNull()
+                ?: return@SubcomposeLayout layout(0, 0) {}
 
         val additionalContentCompatMediumPaddingLeft = 32.dp.toPx()
         val additionalContentExpandedPaddingLeft = 16.dp.toPx()
@@ -351,8 +372,9 @@ fun SignInMainLayout(
         SubcomposeLayout(
             modifier = Modifier.fillMaxSize().verticalScroll(state = scrollState)
         ) { layoutConstraints ->
-            val headerMeasurable = subcompose("header", header).first()
-            val mainContentMeasurable = subcompose("mainContent", mainContent).first()
+            val headerMeasurable = subcompose("header", header).firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
+            val mainContentMeasurable =
+                subcompose("mainContent", mainContent).firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
 
             // == Layout size ==
             val width = layoutConstraints.maxWidth
@@ -479,10 +501,10 @@ fun SignInMainLayout(
 }
 
 @Composable
-fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
+fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modifier) {
     Column(modifier = modifier.verticalScroll(state = rememberScrollState())) {
         FilledTonalButton(
-            onClick = ::onGuestSignIn,
+            onClick = onGuestSignIn,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
         ) {
@@ -494,7 +516,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
             Text(text = "游客登录")
         }
         FilledTonalButton(
-            onClick = ::onPhoneSignIn,
+            onClick = onPhoneSignIn,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
         ) {
@@ -506,7 +528,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
             Text(text = "手机号登录")
         }
         FilledTonalButton(
-            onClick = ::onFaceSignIn,
+            onClick = onFaceSignIn,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
         ) {
@@ -518,7 +540,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
             Text(text = "人脸登录")
         }
         FilledTonalButton(
-            onClick = ::onRegister,
+            onClick = onSignUp,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
         ) {
@@ -545,7 +567,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
             visible = showMoreSignInOptions,
         ) {
             FilledTonalButton(
-                onClick = ::onAdminSignIn,
+                onClick = onAdminSignIn,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
             ) {

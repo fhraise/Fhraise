@@ -30,8 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
-import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import data.AppComponentContext
 import data.components.AppRootComponent
 import data.components.RootComponent.ColorMode.*
 import ui.pages.Root
@@ -58,11 +56,10 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
-        val rootComponent =
-            AppRootComponent(componentContext = AppComponentContext(componentContext = defaultComponentContext()))
+        val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
 
         setContent {
-            val colorMode by rootComponent.colorMode.subscribeAsState()
+            val colorMode by rootComponent.colorMode
 
             LaunchedEffect(colorMode) {
                 val systemBarStyle = when (colorMode) {
