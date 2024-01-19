@@ -488,7 +488,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
         ) {
             Icon(
                 imageVector = Icons.Default.Person,
-                contentDescription = "游客登录",
+                contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "游客登录")
@@ -500,7 +500,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
         ) {
             Icon(
                 imageVector = Icons.Default.Phone,
-                contentDescription = "手机号登录",
+                contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "手机号登录")
@@ -512,7 +512,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
         ) {
             Icon(
                 imageVector = Icons.Default.Face,
-                contentDescription = "人脸登录",
+                contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "人脸登录")
@@ -524,7 +524,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
         ) {
             Icon(
                 imageVector = Icons.Default.PersonAdd,
-                contentDescription = "注册",
+                contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "注册")
@@ -536,7 +536,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
         ) {
             Icon(
                 imageVector = Icons.Default.MoreHoriz,
-                contentDescription = "更多登录选项",
+                contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "更多登录选项")
@@ -551,7 +551,7 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
             ) {
                 Icon(
                     imageVector = Icons.Default.AdminPanelSettings,
-                    contentDescription = "管理员登录",
+                    contentDescription = null,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "管理员登录")
