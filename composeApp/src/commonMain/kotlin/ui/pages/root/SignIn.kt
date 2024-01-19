@@ -246,8 +246,14 @@ fun SignInLayout(
         val additionalContentExpandedWidth = width * 2f / 9f
         val additionalContentWidth =
             additionalContentCompatMediumWidth + (additionalContentExpandedWidth - additionalContentCompatMediumWidth) * animationSecondStage - (additionalContentPaddingLeft + additionalContentPaddingRight)
+            (additionalContentCompatMediumWidth + (additionalContentExpandedWidth - additionalContentCompatMediumWidth) * animationSecondStage - (additionalContentPaddingLeft + additionalContentPaddingRight)).roundToInt()
 
-        val additionalContentConstraints = Constraints.fixedWidth(width = additionalContentWidth.roundToInt())
+        val additionalContentConstraints = Constraints(
+            minWidth = additionalContentWidth,
+            maxWidth = additionalContentWidth,
+            minHeight = 0,
+            maxHeight = safeHeight.roundToInt()
+        )
         val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
         // == Measure main ==
@@ -469,7 +475,7 @@ fun SignInMainLayout(
 
 @Composable
 fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.verticalScroll(state = rememberScrollState())) {
         FilledTonalButton(
             onClick = ::onGuestSignIn,
             modifier = Modifier.fillMaxWidth(),
