@@ -221,7 +221,7 @@ fun SignInLayout(
         // == Layout sizes ==
         val width = constraints.maxWidth
         val height = constraints.maxHeight
-        val safeHeight = height - contentPaddingVertical
+        val safeHeight = (height - contentPaddingVertical).coerceAtLeast(0f)
         windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(width.toDp(), height.toDp())).widthSizeClass
 
         // == Animation ==
@@ -245,8 +245,8 @@ fun SignInLayout(
         val additionalContentCompatMediumWidth = width.toFloat()
         val additionalContentExpandedWidth = width * 2f / 9f
         val additionalContentWidth =
-            additionalContentCompatMediumWidth + (additionalContentExpandedWidth - additionalContentCompatMediumWidth) * animationSecondStage - (additionalContentPaddingLeft + additionalContentPaddingRight)
             (additionalContentCompatMediumWidth + (additionalContentExpandedWidth - additionalContentCompatMediumWidth) * animationSecondStage - (additionalContentPaddingLeft + additionalContentPaddingRight)).roundToInt()
+                .coerceAtLeast(0)
 
         val additionalContentConstraints = Constraints(
             minWidth = additionalContentWidth,
@@ -276,7 +276,7 @@ fun SignInLayout(
         val mainMediumExpandedWidth = width * 7f / 9f
         val mainWidth = mainCompatWidth + (mainMediumExpandedWidth - mainCompatWidth) * animationSecondStage
 
-        val mainConstraints = Constraints.fixed(width = mainWidth.roundToInt(), height = height)
+        val mainConstraints = Constraints.fixed(width = mainWidth.roundToInt().coerceAtLeast(0), height = height)
         val mainPlaceable = mainMeasurable.measure(mainConstraints)
 
         val mainActualWidth = mainPlaceable.width
@@ -306,7 +306,11 @@ fun SignInLayout(
                 )
                 Spacer(modifier = Modifier.fillMaxSize().background(color = backgroundColor))
             }
-        }.first().measure(Constraints.fixed(width = width, height = (height - additionalContentY).roundToInt()))
+        }.first().measure(
+            Constraints.fixed(
+                width = width, height = (height - additionalContentY).roundToInt().coerceAtLeast(0)
+            )
+        )
 
         val additionalContentBackgroundY = additionalContentY + (height - additionalContentY) * animationSecondStage
 
@@ -432,10 +436,10 @@ fun SignInMainLayout(
             val requiredBoxHeight = max(boxHeight, requiredIntrinsicHeight)
 
             // == Measure header ==
-            val headerHeight = headerIntrinsicHeight.roundToInt()
+            val headerHeight = headerIntrinsicHeight.roundToInt().coerceAtLeast(0)
 
             val headerConstraints = Constraints(
-                maxWidth = headerWidth.roundToInt(), minHeight = headerHeight, maxHeight = headerHeight
+                maxWidth = headerWidth.roundToInt().coerceAtLeast(0), minHeight = headerHeight, maxHeight = headerHeight
             )
             val headerPlaceable = headerMeasurable.measure(headerConstraints)
 
@@ -451,8 +455,9 @@ fun SignInMainLayout(
             val mainContentHeight = mainContentIntrinsicHeight.roundToInt()
 
             val mainContentConstraintWidth = mainContentWidth.coerceAtMost(mainContentMaxWidth).roundToInt()
-            val mainContentConstraints =
-                Constraints.fixed(width = mainContentConstraintWidth, height = mainContentHeight)
+            val mainContentConstraints = Constraints.fixed(
+                width = mainContentConstraintWidth.coerceAtLeast(0), height = mainContentHeight.coerceAtLeast(0)
+            )
             val mainContentPlaceable = mainContentMeasurable.measure(mainContentConstraints)
 
             val mainContentActualHeight = mainContentPlaceable.height + mainContentPaddingVertical
