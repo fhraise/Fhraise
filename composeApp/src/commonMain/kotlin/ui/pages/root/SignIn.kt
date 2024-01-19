@@ -495,6 +495,18 @@ fun SignInComponent.State.SignIn.MoreMethods(modifier: Modifier = Modifier) {
             Text(text = "手机号登录")
         }
         FilledTonalButton(
+            onClick = ::onFaceSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Face,
+                contentDescription = "人脸登录",
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "人脸登录")
+        }
+        FilledTonalButton(
             onClick = ::onRegister,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,

@@ -60,6 +60,7 @@ interface SignInComponent {
 
             fun onGuestSignIn()
             fun onPhoneSignIn()
+            fun onFaceSignIn()
             fun onRegister()
             fun onAdminSignIn()
             val onDone: KeyboardActionScope.() -> Unit
@@ -110,6 +111,10 @@ class AppSignInComponent(
             }
 
             override fun onPhoneSignIn() {
+                // TODO
+            }
+
+            override fun onFaceSignIn() {
                 // TODO
             }
 
