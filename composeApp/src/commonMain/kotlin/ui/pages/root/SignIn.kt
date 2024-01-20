@@ -462,7 +462,7 @@ fun SignInMainLayout(
             val headerHeight = headerIntrinsicHeight.roundToInt().coerceAtLeast(0)
 
             val headerConstraints = Constraints(
-                maxWidth = headerWidth.roundToInt().coerceAtLeast(0), minHeight = headerHeight, maxHeight = headerHeight
+                maxWidth = headerWidth.roundToInt().coerceAtLeast(0), maxHeight = headerHeight
             )
             val headerPlaceable = headerMeasurable.measure(headerConstraints)
 
@@ -477,17 +477,19 @@ fun SignInMainLayout(
             val mainContentHeight = mainContentIntrinsicHeight.roundToInt()
 
             val mainContentConstraintWidth = mainContentWidth.coerceAtMost(mainContentMaxWidth).roundToInt()
-            val mainContentConstraints = Constraints.fixed(
-                width = mainContentConstraintWidth.coerceAtLeast(0), height = mainContentHeight.coerceAtLeast(0)
+            val mainContentConstraints = Constraints(
+                maxWidth = mainContentConstraintWidth.coerceAtLeast(0), maxHeight = mainContentHeight.coerceAtLeast(0)
             )
             val mainContentPlaceable = mainContentMeasurable.measure(mainContentConstraints)
+
+            val mainContentActualHeight = mainContentPlaceable.height + mainContentPaddingVertical
 
             val mainContentX =
                 headerActualWidth * animationFirstStage + (mainContentWidth - mainContentConstraintWidth) / 2f + mainContentPaddingLeft
 
             val mainContentCompatY =
-                (requiredBoxHeight - headerIntrinsicActualHeight - mainContentIntrinsicActualHeight) / 2f + headerIntrinsicActualHeight
-            val mainContentMediumExpandedY = (requiredBoxHeight - mainContentIntrinsicActualHeight) / 2f
+                (requiredBoxHeight - headerIntrinsicActualHeight - mainContentActualHeight) / 2f + headerIntrinsicActualHeight
+            val mainContentMediumExpandedY = (requiredBoxHeight - mainContentActualHeight) / 2f
             val mainContentY =
                 mainContentCompatY + (mainContentMediumExpandedY - mainContentCompatY) * animationFirstStage + mainContentPaddingTop
 
