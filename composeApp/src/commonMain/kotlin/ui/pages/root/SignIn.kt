@@ -18,10 +18,8 @@
 
 package ui.pages.root
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -60,7 +58,7 @@ import ui.modifiers.applyBrush
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun SignIn(component: SignInComponent) {
     val colorMode by component.colorMode
@@ -139,30 +137,45 @@ fun SignIn(component: SignInComponent) {
             },
             content = {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (state is SignInComponent.ComponentState.SignIn) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            state.PhoneNumber()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    if (state is SignInComponent.ComponentState.SignIn) {
+                        state.PhoneNumber()
+                        AnimatedVisibility(visible = state.canInputVerifyCode) {
                             Spacer(modifier = Modifier.height(16.dp))
                             state.VerifyCode()
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Button(
-                            onClick = state::submit,
-                            shape = MaterialTheme.shapes.large,
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = "登录",
-                            )
+                            Button(
+                                onClick = state::nextOrSubmit,
+                                shape = MaterialTheme.shapes.large,
+                            ) {
+                                AnimatedContent(
+                                    targetState = state.canInputVerifyCode,
+                                    transitionSpec = {
+                                        if (targetState) {
+                                            fadeIn() + slideInHorizontally { it } togetherWith fadeOut() + slideOutHorizontally { -it }
+                                        } else {
+                                            fadeIn() + slideInHorizontally { -it } togetherWith fadeOut() + slideOutHorizontally { it }
+                                        }
+                                    },
+                                ) { targetState ->
+                                    if (targetState) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowForward,
+                                            contentDescription = "登录",
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.Send,
+                                            contentDescription = "发送验证码",
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -617,6 +630,17 @@ fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.PhoneNumber() {
         onValueChange = ::phoneNumber::set,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         label = { Text(text = "手机号") },
+        prefix = { Text(text = "+86") },
+        supportingText = {
+            AnimatedVisibility(
+                visible = !phoneNumberVerified,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Text(text = "手机号格式不正确")
+            }
+        },
+        isError = !phoneNumberVerified,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next
         ),

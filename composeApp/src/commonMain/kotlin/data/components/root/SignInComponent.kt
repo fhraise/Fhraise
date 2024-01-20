@@ -56,8 +56,9 @@ interface SignInComponent {
 
         interface PhoneNumberVerifyCodeState : ComponentState, KeyboardNextState, KeyboardDoneState {
             var phoneNumber: String
-            var verifyCode: String
+            val phoneNumberVerified: Boolean
             var canInputVerifyCode: Boolean
+            var verifyCode: String
 
             fun switchCanInputVerifyCode() {
                 canInputVerifyCode = !canInputVerifyCode
@@ -83,6 +84,8 @@ interface SignInComponent {
             fun switchShowMoreSignInOptions() {
                 showMoreSignInOptions = !showMoreSignInOptions
             }
+
+            fun nextOrSubmit()
 
             val onGuestSignIn: () -> Unit
             val onUsernameSignIn: () -> Unit
@@ -132,9 +135,35 @@ class AppSignInComponent(
             override val onSignUp: () -> Unit,
             override val onAdminSignIn: () -> Unit,
         ) : ComponentState(), SignInComponent.ComponentState.SignIn {
-            override var phoneNumber by mutableStateOf(phoneNumber)
+            private val phoneNumberRegex =
+                Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
+
+            private var _phoneNumber by mutableStateOf(phoneNumber)
+            override var phoneNumber: String
+                get() = _phoneNumber
+                set(value) {
+                    canInputVerifyCode = false
+                    _phoneNumber = value
+                }
+
+            override val phoneNumberVerified: Boolean
+                get() = phoneNumberRegex.matches(phoneNumber)
+
+            private var _canInputVerifyCode by mutableStateOf(canInputVerifyCode)
+            override var canInputVerifyCode: Boolean
+                get() = _canInputVerifyCode
+                set(value) {
+                    if (!phoneNumberVerified) {
+                        _canInputVerifyCode = false
+                        return
+                    }
+                    _canInputVerifyCode = value
+                    if (!value) {
+                        verifyCode = ""
+                    }
+                }
+
             override var verifyCode by mutableStateOf(verifyCode)
-            override var canInputVerifyCode by mutableStateOf(canInputVerifyCode)
             override var showMoreSignInOptions by mutableStateOf(showMoreSignInOptions)
 
             override fun submit() {
@@ -142,7 +171,15 @@ class AppSignInComponent(
             }
 
             override val onNext: KeyboardActionScope.() -> Unit = {
-                // TODO
+                this@SignIn.canInputVerifyCode = true
+            }
+
+            override fun nextOrSubmit() {
+                if (canInputVerifyCode) {
+                    submit()
+                } else {
+                    canInputVerifyCode = true
+                }
             }
 
             override val onDone: KeyboardActionScope.() -> Unit = {
