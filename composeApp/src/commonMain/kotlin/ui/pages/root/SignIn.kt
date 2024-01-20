@@ -451,12 +451,6 @@ fun SignInMainLayout(
             val mainContentIntrinsicHeight =
                 mainContentMeasurable.minIntrinsicHeight(mainContentWidth.roundToInt()).toFloat()
             val headerIntrinsicActualHeight = headerIntrinsicHeight + headerPaddingVertical
-            val mainContentIntrinsicActualHeight = mainContentIntrinsicHeight + mainContentPaddingVertical
-            val requiredColumnIntrinsicHeight = headerIntrinsicActualHeight + mainContentIntrinsicActualHeight
-            val requiredRowIntrinsicHeight = max(headerIntrinsicActualHeight, mainContentIntrinsicActualHeight)
-            val requiredIntrinsicHeight =
-                requiredColumnIntrinsicHeight + (requiredRowIntrinsicHeight - requiredColumnIntrinsicHeight) * animationFirstStage
-            val requiredBoxHeight = max(boxHeight, requiredIntrinsicHeight)
 
             // == Measure header ==
             val headerHeight = headerIntrinsicHeight.roundToInt().coerceAtLeast(0)
@@ -486,6 +480,11 @@ fun SignInMainLayout(
 
             val mainContentX =
                 headerActualWidth * animationFirstStage + (mainContentWidth - mainContentConstraintWidth) / 2f + mainContentPaddingLeft
+
+            val requiredColumnHeight = headerIntrinsicActualHeight + mainContentActualHeight
+            val requiredRowHeight = max(headerIntrinsicActualHeight, mainContentActualHeight)
+            val requiredHeight = requiredColumnHeight + (requiredRowHeight - requiredColumnHeight) * animationFirstStage
+            val requiredBoxHeight = max(boxHeight, requiredHeight)
 
             val mainContentCompatY =
                 (requiredBoxHeight - headerIntrinsicActualHeight - mainContentActualHeight) / 2f + headerIntrinsicActualHeight
