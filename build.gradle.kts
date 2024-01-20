@@ -267,7 +267,9 @@ tasks.register("ciVersioning") {
     dependsOn("updateVersion")
 
     doLast {
-        file(property("output").toString()).writeText("version=${version.substringBefore('+')}")
+        val outputDir = file(project.property("output").toString())
+        outputDir.writeText("version=${version.substringBefore('+')}")
+        logger.lifecycle("Wrote version to ${outputDir.absolutePath}")
     }
 }
 
