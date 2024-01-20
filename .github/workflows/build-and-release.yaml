@@ -23,7 +23,7 @@ jobs:
             os: windows-latest
 
     name: Build and Release ${{ matrix.platform }} on ${{ matrix.os }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -56,6 +56,7 @@ jobs:
 
       - name: Build ${{ matrix.platform }} app
         id: build
+        shell: bash
         run: |
           ./gradlew ciVersioning -Poutput=$GITHUB_OUTPUT
           ./gradlew ciReleaseApp
