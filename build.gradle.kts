@@ -86,7 +86,7 @@ tasks.register("updateCommitSha") {
     doLast {
         val stream = ByteArrayOutputStream()
         exec {
-            commandLine("git", "rev-parse", "--short")
+            commandLine("git", "rev-parse", "--short", "HEAD")
             standardOutput = stream
         }
         commitSha = stream.toString().trim()
