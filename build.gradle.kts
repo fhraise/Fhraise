@@ -339,12 +339,14 @@ tasks.register("cleanReleases") {
     description = "Clean the releases"
 
     doLast {
-        file("android".outputDirectory).deleteRecursively()
-        file("desktop".outputDirectory).deleteRecursively()
-        file("linux-tar".outputDirectory).deleteRecursively()
-        file("windows-zip".outputDirectory).deleteRecursively()
-        file("web-tar".outputDirectory).deleteRecursively()
+        file(layout.buildDirectory.dir("outputs/binaries")).deleteRecursively()
         file(layout.buildDirectory.dir("assets")).deleteRecursively()
+    }
+}
+
+tasks.configureEach {
+    if (name == "clean") {
+        dependsOn("cleanReleases")
     }
 }
 
