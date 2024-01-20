@@ -361,7 +361,7 @@ tasks.register("runWebApp") {
     group = "project build"
     description = "Run the web app"
 
-    dependsOn("versioning", "composeAppwasmJsBrowserDevelopmentRun")
+    dependsOn("versioning", "composeApp:wasmJsBrowserDevelopmentRun")
 }
 
 tasks.register("installReleaseAndroidApp") {
