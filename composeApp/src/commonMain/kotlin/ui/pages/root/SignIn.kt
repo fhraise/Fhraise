@@ -55,6 +55,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ui.WindowSizeClass
 import ui.WindowWidthSizeClass
+import ui.composables.VerticalScrollbar
 import ui.modifiers.applyBrush
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -197,6 +198,8 @@ fun SignInLayout(
         targetValue = if (animation == null) 0f else 1f, animationSpec = spring(stiffness = Spring.StiffnessLow)
     )
 
+    val scrollState = rememberScrollState()
+
     SubcomposeLayout(
         modifier = Modifier.alpha(firstPrintAnimation).offset(y = 32.dp * (1f - firstPrintAnimation)).then(modifier)
     ) { constraints ->
@@ -248,16 +251,19 @@ fun SignInLayout(
         val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
         // == Measure main ==
+        val mainBottomSpace =
+            ((additionalContentPlaceable.height + additionalContentPaddingBottom) * animationSecondStageReversed)
+
         val mainMeasurable = subcompose("main") {
             SignInMainLayout(
                 animation = animation,
                 animationSecondStage = animationSecondStage,
-                scrollState = rememberScrollState(),
+                scrollState = scrollState,
                 contentPaddingLeft = contentPaddingLeft,
                 contentPaddingTop = contentPaddingTop,
                 contentPaddingRight = contentPaddingRight,
                 contentPaddingBottom = contentPaddingBottom,
-                bottomSpace = ((additionalContentPlaceable.height + additionalContentPaddingBottom) * animationSecondStageReversed).roundToInt(),
+                bottomSpace = mainBottomSpace.roundToInt(),
                 header = header,
                 mainContent = content,
             )
@@ -265,10 +271,23 @@ fun SignInLayout(
 
         val mainCompatWidth = width.toFloat()
         val mainMediumExpandedWidth = width * 7f / 9f
-        val mainWidth = mainCompatWidth + (mainMediumExpandedWidth - mainCompatWidth) * animationSecondStage
+        val mainWidth =
+            (mainCompatWidth + (mainMediumExpandedWidth - mainCompatWidth) * animationSecondStage).coerceAtLeast(0f)
+                .roundToInt()
 
-        val mainConstraints = Constraints.fixed(width = mainWidth.roundToInt().coerceAtLeast(0), height = height)
+        val mainConstraints = Constraints.fixed(width = mainWidth, height = height)
         val mainPlaceable = mainMeasurable.measure(mainConstraints)
+
+        // == Scrollbar ==
+        val scrollbarHeight = (safeHeight - mainBottomSpace).roundToInt()
+
+        val scrollbarPlaceable = subcompose("scrollBar") {
+            VerticalScrollbar(scrollState = scrollState)
+        }.firstOrNull()
+            ?.measure(Constraints(maxWidth = mainWidth, minHeight = scrollbarHeight, maxHeight = scrollbarHeight))
+
+        val scrollbarX = scrollbarPlaceable?.let { mainWidth - scrollbarPlaceable.width }
+        val scrollbarY = contentPaddingTop.roundToInt()
 
         // == Place ==
         val additionalContentCompatMediumX = 0f
@@ -305,6 +324,7 @@ fun SignInLayout(
 
         layout(width, height) {
             mainPlaceable.placeRelative(0, 0)
+            scrollbarX?.let { scrollbarPlaceable.placeRelative(scrollbarX, scrollbarY) }
             additionalContentBackgroundPlaceable.placeRelative(0, additionalContentBackgroundY.roundToInt())
             additionalContentPlaceable.placeRelative(additionalContentX.roundToInt(), additionalContentY.roundToInt())
         }
