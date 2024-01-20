@@ -16,6 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.gradle.internal.os.OperatingSystem
 import java.io.ByteArrayOutputStream
 import java.util.*
 
@@ -54,7 +55,12 @@ val buildNumberProperties = Properties().apply {
 
 var buildNumber: String by buildNumberProperties
 
-fun String.getOutputDirectory() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
+val String.outputDirectory
+    get() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
+
+val isLinux = OperatingSystem.current().isLinux
+val isWindows = OperatingSystem.current().isWindows
+val arch: String = System.getProperty("os.arch")
 
 tasks.register("updateDevVer") {
     group = "versioning"
@@ -149,7 +155,7 @@ tasks.register("releaseAndroidApp") {
 
     doLast {
         val apkDir = file(project(":composeApp").layout.buildDirectory.dir("outputs/apk/release"))
-        val outputDir = file("android".getOutputDirectory())
+        val outputDir = file("android".outputDirectory)
         apkDir.copyRecursively(outputDir, overwrite = true)
         apkDir.deleteRecursively()
         logger.lifecycle("output directory: ${outputDir.absolutePath}")
@@ -160,18 +166,72 @@ tasks.register("releaseLinuxApp") {
     group = "project build"
     description = "Build the Linux release executable"
 
-    onlyIf { System.getProperty("os.name").contains("nux") }
+    if (!isLinux) {
+        enabled = false
+    }
 
     dependsOn("composeApp:packageReleaseAppImage", "composeApp:packageReleaseDeb", "composeApp:packageReleaseRpm")
+}
+
+tasks.register<Tar>("releaseTarLinuxApp") {
+    group = "project build"
+    description = "Build the Linux release tar"
+
+    if (!isLinux) {
+        enabled = false
+    }
+
+    dependsOn("releaseLinuxApp")
+
+    archiveBaseName = "fhraise"
+    archiveAppendix = "linux"
+    archiveVersion = "$version.$buildNumber"
+    archiveClassifier = arch
+    archiveExtension = "tar"
+    compression = Compression.GZIP
+    destinationDirectory = file("linux-tar".outputDirectory)
+    from(file("desktop/main-release/app/Fhraise".outputDirectory))
 }
 
 tasks.register("releaseWindowsApp") {
     group = "project build"
     description = "Build the Windows release executable"
 
-    onlyIf { System.getProperty("os.name").contains("win") }
+    if (!isWindows) {
+        enabled = false
+    }
 
-    dependsOn("composeApp:packageReleaseMsi")
+    dependsOn("composeApp:packageReleaseAppImage", "composeApp:packageReleaseMsi")
+}
+
+tasks.register<Zip>("releaseZipWindowsApp") {
+    group = "project build"
+    description = "Build the Windows release zip"
+
+    if (!isWindows) {
+        enabled = false
+    }
+
+    dependsOn("releaseWindowsApp")
+
+    archiveBaseName = "fhraise"
+    archiveAppendix = "windows"
+    archiveVersion = "$version.$buildNumber"
+    archiveClassifier = arch
+    archiveExtension = "zip"
+    destinationDirectory = file("windows-zip".outputDirectory)
+    from(file("desktop/main-release/app/Fhraise".outputDirectory))
+}
+
+tasks.register("releaseArchiveDesktopApp") {
+    group = "project build"
+    description = "Build the desktop release archive"
+
+    if (isLinux) {
+        dependsOn("releaseTarLinuxApp")
+    } else if (isWindows) {
+        dependsOn("releaseZipWindowsApp")
+    }
 }
 
 tasks.register("releaseWebApp") {
@@ -181,7 +241,70 @@ tasks.register("releaseWebApp") {
     dependsOn("composeApp:wasmJsBrowserProductionWebpack")
 
     doLast {
-        logger.lifecycle("output directory: ${file("web".getOutputDirectory()).absolutePath}")
+        logger.lifecycle("output directory: ${file("web".outputDirectory).absolutePath}")
+    }
+}
+
+tasks.register<Tar>("releaseTarWebApp") {
+    group = "project build"
+    description = "Build the Web release tar"
+
+    dependsOn("releaseWebApp")
+
+    archiveBaseName = "fhraise"
+    archiveAppendix = "web"
+    archiveVersion = "$version.$buildNumber"
+    archiveExtension = "tar"
+    compression = Compression.GZIP
+    destinationDirectory = file("web-tar".outputDirectory)
+    from(file("web".outputDirectory))
+}
+
+tasks.register("ciVersioning") {
+    group = "ci"
+    description = "Update the version and output it"
+
+    dependsOn("versioning")
+
+    doLast {
+        logger.lifecycle("::set-output name=version::${version.substringBefore('+')}")
+    }
+}
+
+tasks.register("ciReleaseLinuxApp") {
+    group = "ci"
+    description = "Build on the linux platform"
+
+    dependsOn("releaseAndroidApp", "releaseTarLinuxApp", "releaseTarWebApp")
+
+    doLast {
+        val assetsDir = file(layout.buildDirectory.dir("assets"))
+        file("android".outputDirectory).resolve("composeApp-release.apk").copyTo(
+            assetsDir.resolve("fhraise-android-$version.$buildNumber.apk"), overwrite = true
+        )
+        file("desktop/main-release/deb".outputDirectory).listFiles()?.first()?.copyTo(
+            assetsDir.resolve("fhraise-linux-$version.$buildNumber-$arch.deb"), overwrite = true
+        )
+        file("desktop/main-release/rpm".outputDirectory).listFiles()?.first()?.copyTo(
+            assetsDir.resolve("fhraise-linux-$version.$buildNumber-$arch.rpm"), overwrite = true
+        )
+        file("linux-tar".outputDirectory).copyRecursively(assetsDir, overwrite = true)
+        file("web-tar".outputDirectory).copyRecursively(assetsDir, overwrite = true)
+    }
+}
+
+tasks.register("ciReleaseWindowsApp") {
+    group = "ci"
+    description = "Build on the windows platform"
+
+    dependsOn("releaseZipWindowsApp")
+
+    doLast {
+        val assetsDir = file(layout.buildDirectory.dir("assets"))
+        file("windows-zip".outputDirectory).copyRecursively(assetsDir, overwrite = true)
+        file("desktop/main-release/msi".outputDirectory).listFiles()?.first()?.copyTo(
+            assetsDir.resolve("fhraise-windows-$version.$buildNumber-$arch.msi"), overwrite = true
+        )
     }
 }
 
@@ -195,6 +318,20 @@ tasks.register("release") {
 project(":composeApp").tasks.configureEach {
     if (name == "assembleDebug") {
         dependsOn(":versioning")
+    }
+}
+
+tasks.register("cleanReleases") {
+    group = "project build"
+    description = "Clean the releases"
+
+    doLast {
+        file("android".outputDirectory).deleteRecursively()
+        file("desktop".outputDirectory).deleteRecursively()
+        file("linux-tar".outputDirectory).deleteRecursively()
+        file("windows-zip".outputDirectory).deleteRecursively()
+        file("web-tar".outputDirectory).deleteRecursively()
+        file(layout.buildDirectory.dir("assets")).deleteRecursively()
     }
 }
 
@@ -219,7 +356,7 @@ tasks.register("installReleaseAndroidApp") {
     dependsOn("releaseAndroidApp")
 
     doLast {
-        val apk = file("android".getOutputDirectory()).resolve("composeApp-release.apk")
+        val apk = file("android".outputDirectory).resolve("composeApp-release.apk")
         val cmd = mutableListOf("adb")
         if (hasProperty("device")) {
             cmd.add("-s")

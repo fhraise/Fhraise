@@ -43,10 +43,17 @@ val versionProperties = Properties().apply {
 }
 val version: String = versionProperties.getProperty("version", "0.1.0")
 
-val buildNumberProperties = Properties().apply { load(rootProject.file("build-number.properties").inputStream()) }
-val buildNumber: String by buildNumberProperties
+val buildNumberProperties = Properties().apply {
+    with(rootProject.file("build-number.properties")) {
+        if (exists()) {
+            load(inputStream())
+        }
+    }
+}
+val buildNumber: String = buildNumberProperties.getProperty("buildNumber", "1")
 
-fun String.getOutputDirectory() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
+val String.outputDirectory
+    get() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
 
 kotlin {
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
@@ -56,7 +63,7 @@ kotlin {
                 outputFileName = "fhraise.js"
             }
             @OptIn(ExperimentalDistributionDsl::class) distribution {
-                outputDirectory = "web".getOutputDirectory()
+                outputDirectory = "web".outputDirectory
             }
         }
         binaries.executable()
@@ -184,16 +191,15 @@ compose.desktop {
             } HSAS Foodies. All Rights Reserved."
             vendor = "HSAS Foodies"
             licenseFile = rootProject.file("LICENSE")
+            outputBaseDir = "desktop".outputDirectory
 
             linux {
-                outputBaseDir = "linux".getOutputDirectory()
                 debMaintainer = "xfqwdsj@qq.com"
                 menuGroup = "Utility"
                 rpmLicenseType = "GPL-3.0-or-later"
             }
 
             windows {
-                outputBaseDir = "windows".getOutputDirectory()
                 packageVersion = version.split("+").first()
                 dirChooser = true
                 menuGroup = "HSAS Foodies"
