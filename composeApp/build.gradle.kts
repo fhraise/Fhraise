@@ -16,6 +16,8 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import com.android.build.gradle.internal.lint.AndroidLintAnalysisTask
+import com.android.build.gradle.internal.lint.LintModelWriterTask
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
@@ -221,4 +223,13 @@ compose.desktop {
 
 compose.experimental {
     web.application {}
+}
+
+// TODO: Workaround for https://github.com/JetBrains/compose-multiplatform/issues/4085, remove when fixed
+tasks.withType<LintModelWriterTask> {
+    dependsOn("copyFontsToAndroidAssets")
+}
+
+tasks.withType<AndroidLintAnalysisTask> {
+    dependsOn("copyFontsToAndroidAssets")
 }
