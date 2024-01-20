@@ -58,7 +58,7 @@ jobs:
         id: build
         shell: bash
         run: |
-          ./gradlew ciVersioning -Poutput=$GITHUB_OUTPUT
+          ./gradlew ciVersioning
           ./gradlew ciReleaseApp
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
