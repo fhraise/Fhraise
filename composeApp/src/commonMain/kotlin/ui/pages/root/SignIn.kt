@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import data.components.RootComponent
 import data.components.root.SignInComponent
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ui.WindowSizeClass
@@ -78,7 +79,7 @@ fun SignIn(component: SignInComponent) {
                                 listOf(Color.Magenta.copy(alpha = 0.8f), Color.Cyan.copy(alpha = 0.8f))
                             )
                         ),
-                        painter = painterResource("drawable/fhraise_logo.xml"),
+                        painter = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
                         contentDescription = "Fhraise Logo",
                     )
                 },
