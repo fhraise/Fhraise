@@ -86,7 +86,7 @@ tasks.register("updateCommitSha") {
     doLast {
         val stream = ByteArrayOutputStream()
         exec {
-            commandLine("git", "rev-parse", "--short", "main")
+            commandLine("git", "rev-parse", "--short")
             standardOutput = stream
         }
         commitSha = stream.toString().trim()
@@ -267,7 +267,7 @@ tasks.register("ciVersioning") {
     dependsOn("updateVersion")
 
     doLast {
-        val outputDir = file(project.property("output").toString())
+        val outputDir = file(System.getenv("GITHUB_OUTPUT"))
         outputDir.writeText("version=${version.substringBefore('+')}")
         logger.lifecycle("Wrote version to ${outputDir.absolutePath}")
     }
