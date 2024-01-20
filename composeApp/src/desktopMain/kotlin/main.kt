@@ -17,6 +17,8 @@
  */
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -26,10 +28,13 @@ import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import compositionLocals.LocalWindowSize
 import data.components.AppRootComponent
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 import ui.pages.Root
 import javax.swing.SwingUtilities
 
-@OptIn(ExperimentalDecomposeApi::class)
+@OptIn(ExperimentalDecomposeApi::class, ExperimentalResourceApi::class)
 fun main() {
     val lifecycleRegistry = LifecycleRegistry()
 
@@ -40,11 +45,16 @@ fun main() {
     }
 
     application {
-        val windowState = rememberWindowState()
+        val windowState = rememberWindowState(size = DpSize(width = 1000.dp, height = 800.dp))
 
         LifecycleController(lifecycleRegistry, windowState)
 
-        Window(onCloseRequest = ::exitApplication, state = windowState, title = "Fhraise") {
+        Window(
+            onCloseRequest = ::exitApplication,
+            state = windowState,
+            title = "Fhraise",
+            icon = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
+        ) {
             CompositionLocalProvider(LocalWindowSize provides windowState.size) {
                 Root(component = rootComponent)
             }
