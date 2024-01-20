@@ -279,7 +279,7 @@ tasks.register("ciReleaseLinuxApp") {
 
     doLast {
         val assetsDir = file(layout.buildDirectory.dir("assets"))
-        file("android".outputDirectory).resolve("composeApp-release.apk").copyTo(
+        file("android".outputDirectory).listFiles()?.first { it.name.endsWith(".apk") }?.copyTo(
             assetsDir.resolve("fhraise-android-$version.$buildNumber.apk"), overwrite = true
         )
         file("desktop/main-release/deb".outputDirectory).listFiles()?.first()?.copyTo(
@@ -367,7 +367,7 @@ tasks.register("installReleaseAndroidApp") {
     dependsOn("releaseAndroidApp")
 
     doLast {
-        val apk = file("android".outputDirectory).resolve("composeApp-release.apk")
+        val apk = file("android".outputDirectory).listFiles()!!.first { it.name.endsWith(".apk") }!!
         val cmd = mutableListOf("adb")
         if (hasProperty("device")) {
             cmd.add("-s")
