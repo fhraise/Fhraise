@@ -62,18 +62,6 @@ jobs:
           ./gradlew ciReleaseApp
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        name: Create tag
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'refs/tags/v${{ steps.build.outputs.version }}',
-              sha: context.sha
-            })
-
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Release
         uses: svenstaro/upload-release-action@v2
         with:
