@@ -308,6 +308,17 @@ tasks.register("ciReleaseWindowsApp") {
     }
 }
 
+tasks.register("ciReleaseApp") {
+    group = "ci"
+    description = "Build the release app"
+
+    if (isLinux) {
+        dependsOn("ciReleaseLinuxApp")
+    } else if (isWindows) {
+        dependsOn("ciReleaseWindowsApp")
+    }
+}
+
 tasks.register("release") {
     group = "project build"
     description = "Create a new release"
