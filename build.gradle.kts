@@ -264,7 +264,7 @@ tasks.register("ciVersioning") {
     group = "ci"
     description = "Update the version and output it"
 
-    dependsOn("versioning")
+    dependsOn("updateVersion")
 
     doLast {
         logger.lifecycle("::set-output name=version::${version.substringBefore('+')}")
