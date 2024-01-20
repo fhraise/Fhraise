@@ -16,6 +16,9 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import java.io.ByteArrayOutputStream
+import java.util.*
+
 plugins {
     // this is necessary to avoid the plugins to be loaded multiple times
     // in each subproject's classloader
@@ -24,4 +27,208 @@ plugins {
     alias(libs.plugins.jetbrainsCompose) apply false
     alias(libs.plugins.kotlinJvm) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
+}
+
+val versionPropertiesFile = file("version.properties")
+val versionProperties = Properties().apply {
+    with(versionPropertiesFile) {
+        if (exists()) {
+            load(inputStream())
+        }
+    }
+}
+
+var devVer: String by versionProperties
+var commitSha: String by versionProperties
+var reversion: String by versionProperties
+var version: String by versionProperties
+
+val buildNumberPropertiesFile = file("build-number.properties")
+val buildNumberProperties = Properties().apply {
+    with(buildNumberPropertiesFile) {
+        if (exists()) {
+            load(inputStream())
+        }
+    }
+}
+
+var buildNumber: String by buildNumberProperties
+
+fun String.getOutputDirectory() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
+
+tasks.register("updateDevVer") {
+    group = "versioning"
+    description = "Update the dev version"
+
+    doLast {
+        val stream = ByteArrayOutputStream()
+        val result = exec {
+            commandLine("git", "describe", "--tags", "--abbrev=0", "--match=dev[0-9]*\\.[0-9]*")
+            standardOutput = stream
+            isIgnoreExitValue = true
+        }
+        devVer = if (result.exitValue == 0) stream.toString().trim().substringAfter("dev") else "0.0"
+        versionProperties.store(versionPropertiesFile.outputStream(), null)
+        logger.lifecycle("devVer: $devVer")
+    }
+}
+
+tasks.register("updateCommitSha") {
+    group = "versioning"
+    description = "Update the commit sha of the main branch"
+
+    doLast {
+        val stream = ByteArrayOutputStream()
+        exec {
+            commandLine("git", "rev-parse", "--short", "main")
+            standardOutput = stream
+        }
+        commitSha = stream.toString().trim()
+        versionProperties.store(versionPropertiesFile.outputStream(), null)
+        logger.lifecycle("commitSha: $commitSha")
+    }
+}
+
+tasks.register("updateReversion") {
+    group = "versioning"
+    description = "Update the reversion"
+
+    doLast {
+        val stream = ByteArrayOutputStream()
+        val result = exec {
+            commandLine("git", "rev-list", "--count", "dev$devVer..main")
+            standardOutput = stream
+            isIgnoreExitValue = true
+        }
+        reversion = if (result.exitValue == 0) stream.toString().trim() else "0"
+        versionProperties.store(versionPropertiesFile.outputStream(), null)
+        logger.lifecycle("reversion: $reversion")
+    }
+}
+
+tasks.register("updateVersion") {
+    group = "versioning"
+    description = "Update the version"
+
+    dependsOn("updateDevVer", "updateCommitSha", "updateReversion")
+
+    doLast {
+        version = "$devVer.$reversion+$commitSha"
+        versionProperties.store(versionPropertiesFile.outputStream(), null)
+        logger.lifecycle("version: $version")
+    }
+}
+
+tasks.register("increaseBuildNumber") {
+    group = "versioning"
+    description = "Increase the build number"
+
+    doLast {
+        buildNumber = try {
+            (buildNumber.toInt() + 1).toString()
+        } catch (e: Throwable) {
+            "1"
+        }
+        buildNumberProperties.store(buildNumberPropertiesFile.outputStream(), null)
+        logger.lifecycle("buildNumber: $buildNumber")
+    }
+}
+
+tasks.register("versioning") {
+    group = "versioning"
+    description = "Update the version and increase the build number"
+
+    dependsOn("updateVersion", "increaseBuildNumber")
+}
+
+tasks.register("releaseAndroidApp") {
+    group = "project build"
+    description = "Build the Android release APK"
+
+    dependsOn("composeApp:assembleRelease")
+
+    doLast {
+        val apkDir = file(project(":composeApp").layout.buildDirectory.dir("outputs/apk/release"))
+        val outputDir = file("android".getOutputDirectory())
+        apkDir.copyRecursively(outputDir, overwrite = true)
+        apkDir.deleteRecursively()
+        logger.lifecycle("output directory: ${outputDir.absolutePath}")
+    }
+}
+
+tasks.register("releaseLinuxApp") {
+    group = "project build"
+    description = "Build the Linux release executable"
+
+    onlyIf { System.getProperty("os.name").contains("nux") }
+
+    dependsOn("composeApp:packageReleaseAppImage", "composeApp:packageReleaseDeb", "composeApp:packageReleaseRpm")
+}
+
+tasks.register("releaseWindowsApp") {
+    group = "project build"
+    description = "Build the Windows release executable"
+
+    onlyIf { System.getProperty("os.name").contains("win") }
+
+    dependsOn("composeApp:packageReleaseMsi")
+}
+
+tasks.register("releaseWebApp") {
+    group = "project build"
+    description = "Build the Web release"
+
+    dependsOn("composeApp:wasmJsBrowserProductionWebpack")
+
+    doLast {
+        logger.lifecycle("output directory: ${file("web".getOutputDirectory()).absolutePath}")
+    }
+}
+
+tasks.register("release") {
+    group = "project build"
+    description = "Create a new release"
+
+    dependsOn("versioning", "releaseAndroidApp", "releaseLinuxApp", "releaseWindowsApp", "releaseWebApp")
+}
+
+project(":composeApp").tasks.configureEach {
+    if (name == "assembleDebug") {
+        dependsOn(":versioning")
+    }
+}
+
+tasks.register("runDesktopApp") {
+    group = "project build"
+    description = "Run the desktop app"
+
+    dependsOn("versioning", "composeApp:run")
+}
+
+tasks.register("runWebApp") {
+    group = "project build"
+    description = "Run the web app"
+
+    dependsOn("versioning", "composeAppwasmJsBrowserDevelopmentRun")
+}
+
+tasks.register("installReleaseAndroidApp") {
+    group = "project build"
+    description = "Install the Android release APK"
+
+    dependsOn("releaseAndroidApp")
+
+    doLast {
+        val apk = file("android".getOutputDirectory()).resolve("composeApp-release.apk")
+        val cmd = mutableListOf("adb")
+        if (hasProperty("device")) {
+            cmd.add("-s")
+            cmd.add(property("device").toString())
+        }
+        cmd.addAll(listOf("install", "-r", apk.absolutePath))
+
+        exec {
+            commandLine(cmd)
+        }
+    }
 }

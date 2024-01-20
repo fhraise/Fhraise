@@ -16,14 +16,25 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import java.util.*
+
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
     application
 }
 
+val versionProperties = Properties().apply {
+    with(rootProject.file("version.properties")) {
+        if (exists()) {
+            load(inputStream())
+        }
+    }
+}
+val version: String = versionProperties.getProperty("version", "0.1.0")
+
 group = "xyz.xfqlittlefan.fhraise"
-version = "1.0.0"
+project.version = version
 application {
     mainClass.set("xyz.xfqlittlefan.fhraise.ApplicationKt")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=${extra["development"] ?: "false"}")

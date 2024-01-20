@@ -18,7 +18,9 @@
 
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import java.time.Year
 import java.util.*
 
 plugins {
@@ -28,12 +30,33 @@ plugins {
     alias(libs.plugins.jetbrainsCompose)
 }
 
+val androidCompileSdk: String by project
+val androidMinSdk: String by project
+val androidTargetSdk: String by project
+
+val versionProperties = Properties().apply {
+    with(rootProject.file("version.properties")) {
+        if (exists()) {
+            load(inputStream())
+        }
+    }
+}
+val version: String = versionProperties.getProperty("version", "0.1.0")
+
+val buildNumberProperties = Properties().apply { load(rootProject.file("build-number.properties").inputStream()) }
+val buildNumber: String by buildNumberProperties
+
+fun String.getOutputDirectory() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
+
 kotlin {
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
         moduleName = "composeApp"
         browser {
             commonWebpackConfig {
-                outputFileName = "composeApp.js"
+                outputFileName = "fhraise.js"
+            }
+            @OptIn(ExperimentalDistributionDsl::class) distribution {
+                outputDirectory = "web".getOutputDirectory()
             }
         }
         binaries.executable()
@@ -84,7 +107,7 @@ kotlin {
 
 android {
     namespace = "xyz.xfqlittlefan.fhraise"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = androidCompileSdk.toInt()
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
@@ -92,10 +115,10 @@ android {
 
     defaultConfig {
         applicationId = "xyz.xfqlittlefan.fhraise"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        minSdk = androidMinSdk.toInt()
+        targetSdk = androidTargetSdk.toInt()
+        versionCode = buildNumber.toInt()
+        versionName = version
     }
     packaging {
         resources {
@@ -126,7 +149,7 @@ android {
             isShrinkResources = true
 
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"), "compose-android.pro"
             )
 
             try {
@@ -150,9 +173,32 @@ compose.desktop {
         mainClass = "MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "xyz.xfqlittlefan.fhraise"
-            packageVersion = "1.0.0"
+            targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Msi)
+            packageName = "Fhraise"
+            packageVersion = version
+            description = "Fhraise"
+            copyright = "© 2024${
+                Year.now().value.let {
+                    if (it > 2024) "-$it" else ""
+                }
+            } HSAS Foodies. All Rights Reserved."
+            vendor = "HSAS Foodies"
+            licenseFile = rootProject.file("LICENSE")
+
+            linux {
+                outputBaseDir = "linux".getOutputDirectory()
+                debMaintainer = "xfqwdsj@qq.com"
+                menuGroup = "Utility"
+                rpmLicenseType = "GPL-3.0-or-later"
+            }
+
+            windows {
+                outputBaseDir = "windows".getOutputDirectory()
+                packageVersion = version.split("+").first()
+                dirChooser = true
+                menuGroup = "HSAS Foodies"
+                upgradeUuid = "e72b5bab-6eb1-41a6-b9c4-d755d92103ae"
+            }
         }
 
         buildTypes {

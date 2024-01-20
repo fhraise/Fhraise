@@ -45,10 +45,13 @@ kotlin {
     }
 }
 
+val androidCompileSdk: String by project
+val androidMinSdk: String by project
+
 android {
     namespace = "xyz.xfqlittlefan.fhraise.shared"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = androidCompileSdk.toInt()
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        minSdk = androidMinSdk.toInt()
     }
 }
