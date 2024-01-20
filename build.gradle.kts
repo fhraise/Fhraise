@@ -267,7 +267,7 @@ tasks.register("ciVersioning") {
     dependsOn("updateVersion")
 
     doLast {
-        logger.lifecycle("::set-output name=version::${version.substringBefore('+')}")
+        file(property("output").toString()).writeText("version=${version.substringBefore('+')}")
     }
 }
 

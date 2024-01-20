@@ -19,15 +19,8 @@ jobs:
         include:
           - platform: Android, Linux, Web
             os: ubuntu-latest
-            command: |
-              chmod +x gradlew
-              ./gradlew ciVersioning
-              ./gradlew ciReleaseLinuxApp
           - platform: Windows
             os: windows-latest
-            command: |
-              gradlew ciVersioning
-              gradlew ciReleaseWindowsApp
 
     name: Build and Release ${{ matrix.platform }} on ${{ matrix.os }}
     runs-on: ubuntu-latest
@@ -51,12 +44,6 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - if: matrix.os == 'ubuntu-latest'
-        name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg rpm
-
-      - if: matrix.os == 'ubuntu-latest'
         name: Configure Android signing
         shell: bash
         run: |
@@ -69,7 +56,8 @@ jobs:
       - name: Build ${{ matrix.platform }} app
         id: build
         run: |
-          ${{ matrix.command }}
+          ./gradlew ciVersioning -Poutput=$GITHUB_OUTPUT
+          ./gradlew ciReleaseApp
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Create tag
@@ -87,4 +75,6 @@ jobs:
         name: Release
         uses: svenstaro/upload-release-action@v2
         with:
+          tag: refs/tags/v${{ steps.build.outputs.version }}
           file: build/assets/*
+          file_glob: true
