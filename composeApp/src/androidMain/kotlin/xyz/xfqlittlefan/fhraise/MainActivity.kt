@@ -18,7 +18,9 @@
 
 package xyz.xfqlittlefan.fhraise
 
+import Notification
 import Permission
+import android.app.NotificationManager
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
@@ -32,6 +34,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
@@ -67,7 +70,7 @@ class MainActivity : ComponentActivity() {
             val verifyCodeChannelId = "verifyCode"
             val verifyCodeChannelName = "模拟验证码"
             val verifyCodeChannelDescription = "模拟验证码的通知"
-            val verifyCodeChannelImportance = android.app.NotificationManager.IMPORTANCE_HIGH
+            val verifyCodeChannelImportance = NotificationManager.IMPORTANCE_HIGH
             val verifyCodeChannel = android.app.NotificationChannel(
                 verifyCodeChannelId, verifyCodeChannelName, verifyCodeChannelImportance
             ).apply {
@@ -85,13 +88,13 @@ class MainActivity : ComponentActivity() {
             }
 
         Permission.checkNotificationPermissionGranted = {
-            ContextCompat.checkSelfPermission(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || ContextCompat.checkSelfPermission(
                 this, android.Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         }
 
         Permission.requestNotificationPermission = {
-            if (Permission.checkNotificationPermissionGranted() != true) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && Permission.checkNotificationPermissionGranted() != true) {
                 suspendCoroutine {
                     notificationPermissionRequestContinuation = it
                     notificationPermissionRequestLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -99,6 +102,21 @@ class MainActivity : ComponentActivity() {
             } else {
                 true
             }
+        }
+
+        Notification.send = { channel, title, message, priority ->
+            val notification = NotificationCompat.Builder(this, "verifyCode").apply {
+                setSmallIcon(R.drawable.ic_launcher_foreground)
+                setContentTitle(title)
+                setContentText(message)
+                setPriority(priority)
+                setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
+            }.build()
+            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+            val id =
+                (channel.hashCode() shl 48) or (title.hashCode() shl 32) or (message.hashCode() shl 16) or priority.hashCode()
+            notificationManager.notify(id, notification)
         }
 
         val rootComponent = AppRootComponent(componentContext = defaultComponentContext())

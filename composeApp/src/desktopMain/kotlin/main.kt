@@ -19,9 +19,7 @@
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.window.*
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
@@ -46,6 +44,17 @@ fun main() {
 
     application {
         val windowState = rememberWindowState(size = DpSize(width = 1000.dp, height = 800.dp))
+        val trayState = rememberTrayState()
+
+        Notification.send = { title, message, type ->
+            trayState.sendNotification(Notification(title, message, type))
+        }
+
+        Tray(
+            icon = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
+            state = trayState,
+            tooltip = "Fhraise",
+        )
 
         LifecycleController(lifecycleRegistry, windowState)
 

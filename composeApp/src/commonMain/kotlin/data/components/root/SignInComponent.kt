@@ -30,6 +30,7 @@ import data.componentScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import notificationPermissionGranted
+import sendVerifyCodeNotification
 
 interface SignInComponent : AppComponentContext {
     val nextColorMode: ColorMode
@@ -170,13 +171,20 @@ class AppSignInComponent(
                 if (notificationPermissionGranted != true) {
                     componentScope.launch {
                         val result = requestAppNotificationPermission()
-                        if (result == false) {
+                        if (result != false) {
+                            doSendVerifyCode()
+                        } else {
                             verifyCode = "114514" // TODO
                             verifyCodeSentSnackbarJob?.cancel()
                             snackbarHostState.showSnackbar("通知权限未授予，验证码已自动填写", withDismissAction = true)
                         }
                     }
                 }
+                doSendVerifyCode()
+            }
+
+            private fun doSendVerifyCode() {
+                sendVerifyCodeNotification("114514") // TODO
                 verifyCodeSentSnackbarJob?.cancel()
                 verifyCodeSentSnackbarJob = componentScope.launch {
                     snackbarHostState.showSnackbar("验证码已发送", withDismissAction = true)

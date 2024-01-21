@@ -16,27 +16,12 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class JVMPlatform : Platform {
-    override val name: String = "Java ${System.getProperty("java.version")}"
+import androidx.core.app.NotificationCompat
+
+object Notification {
+    var send: (channel: String, title: String, message: String, priority: Int) -> Unit = { _, _, _, _ -> }
 }
 
-actual fun getPlatform(): Platform = JVMPlatform()
-
-enum class DesktopPlatform {
-    Linux, Windows, MacOS, Unknown;
-
-    companion object {
-        /**
-         * Identify OS on which the application is currently running.
-         */
-        val Current: DesktopPlatform by lazy {
-            val name = System.getProperty("os.name")
-            when {
-                name?.startsWith("Linux") == true -> Linux
-                name?.startsWith("Win") == true -> Windows
-                name == "Mac OS X" -> MacOS
-                else -> Unknown
-            }
-        }
-    }
+actual fun sendVerifyCodeNotification(code: String) {
+    Notification.send("verifyCode", "验证码", code, NotificationCompat.PRIORITY_HIGH)
 }

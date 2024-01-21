@@ -16,27 +16,11 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class JVMPlatform : Platform {
-    override val name: String = "Java ${System.getProperty("java.version")}"
-}
+import org.w3c.notifications.Notification
+import org.w3c.notifications.NotificationOptions
 
-actual fun getPlatform(): Platform = JVMPlatform()
-
-enum class DesktopPlatform {
-    Linux, Windows, MacOS, Unknown;
-
-    companion object {
-        /**
-         * Identify OS on which the application is currently running.
-         */
-        val Current: DesktopPlatform by lazy {
-            val name = System.getProperty("os.name")
-            when {
-                name?.startsWith("Linux") == true -> Linux
-                name?.startsWith("Win") == true -> Windows
-                name == "Mac OS X" -> MacOS
-                else -> Unknown
-            }
-        }
-    }
+actual fun sendVerifyCodeNotification(code: String) {
+    Notification(
+        title = "验证码", options = NotificationOptions(body = code)
+    )
 }
