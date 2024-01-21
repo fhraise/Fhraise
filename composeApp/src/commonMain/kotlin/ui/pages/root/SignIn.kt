@@ -270,7 +270,7 @@ fun SignInLayout(
         val mainPlaceable = mainMeasurable.measure(mainConstraints)
 
         // == Scrollbar ==
-        val scrollbarHeight = (safeHeight - mainBottomSpace).roundToInt()
+        val scrollbarHeight = (safeHeight - mainBottomSpace).roundToInt().coerceAtLeast(0)
 
         val scrollbarPlaceable = subcompose("scrollBar") {
             VerticalScrollbar(scrollState = scrollState)
