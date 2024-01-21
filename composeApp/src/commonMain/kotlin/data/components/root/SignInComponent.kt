@@ -29,6 +29,7 @@ import data.AppComponentContextValues.ColorMode.*
 import data.componentScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import notificationPermissionGranted
 
 interface SignInComponent : AppComponentContext {
     val nextColorMode: ColorMode
@@ -63,12 +64,7 @@ interface SignInComponent : AppComponentContext {
             var canInputVerifyCode: Boolean
             var verifyCode: String
 
-            fun switchCanInputVerifyCode() {
-                canInputVerifyCode = !canInputVerifyCode
-                if (!canInputVerifyCode) {
-                    verifyCode = ""
-                }
-            }
+            fun sendVerifyCode()
         }
 
         interface UsernamePasswordState : ComponentState, KeyboardDoneState {
@@ -166,6 +162,27 @@ class AppSignInComponent(
                     }
                 }
 
+            private var verifyCodeSentSnackbarJob: Job? = null
+
+            override fun sendVerifyCode() {
+                canInputVerifyCode = true
+                if (!canInputVerifyCode) return
+                if (notificationPermissionGranted != true) {
+                    componentScope.launch {
+                        val result = requestAppNotificationPermission()
+                        if (result == false) {
+                            verifyCode = "114514" // TODO
+                            verifyCodeSentSnackbarJob?.cancel()
+                            snackbarHostState.showSnackbar("通知权限未授予，验证码已自动填写", withDismissAction = true)
+                        }
+                    }
+                }
+                verifyCodeSentSnackbarJob?.cancel()
+                verifyCodeSentSnackbarJob = componentScope.launch {
+                    snackbarHostState.showSnackbar("验证码已发送", withDismissAction = true)
+                }
+            }
+
             override var verifyCode by mutableStateOf(verifyCode)
             override var showMoreSignInOptions by mutableStateOf(showMoreSignInOptions)
 
@@ -174,20 +191,14 @@ class AppSignInComponent(
             }
 
             override val onNext: KeyboardActionScope.() -> Unit = {
-                this@SignIn.canInputVerifyCode = true
+                sendVerifyCode()
             }
-
-            private var verifyCodeSentSnackbarJob: Job? = null
 
             override fun nextOrSubmit() {
                 if (canInputVerifyCode) {
                     submit()
                 } else {
-                    canInputVerifyCode = true
-                    verifyCodeSentSnackbarJob?.cancel()
-                    verifyCodeSentSnackbarJob = componentScope.launch {
-                        snackbarHostState.showSnackbar("验证码已发送", withDismissAction = true)
-                    }
+                    sendVerifyCode()
                 }
             }
 

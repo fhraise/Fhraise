@@ -20,16 +20,23 @@ package data.components
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.*
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.backhandler.BackHandlerOwner
 import data.AppComponentContext
 import data.AppComponentContextValues
+import data.componentScope
 import data.components.root.AppSignInComponent
 import data.components.root.SignInComponent
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import requestNotificationPermission
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.suspendCoroutine
 
 interface RootComponent : AppComponentContext, BackHandlerOwner {
     val stack: Value<ChildStack<*, Child>>
@@ -37,6 +44,11 @@ interface RootComponent : AppComponentContext, BackHandlerOwner {
     sealed class Child {
         class SignIn(val component: SignInComponent) : Child()
     }
+
+    val showNotificationPermissionDialog: Boolean
+
+    fun startNotificationPermissionRequest()
+    fun cancelNotificationPermissionRequest()
 
     fun onBack()
 }
@@ -110,6 +122,25 @@ class AppRootComponent(
 
         @Serializable
         data object SignUp : Configuration()
+    }
+
+    override var showNotificationPermissionDialog by mutableStateOf(false)
+    private var permissionRequestContinuation: Continuation<Boolean?>? = null
+
+    override fun startNotificationPermissionRequest() {
+        componentScope.launch {
+            permissionRequestContinuation?.resumeWith(Result.success(requestNotificationPermission()))
+            showNotificationPermissionDialog = false
+        }
+    }
+
+    override fun cancelNotificationPermissionRequest() {
+        showNotificationPermissionDialog = false
+    }
+
+    override suspend fun requestAppNotificationPermission(): Boolean? = suspendCoroutine {
+        permissionRequestContinuation = it
+        showNotificationPermissionDialog = true
     }
 
     override fun onBack() = navigation.pop()

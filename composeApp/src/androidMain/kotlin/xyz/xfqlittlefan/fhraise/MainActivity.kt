@@ -18,16 +18,21 @@
 
 package xyz.xfqlittlefan.fhraise
 
+import Permission
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
 import data.AppComponentContextValues.ColorMode.*
@@ -35,6 +40,8 @@ import data.components.AppRootComponent
 import ui.pages.Root
 import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
 import xyz.xfqlittlefan.fhraise.utils.isMiui
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.suspendCoroutine
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,6 +62,44 @@ class MainActivity : ComponentActivity() {
         }
 
         super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val verifyCodeChannelId = "verifyCode"
+            val verifyCodeChannelName = "模拟验证码"
+            val verifyCodeChannelDescription = "模拟验证码的通知"
+            val verifyCodeChannelImportance = android.app.NotificationManager.IMPORTANCE_HIGH
+            val verifyCodeChannel = android.app.NotificationChannel(
+                verifyCodeChannelId, verifyCodeChannelName, verifyCodeChannelImportance
+            ).apply {
+                description = verifyCodeChannelDescription
+            }
+
+            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+            notificationManager.createNotificationChannel(verifyCodeChannel)
+        }
+
+        var notificationPermissionRequestContinuation: Continuation<Boolean>? = null
+        val notificationPermissionRequestLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                notificationPermissionRequestContinuation?.resumeWith(Result.success(granted))
+            }
+
+        Permission.checkNotificationPermissionGranted = {
+            ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        Permission.requestNotificationPermission = {
+            if (Permission.checkNotificationPermissionGranted() != true) {
+                suspendCoroutine {
+                    notificationPermissionRequestContinuation = it
+                    notificationPermissionRequestLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            } else {
+                true
+            }
+        }
 
         val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
 

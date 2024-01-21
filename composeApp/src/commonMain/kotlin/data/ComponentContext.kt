@@ -42,4 +42,6 @@ interface AppComponentContextValues {
     fun SnackbarHost() {
         SnackbarHost(hostState = snackbarHostState)
     }
+
+    suspend fun requestAppNotificationPermission(): Boolean?
 }

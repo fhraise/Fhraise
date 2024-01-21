@@ -19,6 +19,9 @@
 package ui.pages
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -60,6 +63,24 @@ fun Root(component: RootComponent) {
                 when (val child = it.instance) {
                     is RootComponent.Child.SignIn -> SignIn(component = child.component)
                 }
+            }
+
+            if (component.showNotificationPermissionDialog) {
+                AlertDialog(
+                    onDismissRequest = component::cancelNotificationPermissionRequest,
+                    title = { Text("请授予通知权限") },
+                    text = { Text("由于发送短信需要大量资费，本 Demo 版应用程序使用通知模拟发送短信。请在接下来弹出的窗口中为应用程序授予通知权限") },
+                    confirmButton = {
+                        Button(onClick = component::startNotificationPermissionRequest) {
+                            Text("确定")
+                        }
+                    },
+                    dismissButton = {
+                        Button(onClick = component::cancelNotificationPermissionRequest) {
+                            Text("取消")
+                        }
+                    },
+                )
             }
         }
     }
