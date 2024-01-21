@@ -24,7 +24,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.arkivanov.decompose.ComponentContext
-import com.arkivanov.decompose.router.stack.*
+import com.arkivanov.decompose.router.stack.ChildStack
+import com.arkivanov.decompose.router.stack.StackNavigation
+import com.arkivanov.decompose.router.stack.childStack
+import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.backhandler.BackHandlerOwner
 import data.AppComponentContext
@@ -95,12 +98,7 @@ class AppRootComponent(
                     AppSignInComponent.ComponentState.SignIn(
                         context = this,
                         onGuestSignIn = {},
-                        onUsernameSignIn = {},
                         onFaceSignIn = {},
-                        onSignUp = {
-                            navigation.push(Configuration.SignUp)
-                        },
-                        onAdminSignIn = {},
                     )
                 },
             )

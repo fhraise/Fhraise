@@ -481,82 +481,73 @@ fun SignInMainLayout(
 
 @Composable
 fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.verticalScroll(state = rememberScrollState())) {
-        FilledTonalButton(
-            onClick = onGuestSignIn,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Icon(
-                imageVector = Icons.Default.NoAccounts,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "游客登录")
-        }
-        FilledTonalButton(
-            onClick = onUsernameSignIn,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "用户名登录")
-        }
-        FilledTonalButton(
-            onClick = onFaceSignIn,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Face,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "人脸登录")
-        }
-        FilledTonalButton(
-            onClick = onSignUp,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Icon(
-                imageVector = Icons.Default.PersonAdd,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "注册")
-        }
-        TextButton(
-            onClick = ::switchShowMoreSignInOptions,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreHoriz,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "更多登录选项")
-        }
-        AnimatedVisibility(
-            visible = showMoreSignInOptions,
-        ) {
-            FilledTonalButton(
-                onClick = onAdminSignIn,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AdminPanelSettings,
-                    contentDescription = null,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "管理员登录")
+    val scrollState = rememberScrollState()
+
+    SubcomposeLayout { constraints ->
+        val buttons = subcompose("buttons") {
+            Column(modifier = modifier.verticalScroll(state = scrollState)) {
+                FilledTonalButton(
+                    onClick = onGuestSignIn,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NoAccounts,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "游客登录")
+                }
+                FilledTonalButton(
+                    onClick = onFaceSignIn,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Face,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "人脸登录")
+                }
+                TextButton(
+                    onClick = ::switchShowMoreSignInOptions,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreHoriz,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "更多登录选项")
+                }
+                AnimatedVisibility(
+                    visible = showMoreSignInOptions,
+                ) {
+                    FilledTonalButton(
+                        onClick = ::onAdminSignIn,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AdminPanelSettings,
+                            contentDescription = null,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "管理员登录")
+                    }
+                }
             }
+        }.first().measure(constraints)
+
+        val scrollBar = subcompose("scrollBar") {
+            VerticalScrollbar(scrollState = scrollState)
+        }.first().measure(Constraints.fixedHeight(buttons.height))
+
+        layout(buttons.width, buttons.height) {
+            buttons.placeRelative(0, 0)
+            scrollBar.placeRelative(buttons.width - scrollBar.width, 0)
         }
     }
 }

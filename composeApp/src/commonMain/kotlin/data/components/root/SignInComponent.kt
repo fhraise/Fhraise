@@ -86,10 +86,9 @@ interface SignInComponent : AppComponentContext {
             }
 
             val onGuestSignIn: () -> Unit
-            val onUsernameSignIn: () -> Unit
             val onFaceSignIn: () -> Unit
-            val onSignUp: () -> Unit
-            val onAdminSignIn: () -> Unit
+
+            fun onAdminSignIn()
         }
 
         interface SignUp : ComponentState, UsernamePasswordState {
@@ -130,10 +129,7 @@ class AppSignInComponent(
             canInputVerifyCode: Boolean = false,
             showMoreSignInOptions: Boolean = false,
             override val onGuestSignIn: () -> Unit,
-            override val onUsernameSignIn: () -> Unit,
             override val onFaceSignIn: () -> Unit,
-            override val onSignUp: () -> Unit,
-            override val onAdminSignIn: () -> Unit,
         ) : ComponentState(context), SignInComponent.ComponentState.SignIn {
             private val phoneNumberRegex =
                 Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
@@ -212,6 +208,10 @@ class AppSignInComponent(
 
             override val onDone: KeyboardActionScope.() -> Unit = {
                 submit()
+            }
+
+            override fun onAdminSignIn() {
+                // TODO
             }
         }
 
