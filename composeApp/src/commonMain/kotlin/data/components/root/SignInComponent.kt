@@ -54,7 +54,11 @@ interface SignInComponent {
             val onDone: KeyboardActionScope.() -> Unit
         }
 
-        interface PhoneNumberVerifyCodeState : ComponentState, KeyboardNextState, KeyboardDoneState {
+        interface MultiStepState : ComponentState {
+            fun nextOrSubmit()
+        }
+
+        interface PhoneNumberVerifyCodeState : ComponentState, MultiStepState, KeyboardNextState, KeyboardDoneState {
             var phoneNumber: String
             val phoneNumberVerified: Boolean
             var canInputVerifyCode: Boolean
@@ -84,8 +88,6 @@ interface SignInComponent {
             fun switchShowMoreSignInOptions() {
                 showMoreSignInOptions = !showMoreSignInOptions
             }
-
-            fun nextOrSubmit()
 
             val onGuestSignIn: () -> Unit
             val onUsernameSignIn: () -> Unit

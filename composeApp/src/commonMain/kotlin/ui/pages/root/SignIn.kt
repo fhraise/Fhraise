@@ -138,46 +138,23 @@ fun SignIn(component: SignInComponent) {
             content = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    if (state is SignInComponent.ComponentState.SignIn) {
-                        state.PhoneNumber()
-                        AnimatedVisibility(visible = state.canInputVerifyCode) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            state.VerifyCode()
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Button(
-                                onClick = state::nextOrSubmit,
-                                shape = MaterialTheme.shapes.large,
+                    with(state) {
+                        if (this is SignInComponent.ComponentState.SignIn) {
+                            PhoneNumber()
+                            AnimatedVisibility(visible = canInputVerifyCode) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                VerifyCode()
+                            }
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                                contentAlignment = Alignment.Center,
                             ) {
-                                AnimatedContent(
-                                    targetState = state.canInputVerifyCode,
-                                    transitionSpec = {
-                                        if (targetState) {
-                                            fadeIn() + slideInHorizontally { it } togetherWith fadeOut() + slideOutHorizontally { -it }
-                                        } else {
-                                            fadeIn() + slideInHorizontally { -it } togetherWith fadeOut() + slideOutHorizontally { it }
-                                        }
-                                    },
-                                ) { targetState ->
-                                    if (targetState) {
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowForward,
-                                            contentDescription = "登录",
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.Send,
-                                            contentDescription = "发送验证码",
-                                        )
-                                    }
-                                }
+                                NextOrSubmitButton()
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             },
             additionalContent = {
@@ -663,4 +640,35 @@ fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.VerifyCode() {
         keyboardActions = KeyboardActions(onDone = onDone),
         maxLines = 1,
     )
+}
+
+@Composable
+fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.NextOrSubmitButton() {
+    Button(
+        onClick = ::nextOrSubmit,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        AnimatedContent(
+            targetState = canInputVerifyCode,
+            transitionSpec = {
+                if (targetState) {
+                    fadeIn() + slideInHorizontally { -it } togetherWith fadeOut() + slideOutHorizontally { it }
+                } else {
+                    fadeIn() + slideInHorizontally { it } togetherWith fadeOut() + slideOutHorizontally { -it }
+                }
+            },
+        ) { targetState ->
+            if (targetState) {
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "登录",
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Send,
+                    contentDescription = "发送验证码",
+                )
+            }
+        }
+    }
 }
