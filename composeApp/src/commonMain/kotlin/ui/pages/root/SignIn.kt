@@ -543,11 +543,11 @@ fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modif
 
         val scrollBar = subcompose("scrollBar") {
             VerticalScrollbar(scrollState = scrollState)
-        }.first().measure(Constraints.fixedHeight(buttons.height))
+        }.firstOrNull()?.measure(Constraints.fixedHeight(buttons.height))
 
         layout(buttons.width, buttons.height) {
             buttons.placeRelative(0, 0)
-            scrollBar.placeRelative(buttons.width - scrollBar.width, 0)
+            scrollBar?.placeRelative(buttons.width - scrollBar.width, 0)
         }
     }
 }
