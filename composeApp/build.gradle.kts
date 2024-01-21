@@ -86,6 +86,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.kotlin.reflect)
+            implementation(libs.kotlinx.coroutines.android)
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.androidx.window)
             implementation(libs.androidx.activity.compose)
@@ -110,6 +111,7 @@ kotlin {
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(libs.kotlinx.coroutines.swing)
         }
     }
 }

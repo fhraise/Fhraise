@@ -45,7 +45,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import data.components.RootComponent
+import data.AppComponentContextValues.ColorMode.*
 import data.components.root.SignInComponent
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
@@ -58,7 +58,7 @@ import ui.modifiers.applyBrush
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 fun SignIn(component: SignInComponent) {
     val colorMode by component.colorMode
@@ -105,9 +105,9 @@ fun SignIn(component: SignInComponent) {
                         content = {
                             Icon(
                                 imageVector = when (colorMode) {
-                                    RootComponent.ColorMode.LIGHT -> Icons.Default.LightMode
-                                    RootComponent.ColorMode.DARK -> Icons.Default.DarkMode
-                                    RootComponent.ColorMode.SYSTEM -> Icons.Default.Adjust
+                                    LIGHT -> Icons.Default.LightMode
+                                    DARK -> Icons.Default.DarkMode
+                                    SYSTEM -> Icons.Default.Adjust
                                 },
                                 contentDescription = "当前颜色模式：${component.colorMode.value.displayName}，改变到：${component.nextColorMode.displayName}",
                             )
@@ -117,6 +117,7 @@ fun SignIn(component: SignInComponent) {
                 scrollBehavior = scrollBehavior,
             )
         },
+        snackbarHost = { component.SnackbarHost() },
         contentWindowInsets = WindowInsets.safeContent,
     ) { paddingValues ->
         SignInLayout(

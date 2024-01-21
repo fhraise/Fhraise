@@ -20,17 +20,18 @@ package data.components.root
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.text.KeyboardActionScope
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import data.AppComponentContext
-import data.components.RootComponent
-import data.components.RootComponent.ColorMode.*
+import data.AppComponentContextValues.ColorMode
+import data.AppComponentContextValues.ColorMode.*
+import data.componentScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
-interface SignInComponent {
-    val colorMode: State<RootComponent.ColorMode>
-    val nextColorMode: RootComponent.ColorMode
+interface SignInComponent : AppComponentContext {
+    val nextColorMode: ColorMode
         get() = when (colorMode.value) {
             LIGHT -> DARK
             DARK -> SYSTEM
@@ -38,8 +39,6 @@ interface SignInComponent {
         }
 
     fun switchColorMode()
-
-    val pop: State<(() -> Unit)?>
 
     val state: ComponentState
 
@@ -111,9 +110,9 @@ interface SignInComponent {
 }
 
 class AppSignInComponent(
-    componentContext: AppComponentContext, state: ComponentState
+    componentContext: AppComponentContext, stateBuilder: AppSignInComponent.() -> ComponentState
 ) : SignInComponent, AppComponentContext by componentContext {
-    override var state: ComponentState by mutableStateOf(state)
+    override var state: ComponentState by mutableStateOf(stateBuilder())
 
     override fun switchColorMode() {
         changeColorMode(
@@ -125,8 +124,10 @@ class AppSignInComponent(
         )
     }
 
-    sealed class ComponentState : SignInComponent.ComponentState {
+    sealed class ComponentState(context: AppComponentContext) : AppComponentContext by context,
+        SignInComponent.ComponentState {
         class SignIn(
+            context: AppComponentContext,
             phoneNumber: String = "",
             verifyCode: String = "",
             canInputVerifyCode: Boolean = false,
@@ -136,7 +137,7 @@ class AppSignInComponent(
             override val onFaceSignIn: () -> Unit,
             override val onSignUp: () -> Unit,
             override val onAdminSignIn: () -> Unit,
-        ) : ComponentState(), SignInComponent.ComponentState.SignIn {
+        ) : ComponentState(context), SignInComponent.ComponentState.SignIn {
             private val phoneNumberRegex =
                 Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
 
@@ -176,11 +177,17 @@ class AppSignInComponent(
                 this@SignIn.canInputVerifyCode = true
             }
 
+            private var verifyCodeSentSnackbarJob: Job? = null
+
             override fun nextOrSubmit() {
                 if (canInputVerifyCode) {
                     submit()
                 } else {
                     canInputVerifyCode = true
+                    verifyCodeSentSnackbarJob?.cancel()
+                    verifyCodeSentSnackbarJob = componentScope.launch {
+                        snackbarHostState.showSnackbar("验证码已发送", withDismissAction = true)
+                    }
                 }
             }
 
@@ -190,13 +197,14 @@ class AppSignInComponent(
         }
 
         class SignUp(
+            context: AppComponentContext,
             email: String = "",
             username: String = "",
             password: String = "",
             showPassword: Boolean = false,
             confirmPassword: String = "",
             showConfirmPassword: Boolean = false
-        ) : ComponentState(), SignInComponent.ComponentState.SignUp {
+        ) : ComponentState(context), SignInComponent.ComponentState.SignUp {
             override var email by mutableStateOf(email)
             override var username by mutableStateOf(username)
             override var password by mutableStateOf(password)

@@ -18,15 +18,28 @@
 
 package data
 
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import com.arkivanov.decompose.ComponentContext
-import data.components.RootComponent
 
 interface AppComponentContext : ComponentContext, AppComponentContextValues
 
 interface AppComponentContextValues {
-    val colorMode: State<RootComponent.ColorMode>
-    fun changeColorMode(colorMode: RootComponent.ColorMode)
+    val colorMode: State<ColorMode>
+    fun changeColorMode(colorMode: ColorMode)
+
+    enum class ColorMode(val displayName: String) {
+        LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统")
+    }
 
     val pop: State<(() -> Unit)?>
+
+    val snackbarHostState: SnackbarHostState
+
+    @Composable
+    fun SnackbarHost() {
+        SnackbarHost(hostState = snackbarHostState)
+    }
 }

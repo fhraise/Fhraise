@@ -29,6 +29,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.plus
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.scale
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
+import data.AppComponentContextValues.ColorMode.*
 import data.components.RootComponent
 import ui.AppTheme
 import ui.LocalWindowSizeClass
@@ -43,9 +44,9 @@ fun Root(component: RootComponent) {
     CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
         AppTheme(
             dark = when (colorMode) {
-                RootComponent.ColorMode.LIGHT -> false
-                RootComponent.ColorMode.DARK -> true
-                RootComponent.ColorMode.SYSTEM -> isSystemInDarkTheme()
+                LIGHT -> false
+                DARK -> true
+                SYSTEM -> isSystemInDarkTheme()
             },
         ) {
             Children(

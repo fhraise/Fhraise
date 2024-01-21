@@ -18,8 +18,8 @@
 
 package data.components
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.*
@@ -31,18 +31,11 @@ import data.components.root.AppSignInComponent
 import data.components.root.SignInComponent
 import kotlinx.serialization.Serializable
 
-interface RootComponent : BackHandlerOwner {
+interface RootComponent : AppComponentContext, BackHandlerOwner {
     val stack: Value<ChildStack<*, Child>>
 
     sealed class Child {
         class SignIn(val component: SignInComponent) : Child()
-    }
-
-    val colorMode: State<ColorMode>
-    fun changeColorMode(colorMode: ColorMode)
-
-    enum class ColorMode(val displayName: String) {
-        LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统")
     }
 
     fun onBack()
@@ -50,14 +43,16 @@ interface RootComponent : BackHandlerOwner {
 
 class AppRootComponent(
     componentContext: ComponentContext,
-) : RootComponent, AppComponentContext, ComponentContext by componentContext {
+) : RootComponent, ComponentContext by componentContext {
     private val navigation = StackNavigation<Configuration>()
 
-    override val colorMode: MutableState<RootComponent.ColorMode> = mutableStateOf(RootComponent.ColorMode.SYSTEM)
+    override val colorMode = mutableStateOf(AppComponentContextValues.ColorMode.SYSTEM)
 
-    override fun changeColorMode(colorMode: RootComponent.ColorMode) {
+    override fun changeColorMode(colorMode: AppComponentContextValues.ColorMode) {
         this.colorMode.value = colorMode
     }
+
+    override val snackbarHostState = SnackbarHostState()
 
     override val stack: Value<ChildStack<*, RootComponent.Child>> = childStack(
         source = navigation,
@@ -84,8 +79,9 @@ class AppRootComponent(
             object : AppComponentContext, ComponentContext by componentContext, AppComponentContextValues by this {}
         return when (config) {
             is Configuration.SignIn -> RootComponent.Child.SignIn(
-                component = AppSignInComponent(
-                    componentContext = childComponentContext, state = AppSignInComponent.ComponentState.SignIn(
+                component = AppSignInComponent(componentContext = childComponentContext) {
+                    AppSignInComponent.ComponentState.SignIn(
+                        context = this,
                         onGuestSignIn = {},
                         onUsernameSignIn = {},
                         onFaceSignIn = {},
@@ -94,13 +90,15 @@ class AppRootComponent(
                         },
                         onAdminSignIn = {},
                     )
-                )
+                },
             )
 
             is Configuration.SignUp -> RootComponent.Child.SignIn(
-                component = AppSignInComponent(
-                    componentContext = childComponentContext, state = AppSignInComponent.ComponentState.SignUp()
-                )
+                component = AppSignInComponent(componentContext = childComponentContext) {
+                    AppSignInComponent.ComponentState.SignUp(
+                        context = this,
+                    )
+                },
             )
         }
     }

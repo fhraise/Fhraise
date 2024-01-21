@@ -30,8 +30,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
+import data.AppComponentContextValues.ColorMode.*
 import data.components.AppRootComponent
-import data.components.RootComponent.ColorMode.*
 import ui.pages.Root
 import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
 import xyz.xfqlittlefan.fhraise.utils.isMiui
