@@ -81,7 +81,7 @@ class AppRootComponent(
 
     private fun createChild(config: Configuration, componentContext: ComponentContext): RootComponent.Child {
         val childComponentContext =
-            object : ComponentContext by componentContext, AppComponentContextValues by this, AppComponentContext {}
+            object : AppComponentContext, ComponentContext by componentContext, AppComponentContextValues by this {}
         return when (config) {
             is Configuration.SignIn -> RootComponent.Child.SignIn(
                 component = AppSignInComponent(
