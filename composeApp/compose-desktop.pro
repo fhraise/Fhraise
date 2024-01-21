@@ -1,3 +1,4 @@
+-keep class kotlinx.coroutines.swing.** { *; }
 -dontwarn org.slf4j.**
 -keep class org.slf4j.** { *; }
 -keep class com.arkivanov.decompose.extensions.compose.** { *; }
