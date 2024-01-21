@@ -31,12 +31,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        name: Create Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          tag: refs/tags/v${{ steps.build.outputs.version }}
-
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
@@ -68,7 +62,7 @@ jobs:
           ./gradlew ciReleaseApp
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        name: Upload Release
+        name: Release
         uses: svenstaro/upload-release-action@v2
         with:
           tag: refs/tags/v${{ steps.build.outputs.version }}
