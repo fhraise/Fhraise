@@ -28,6 +28,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -92,7 +95,7 @@ fun SignIn(component: SignInComponent) {
                             onClick = pop ?: {},
                             content = {
                                 Icon(
-                                    imageVector = Icons.Default.ArrowBack,
+                                    imageVector = Icons.AutoMirrored.Default.ArrowBack,
                                     contentDescription = "返回",
                                 )
                             },
@@ -652,12 +655,12 @@ fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.NextOrSubmitButton
         ) { targetState ->
             if (targetState) {
                 Icon(
-                    imageVector = Icons.Default.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Default.ArrowForward,
                     contentDescription = "登录",
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.Send,
+                    imageVector = Icons.AutoMirrored.Default.Send,
                     contentDescription = "发送验证码",
                 )
             }
