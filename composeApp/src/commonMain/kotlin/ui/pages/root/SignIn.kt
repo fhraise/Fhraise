@@ -164,7 +164,7 @@ fun SignIn(component: SignInComponent) {
             },
             additionalContent = {
                 if (state is SignInComponent.ComponentState.SignIn) {
-                    state.MoreMethods(modifier = Modifier.fillMaxWidth(), scrollState = rememberScrollState())
+                    state.MoreMethods(modifier = Modifier.fillMaxWidth())
                 }
             },
         )
@@ -313,38 +313,22 @@ fun SignInLayout(
 
         val additionalContentBackgroundY = additionalContentY + (height - additionalContentY) * animationSecondStage
 
-        // == Scrollbars ==
-        val mainScrollbarHeight = (safeHeight - mainBottomSpace).roundToInt().coerceAtLeast(0)
+        // == Scrollbar ==
+        val scrollbarHeight = (safeHeight - mainBottomSpace).roundToInt().coerceAtLeast(0)
 
-        val mainScrollbarPlaceable = subcompose("mainScrollBar") {
+        val scrollbarPlaceable = subcompose("scrollBar") {
             VerticalScrollbar(scrollState = scrollState)
-        }.firstOrNull()?.measure(
-            Constraints(maxWidth = mainWidth, minHeight = mainScrollbarHeight, maxHeight = mainScrollbarHeight)
-        )
+        }.firstOrNull()
+            ?.measure(Constraints(maxWidth = mainWidth, minHeight = scrollbarHeight, maxHeight = scrollbarHeight))
 
-        val mainScrollbarX = mainScrollbarPlaceable?.let { mainWidth - mainScrollbarPlaceable.width }
-        val mainScrollbarY = contentPaddingTop.roundToInt()
-
-        val additionalContentScrollbarHeight = additionalContentActualHeight.roundToInt().coerceAtLeast(0)
-
-        val additionalContentScrollbarPlaceable = subcompose("additionalContentScrollBar") {
-            VerticalScrollbar(scrollState = scrollState)
-        }.firstOrNull()?.measure(
-            Constraints(
-                maxWidth = additionalContentActualWidth.roundToInt().coerceAtLeast(0),
-                minHeight = additionalContentScrollbarHeight,
-                maxHeight = additionalContentScrollbarHeight
-            )
-        )
-
-        val additionalContentScrollbarX = additionalContentScrollbarPlaceable?.let { additionalContentActualWidth - additionalContentScrollbarPlaceable.width }
+        val scrollbarX = scrollbarPlaceable?.let { mainWidth - scrollbarPlaceable.width }
+        val scrollbarY = contentPaddingTop.roundToInt()
 
         layout(width, height) {
             mainPlaceable.placeRelative(0, 0)
-            mainScrollbarX?.let { mainScrollbarPlaceable.placeRelative(mainScrollbarX, mainScrollbarY) }
+            scrollbarX?.let { scrollbarPlaceable.placeRelative(scrollbarX, scrollbarY) }
             additionalContentBackgroundPlaceable.placeRelative(0, additionalContentBackgroundY.roundToInt())
             additionalContentPlaceable.placeRelative(additionalContentX.roundToInt(), additionalContentY.roundToInt())
-            additionalContentScrollbarX?.let { additionalContentScrollbarPlaceable.placeRelative(additionalContentScrollbarX.roundToInt(), additionalContentY.roundToInt()) }
         }
     }
 
@@ -507,7 +491,9 @@ fun SignInMainLayout(
 }
 
 @Composable
-fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modifier, scrollState: ScrollState) {
+fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modifier) {
+    val scrollState = rememberScrollState()
+
     SubcomposeLayout { constraints ->
         val buttons = subcompose("buttons") {
             Column(modifier = modifier.verticalScroll(state = scrollState)) {
