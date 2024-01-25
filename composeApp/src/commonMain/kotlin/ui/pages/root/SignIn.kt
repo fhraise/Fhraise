@@ -126,7 +126,6 @@ fun SignIn(component: SignInComponent) {
         SignInLayout(
             modifier = Modifier.fillMaxSize(),
             contentPadding = paddingValues,
-            scrollState = rememberScrollState(),
             header = {
                 Text(
                     text = "开启你的\n 美食之旅_",
@@ -175,7 +174,8 @@ fun SignIn(component: SignInComponent) {
 fun SignInLayout(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    scrollState: ScrollState,
+    scrollState: ScrollState = rememberScrollState(),
+    additionalContentScrollState: ScrollState = rememberScrollState(),
     header: @Composable () -> Unit,
     content: @Composable () -> Unit,
     additionalContent: @Composable () -> Unit,
