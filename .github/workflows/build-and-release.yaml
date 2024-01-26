@@ -60,6 +60,19 @@ jobs:
         run: |
           ./gradlew ciVersioning
 
+      - name: Create release
+        shell: bash
+        run: |
+          .gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/releases \
+            -f tag_name=${{ steps.versioning.outputs.version }} \
+            -F generate_release_notes=true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build ${{ matrix.platform }} app
         shell: bash
         run: |
