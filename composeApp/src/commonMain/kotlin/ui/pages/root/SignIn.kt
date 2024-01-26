@@ -188,10 +188,16 @@ fun SignInLayout(
         else -> null
     }
 
+    val imePaddingInsets = WindowInsets.ime
+
     var animatable: Animatable<Float, AnimationVector1D>? by remember { mutableStateOf(null) }
     val animation = animatable?.value
     val firstPrintAnimation by animateFloatAsState(
         targetValue = if (animation == null) 0f else 1f, animationSpec = spring(stiffness = Spring.StiffnessLow)
+    )
+    val additionalContentAnimation by animateFloatAsState(
+        targetValue = if (imePaddingInsets.asPaddingValues().calculateBottomPadding() > 0.dp) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
     )
 
     SubcomposeLayout(
@@ -258,9 +264,12 @@ fun SignInLayout(
             additionalContentPlaceable.width + additionalContentPaddingHorizontal + contentPaddingHorizontal
         val additionalContentActualHeight = additionalContentPlaceable.height + additionalContentPaddingVertical
 
+        val additionalContentYDelta =
+            (additionalContentActualHeight * additionalContentAnimation * animationSecondStageReversed).roundToInt()
+
         // == Measure main ==
         val mainBottomSpace =
-            ((additionalContentPlaceable.height + additionalContentPaddingVertical) * animationSecondStageReversed)
+            ((additionalContentPlaceable.height + additionalContentPaddingVertical) * animationSecondStageReversed) - additionalContentYDelta
 
         val mainMeasurable = subcompose("main") {
             SignInMainLayout(
@@ -351,11 +360,15 @@ fun SignInLayout(
         layout(width, height) {
             mainPlaceable.placeRelative(0, 0)
             mainScrollbarX?.let { mainScrollbarPlaceable.placeRelative(mainScrollbarX, mainScrollbarY) }
-            additionalContentBackgroundPlaceable.placeRelative(0, additionalContentBackgroundY.roundToInt())
-            additionalContentPlaceable.placeRelative(additionalContentX.roundToInt(), additionalContentY.roundToInt())
+            additionalContentBackgroundPlaceable.placeRelative(
+                0, additionalContentBackgroundY.roundToInt() + additionalContentYDelta
+            )
+            additionalContentPlaceable.placeRelative(
+                additionalContentX.roundToInt(), additionalContentY.roundToInt() + additionalContentYDelta
+            )
             additionalContentScrollbarX?.let {
                 additionalContentScrollbarPlaceable.placeRelative(
-                    additionalContentScrollbarX.roundToInt(), additionalContentY.roundToInt()
+                    additionalContentScrollbarX.roundToInt(), additionalContentY.roundToInt() + additionalContentYDelta
                 )
             }
         }
