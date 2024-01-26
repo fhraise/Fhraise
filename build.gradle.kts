@@ -69,7 +69,7 @@ tasks.register("updateDevVer") {
     doLast {
         val stream = ByteArrayOutputStream()
         val result = exec {
-            commandLine("git", "describe", "--tags", "--abbrev=0", "--match=dev[0-9]*\\.[0-9]*")
+            commandLine = listOf("git", "describe", "--tags", "--abbrev=0", "--match=dev[0-9]*\\.[0-9]*")
             standardOutput = stream
             isIgnoreExitValue = true
         }
@@ -86,7 +86,7 @@ tasks.register("updateCommitSha") {
     doLast {
         val stream = ByteArrayOutputStream()
         exec {
-            commandLine("git", "rev-parse", "--short", "HEAD")
+            commandLine = listOf("git", "rev-parse", "--short", "HEAD")
             standardOutput = stream
         }
         commitSha = stream.toString().trim()
@@ -102,7 +102,7 @@ tasks.register("updateReversion") {
     doLast {
         val stream = ByteArrayOutputStream()
         val result = exec {
-            commandLine("git", "rev-list", "--count", "dev$devVer..main")
+            commandLine = listOf("git", "rev-list", "--count", "dev$devVer..main")
             standardOutput = stream
             isIgnoreExitValue = true
         }
@@ -380,7 +380,7 @@ tasks.register("installReleaseAndroidApp") {
         cmd.addAll(listOf("install", "-r", apk.absolutePath))
 
         exec {
-            commandLine(cmd)
+            commandLine = cmd
         }
     }
 }
