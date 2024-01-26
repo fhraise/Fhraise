@@ -54,17 +54,21 @@ jobs:
             echo ${{ secrets.PROPERTIES }} | base64 --decode > key.properties
           fi
 
-      - name: Build ${{ matrix.platform }} app
-        id: build
+      - name: Versioning
+        id: versioning
         shell: bash
         run: |
           ./gradlew ciVersioning
+
+      - name: Build ${{ matrix.platform }} app
+        shell: bash
+        run: |
           ./gradlew ciReleaseApp
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Release
         uses: svenstaro/upload-release-action@v2
         with:
-          tag: refs/tags/v${{ steps.build.outputs.version }}
+          tag: refs/tags/${{ steps.versioning.outputs.version }}
           file: build/assets/*
           file_glob: true
