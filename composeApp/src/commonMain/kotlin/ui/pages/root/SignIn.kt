@@ -121,7 +121,7 @@ fun SignIn(component: SignInComponent) {
             )
         },
         snackbarHost = { component.SnackbarHost() },
-        contentWindowInsets = WindowInsets.safeContent,
+        contentWindowInsets = WindowInsets.safeDrawing,
     ) { paddingValues ->
         SignInLayout(
             modifier = Modifier.fillMaxSize(),
