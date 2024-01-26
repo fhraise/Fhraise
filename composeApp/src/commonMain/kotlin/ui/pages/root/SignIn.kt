@@ -174,6 +174,8 @@ fun SignIn(component: SignInComponent) {
 fun SignInLayout(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    scrollState: ScrollState = rememberScrollState(),
+    additionalContentScrollState: ScrollState = rememberScrollState(),
     header: @Composable () -> Unit,
     content: @Composable () -> Unit,
     additionalContent: @Composable () -> Unit,
@@ -192,8 +194,6 @@ fun SignInLayout(
         targetValue = if (animation == null) 0f else 1f, animationSpec = spring(stiffness = Spring.StiffnessLow)
     )
 
-    val scrollState = rememberScrollState()
-
     SubcomposeLayout(
         modifier = Modifier.alpha(firstPrintAnimation).offset(y = 32.dp * (1f - firstPrintAnimation)).then(modifier)
     ) { constraints ->
@@ -203,6 +203,7 @@ fun SignInLayout(
         val contentPaddingRight = contentPadding.calculateRightPadding(layoutDirection).toPx()
         val contentPaddingBottom = contentPadding.calculateBottomPadding().toPx()
         val contentPaddingVertical = contentPaddingTop + contentPaddingBottom
+        val contentPaddingHorizontal = contentPaddingLeft + contentPaddingRight
 
         // == Layout sizes ==
         val width = constraints.maxWidth
@@ -217,36 +218,49 @@ fun SignInLayout(
         val animationSecondStageReversed = 1f - animationSecondStage
 
         // == Measure additional content ==
-        val additionalContentMeasurable =
-            subcompose(slotId = "additionalContent", content = additionalContent).firstOrNull()
-                ?: return@SubcomposeLayout layout(0, 0) {}
+        val additionalContentMeasurable = subcompose(slotId = "additionalContent") {
+            Box(modifier = Modifier.verticalScroll(state = additionalContentScrollState)) {
+                additionalContent()
+            }
+        }.firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
 
         val additionalContentCompatMediumPaddingLeft = 32.dp.toPx()
         val additionalContentExpandedPaddingLeft = 16.dp.toPx()
         val additionalContentPaddingLeft =
             additionalContentCompatMediumPaddingLeft + (additionalContentExpandedPaddingLeft - additionalContentCompatMediumPaddingLeft) * animationSecondStage
 
+        val additionalContentPaddingTop = 8.dp.toPx() * animationSecondStageReversed
+
         val additionalContentPaddingRight = 32.dp.toPx()
 
         val additionalContentPaddingBottom = 16.dp.toPx() * animationSecondStageReversed
 
+        val additionalContentPaddingHorizontal = additionalContentPaddingLeft + additionalContentPaddingRight
+        val additionalContentPaddingVertical = additionalContentPaddingTop + additionalContentPaddingBottom
+
         val additionalContentCompatMediumWidth = width.toFloat()
         val additionalContentExpandedWidth = width * 2f / 9f
         val additionalContentWidth =
-            (additionalContentCompatMediumWidth + (additionalContentExpandedWidth - additionalContentCompatMediumWidth) * animationSecondStage - (additionalContentPaddingLeft + additionalContentPaddingRight)).roundToInt()
+            (additionalContentCompatMediumWidth + (additionalContentExpandedWidth - additionalContentCompatMediumWidth) * animationSecondStage - additionalContentPaddingHorizontal - contentPaddingHorizontal).roundToInt()
                 .coerceAtLeast(0)
+
+        val additionalContentHeight = safeHeight - additionalContentPaddingVertical
 
         val additionalContentConstraints = Constraints(
             minWidth = additionalContentWidth,
             maxWidth = additionalContentWidth,
             minHeight = 0,
-            maxHeight = safeHeight.roundToInt()
+            maxHeight = additionalContentHeight.roundToInt().coerceAtLeast(0)
         )
         val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
+        val additionalContentActualWidth =
+            additionalContentPlaceable.width + additionalContentPaddingHorizontal + contentPaddingHorizontal
+        val additionalContentActualHeight = additionalContentPlaceable.height + additionalContentPaddingVertical
+
         // == Measure main ==
         val mainBottomSpace =
-            ((additionalContentPlaceable.height + additionalContentPaddingBottom) * animationSecondStageReversed)
+            ((additionalContentPlaceable.height + additionalContentPaddingVertical) * animationSecondStageReversed)
 
         val mainMeasurable = subcompose("main") {
             SignInMainLayout(
@@ -272,21 +286,10 @@ fun SignInLayout(
         val mainConstraints = Constraints.fixed(width = mainWidth, height = height)
         val mainPlaceable = mainMeasurable.measure(mainConstraints)
 
-        // == Scrollbar ==
-        val scrollbarHeight = (safeHeight - mainBottomSpace).roundToInt().coerceAtLeast(0)
-
-        val scrollbarPlaceable = subcompose("scrollBar") {
-            VerticalScrollbar(scrollState = scrollState)
-        }.firstOrNull()
-            ?.measure(Constraints(maxWidth = mainWidth, minHeight = scrollbarHeight, maxHeight = scrollbarHeight))
-
-        val scrollbarX = scrollbarPlaceable?.let { mainWidth - scrollbarPlaceable.width }
-        val scrollbarY = contentPaddingTop.roundToInt()
-
         // == Place ==
         val additionalContentCompatMediumX = 0f
         val additionalContentX =
-            additionalContentCompatMediumX + (mainPlaceable.width - additionalContentCompatMediumX) * animationSecondStage + additionalContentPaddingLeft
+            additionalContentCompatMediumX + (mainPlaceable.width - additionalContentCompatMediumX) * animationSecondStage + additionalContentPaddingLeft + contentPaddingLeft
 
         val additionalContentCompatMediumY =
             (height - additionalContentPlaceable.height).toFloat() - additionalContentPaddingBottom - contentPaddingBottom
@@ -316,11 +319,45 @@ fun SignInLayout(
 
         val additionalContentBackgroundY = additionalContentY + (height - additionalContentY) * animationSecondStage
 
+        // == Scrollbars ==
+        val mainScrollbarHeight = (safeHeight - mainBottomSpace).roundToInt().coerceAtLeast(0)
+
+        val mainScrollbarPlaceable = subcompose("mainScrollBar") {
+            VerticalScrollbar(scrollState = scrollState)
+        }.firstOrNull()?.measure(
+            Constraints(
+                maxWidth = mainWidth, minHeight = mainScrollbarHeight, maxHeight = mainScrollbarHeight
+            )
+        )
+
+        val mainScrollbarX = mainScrollbarPlaceable?.let { mainWidth - mainScrollbarPlaceable.width }
+        val mainScrollbarY = contentPaddingTop.roundToInt()
+
+        val additionalContentScrollbarHeight = additionalContentActualHeight.roundToInt().coerceAtLeast(0)
+
+        val additionalContentScrollbarPlaceable = subcompose("additionalContentScrollbar") {
+            VerticalScrollbar(scrollState = additionalContentScrollState)
+        }.firstOrNull()?.measure(
+            Constraints(
+                maxWidth = additionalContentWidth,
+                minHeight = additionalContentScrollbarHeight,
+                maxHeight = additionalContentScrollbarHeight
+            )
+        )
+
+        val additionalContentScrollbarX =
+            additionalContentScrollbarPlaceable?.let { additionalContentX - additionalContentPaddingLeft - contentPaddingLeft + additionalContentActualWidth - additionalContentScrollbarPlaceable.width }
+
         layout(width, height) {
             mainPlaceable.placeRelative(0, 0)
-            scrollbarX?.let { scrollbarPlaceable.placeRelative(scrollbarX, scrollbarY) }
+            mainScrollbarX?.let { mainScrollbarPlaceable.placeRelative(mainScrollbarX, mainScrollbarY) }
             additionalContentBackgroundPlaceable.placeRelative(0, additionalContentBackgroundY.roundToInt())
             additionalContentPlaceable.placeRelative(additionalContentX.roundToInt(), additionalContentY.roundToInt())
+            additionalContentScrollbarX?.let {
+                additionalContentScrollbarPlaceable.placeRelative(
+                    additionalContentScrollbarX.roundToInt(), additionalContentY.roundToInt()
+                )
+            }
         }
     }
 
@@ -484,73 +521,58 @@ fun SignInMainLayout(
 
 @Composable
 fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modifier) {
-    val scrollState = rememberScrollState()
-
-    SubcomposeLayout { constraints ->
-        val buttons = subcompose("buttons") {
-            Column(modifier = modifier.verticalScroll(state = scrollState)) {
-                FilledTonalButton(
-                    onClick = onGuestSignIn,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.NoAccounts,
-                        contentDescription = null,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "游客登录")
-                }
-                FilledTonalButton(
-                    onClick = onFaceSignIn,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Face,
-                        contentDescription = null,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "人脸登录")
-                }
-                TextButton(
-                    onClick = ::switchShowMoreSignInOptions,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreHoriz,
-                        contentDescription = null,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "更多登录选项")
-                }
-                AnimatedVisibility(
-                    visible = showMoreSignInOptions,
-                ) {
-                    FilledTonalButton(
-                        onClick = ::onAdminSignIn,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.large,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AdminPanelSettings,
-                            contentDescription = null,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "管理员登录")
-                    }
-                }
+    Column(modifier = modifier) {
+        FilledTonalButton(
+            onClick = onGuestSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.NoAccounts,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "游客登录")
+        }
+        FilledTonalButton(
+            onClick = onFaceSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Face,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "人脸登录")
+        }
+        TextButton(
+            onClick = ::switchShowMoreSignInOptions,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreHoriz,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "更多登录选项")
+        }
+        AnimatedVisibility(
+            visible = showMoreSignInOptions,
+        ) {
+            FilledTonalButton(
+                onClick = ::onAdminSignIn,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AdminPanelSettings,
+                    contentDescription = null,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "管理员登录")
             }
-        }.first().measure(constraints)
-
-        val scrollBar = subcompose("scrollBar") {
-            VerticalScrollbar(scrollState = scrollState)
-        }.firstOrNull()?.measure(Constraints.fixedHeight(buttons.height))
-
-        layout(buttons.width, buttons.height) {
-            buttons.placeRelative(0, 0)
-            scrollBar?.placeRelative(buttons.width - scrollBar.width, 0)
         }
     }
 }
