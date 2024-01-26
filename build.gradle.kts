@@ -268,11 +268,6 @@ tasks.register("ciVersioning") {
 
     doLast {
         val outputVersion = "v${version.substringBefore('+')}"
-        exec {
-            commandLine = listOf("git", "tag", outputVersion)
-            isIgnoreExitValue = true
-        }
-        exec { commandLine = listOf("git", "push", "origin", outputVersion) }
         file(System.getenv("GITHUB_OUTPUT")).writeText("version=$outputVersion")
         logger.lifecycle("Wrote version to GitHub output: $outputVersion")
     }
