@@ -22,7 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.window.layout.WindowMetricsCalculator
-import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
+import compositionLocals.LocalActivity
 
 actual val windowSizeClass: WindowSizeClass
     @Composable get() {

@@ -16,7 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.compositionLocals
+package compositionLocals
 
 import android.app.Activity
 import androidx.compose.runtime.staticCompositionLocalOf

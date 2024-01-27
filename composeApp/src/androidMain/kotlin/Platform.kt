@@ -16,8 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.utils
-
 import android.annotation.SuppressLint
 import kotlin.reflect.full.declaredFunctions
 

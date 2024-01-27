@@ -38,11 +38,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
+import compositionLocals.LocalActivity
 import data.AppComponentContextValues.ColorMode.*
 import data.components.AppRootComponent
+import isMiui
 import ui.pages.Root
-import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
-import xyz.xfqlittlefan.fhraise.utils.isMiui
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.suspendCoroutine
 
