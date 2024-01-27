@@ -4,7 +4,19 @@ updates:
     directory: /
     schedule:
       interval: daily
+      timezone: Asia/Shanghai
+    assignees:
+      - xfqwdsj
+    reviewers:
+      - xfqwdsj
   - package-ecosystem: github-actions
     directory: .github/workflows
+    commit-message:
+      prefix: ci
     schedule:
       interval: daily
+      timezone: Asia/Shanghai
+    assignees:
+      - xfqwdsj
+    reviewers:
+      - xfqwdsj
