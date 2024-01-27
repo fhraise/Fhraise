@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   increase-build-number:
-    if: !startsWith(github.event.pull_request.title, 'ci:')
+    if: "!startsWith(github.event.pull_request.title, 'ci:')"
     name: Increase build number
     runs-on: ubuntu-latest
     steps:
@@ -29,7 +29,8 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git config user.name github-actions
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add build-number.properties
           git commit -m "chore: increase build number to ${{ steps.increase-build-number.outputs.buildNumber }}"
           git push
