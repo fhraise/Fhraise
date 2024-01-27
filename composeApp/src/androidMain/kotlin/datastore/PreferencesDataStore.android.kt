@@ -19,44 +19,10 @@
 package datastore
 
 import android.content.Context
-import androidx.annotation.GuardedBy
 import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
 
-actual fun preferencesDataStore(name: String): ReadOnlyProperty<*, DataStore<Preferences>> {
-    return PreferenceDataStoreSingletonDelegate(name)
-}
-
-/**
- * Delegate class to manage Preferences DataStore as a singleton.
- */
-internal class PreferenceDataStoreSingletonDelegate internal constructor(
-    private val name: String,
-) : ReadOnlyProperty<Context, DataStore<Preferences>> {
-
-    private val lock = Any()
-
-    @GuardedBy("lock")
-    @Volatile
-    private var INSTANCE: DataStore<Preferences>? = null
-
-    /**
-     * Gets the instance of the DataStore.
-     *
-     * @param thisRef must be an instance of [Context]
-     * @param property not used
-     */
-    override fun getValue(thisRef: Context, property: KProperty<*>): DataStore<Preferences> {
-        return INSTANCE ?: synchronized(lock) {
-            if (INSTANCE == null) {
-                val applicationContext = thisRef.applicationContext
-
-                INSTANCE = PreferenceDataStoreFactory.create {
-                    applicationContext.preferencesDataStoreFile(name)
-                }
-            }
-            INSTANCE!!
-        }
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<*, DataStore<Preferences>> =
+    PreferenceDataStoreSingletonDelegate<Context> {
+        applicationContext.preferencesDataStoreFile(name)
     }
-}

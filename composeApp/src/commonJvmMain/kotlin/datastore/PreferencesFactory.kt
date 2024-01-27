@@ -18,20 +18,9 @@
 
 package datastore
 
-actual object PreferenceDataStoreFactory {
-    fun create(
-        produceFile: () -> File
-    ): DataStore<Preferences> {
+fun emptyPreferences(): Preferences = MutablePreferences(startFrozen = true)
 
-        val delegate = create(
-            storage = OkioStorage(FileSystem.SYSTEM, PreferencesSerializer) {
-                val file = produceFile()
-                check(file.extension == PreferencesSerializer.fileExtension) {
-                    "File extension for file: $file does not match required extension for" + " Preferences file: ${PreferencesSerializer.fileExtension}"
-                }
-                file.absoluteFile.toOkioPath()
-            }, corruptionHandler = corruptionHandler, migrations = migrations, scope = scope
-        )
-        return PreferenceDataStore(delegate)
-    }
-}
+fun preferencesOf(vararg pairs: Preferences.Pair<*>): Preferences = mutablePreferencesOf(*pairs)
+
+fun mutablePreferencesOf(vararg pairs: Preferences.Pair<*>): MutablePreferences =
+    MutablePreferences(startFrozen = false).apply { putAll(*pairs) }

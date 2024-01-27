@@ -16,9 +16,16 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
+package datastore
 
-val Context.permissionsDataStore: DataStore<Preferences> by preferencesDataStore(name = "permissions")
+import kotlinx.coroutines.flow.Flow
+
+actual class DataStoreImpl<T> : DataStore<T> {
+    override val data: Flow<T>
+        get() = TODO("Not yet implemented")
+
+    override suspend fun updateData(transform: suspend (t: T) -> T): T {
+        TODO("Not yet implemented")
+    }
+
+}

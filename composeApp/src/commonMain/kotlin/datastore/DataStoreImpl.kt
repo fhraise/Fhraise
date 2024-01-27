@@ -16,9 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
+package datastore
 
-val Context.permissionsDataStore: DataStore<Preferences> by preferencesDataStore(name = "permissions")
+expect class DataStoreImpl<T> : DataStore<T>

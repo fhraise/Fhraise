@@ -99,12 +99,18 @@ kotlin {
             implementation(projects.shared)
         }
 
-        jvmMain.dependencies {
-            implementation(libs.okio)
+        val commonJvmMain by creating {
+            dependsOn(commonMain.get())
+            dependencies {
+                implementation(libs.androidx.datastore.core)
+                implementation(libs.androidx.datastore.core.okio)
+                implementation(libs.androidx.datastore.preferences.core)
+                implementation(libs.okio)
+            }
         }
 
         androidMain {
-            dependsOn(jvmMain.get())
+            dependsOn(commonJvmMain)
             dependencies {
                 implementation(libs.kotlin.reflect)
                 implementation(libs.kotlinx.coroutines.android)
@@ -116,12 +122,11 @@ kotlin {
             }
         }
 
-        named("desktopMain") {
-            dependsOn(jvmMain.get())
+        val desktopMain by getting {
+            dependsOn(commonJvmMain)
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
-                implementation(libs.androidx.datastore.preferences.core)
             }
         }
     }
