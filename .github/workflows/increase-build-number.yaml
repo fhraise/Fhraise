@@ -1,0 +1,30 @@
+name: Increase build number on pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  increase-build-number:
+    name: Increase build number
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Increase build number
+        run: |
+          buildNumber=$(grep buildNumber= build-number.properties | cut -d'=' -f2)
+          buildNumber=$((buildNumber+1))
+          sed -i "s/buildNumber=.*/buildNumber=$buildNumber/" build-number.properties
+          echo "buildNumber=$buildNumber"
+
+      - name: Commit and push changes
+        run: |
+          git add build-number.properties
+          git commit -m "chore: increase build number to $buildNumber"
+          git push
