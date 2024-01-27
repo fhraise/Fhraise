@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   increase-build-number:
+    if: !startsWith(github.event.pull_request.title, 'ci:')
     name: Increase build number
     runs-on: ubuntu-latest
     steps:
