@@ -1,0 +1,69 @@
+name: 功能请求
+description: 为这个项目提出一个想法
+title: '[功能] '
+labels:
+  - 增强
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您向我们提供功能请求，我们非常重视您的体验。请在提交前确保已经搜索过相关功能请求，以免重复提交。
+  - type: dropdown
+    id: feature-request-type
+    attributes:
+      label: 功能请求类型
+      description: 请选择功能请求的类型。
+      options:
+        - 新功能
+        - 功能增强
+        - 功能优化
+        - 功能移除
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      description: 请选择功能请求的目标平台。
+      options:
+        - 全部/通用
+        - Android
+        - Windows
+        - Linux
+        - Web
+        - 服务器
+      default: 0
+    validations:
+      required: true
+  - type: textarea
+    id: feature-request
+    attributes:
+      label: 功能请求
+      description: 请在此处描述您的功能请求。
+      placeholder: 我希望能够...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 场景
+      description: 请在此处描述您的功能请求的场景。
+      placeholder: 例如，当我...
+  - type: textarea
+    id: possible-solution
+    attributes:
+      label: 可能的解决方案
+      description: 请在此处描述您的功能请求的可能解决方案。
+      placeholder: 也许可以...
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他信息
+      description: 请在此处提供其他信息。
+      placeholder: 我们可以...
+  - type: input
+    id: contact
+    attributes:
+      label: 联系方式
+      description: 请在此处提供您的联系方式，以便我们与您联系。
+      placeholder: 例如，电子邮件地址

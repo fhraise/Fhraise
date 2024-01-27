@@ -1,0 +1,99 @@
+name: 报告错误
+description: 报告错误以帮助我们改进
+title: '[错误] '
+labels:
+  - 错误
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您向我们报告错误，我们非常重视您的体验。请在提交前确保已经搜索过相关错误，以免重复提交。
+  - type: dropdown
+    id: error-type
+    attributes:
+      label: 错误类型
+      description: 请选择错误的类型。
+      options:
+        - 逻辑错误
+        - 界面错误
+        - 功能错误
+        - 文档错误
+        - 其他
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      description: 请选择错误的平台。
+      options:
+        - 全部
+        - Android
+        - Windows
+        - Linux
+        - Web
+        - 服务器
+      default: 0
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 请在此处提供错误发生时的版本。
+      placeholder: 例如，v1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: 请在此处提供错误发生时的环境。
+      placeholder: 例如，操作系统
+    validations:
+      required: true
+  - type: textarea
+    id: bug
+    attributes:
+      label: 错误
+      description: 请在此处描述您遇到的错误。
+      placeholder: 当我...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 场景
+      description: 请在此处描述您遇到错误的场景。
+      placeholder: 例如，当我...
+  - type: textarea
+    id: possible-solution
+    attributes:
+      label: 可能的解决方案
+      description: 请在此处描述您认为可能的解决方案。
+      placeholder: 我认为可以...
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: 请在此处提供相关日志。
+      placeholder: 例如，日志文件
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或视频
+      description: 请在此处提供相关截图或视频。
+      placeholder: 例如，截图文件
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他信息
+      description: 请在此处提供其他信息。
+      placeholder: 我们可以...
+  - type: input
+    id: contact
+    attributes:
+      label: 联系方式
+      description: 请在此处提供您的联系方式，以便我们与您联系。
+      placeholder: 例如，电子邮件地址
