@@ -90,6 +90,7 @@ kotlin {
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.androidx.window)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.datastore.preferences)
             implementation(compose.preview)
         }
         commonMain.dependencies {

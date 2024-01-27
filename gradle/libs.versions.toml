@@ -3,6 +3,7 @@ agp = "8.2.1"
 androidx-core-splashscreen = "1.0.1"
 androidx-window = "1.2.0"
 androidx-activity-compose = "1.8.2"
+androidx-datastore-preferences = "1.0.0"
 compose-plugin = "1.6.0-beta01"
 decompose = "3.0.0-alpha04"
 kotlin = "1.9.22"
@@ -19,6 +20,7 @@ kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }
 androidx-window = { module = "androidx.window:window", version.ref = "androidx-window" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore-preferences" }
 decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
 decompose-extensions-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }

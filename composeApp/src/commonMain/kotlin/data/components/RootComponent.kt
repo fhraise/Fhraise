@@ -37,6 +37,7 @@ import data.components.root.AppSignInComponent
 import data.components.root.SignInComponent
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import notificationPermissionGranted
 import requestNotificationPermission
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.suspendCoroutine
@@ -133,10 +134,16 @@ class AppRootComponent(
     }
 
     override fun cancelNotificationPermissionRequest() {
+        permissionRequestContinuation?.resumeWith(Result.success(null))
         showNotificationPermissionDialog = false
     }
 
     override suspend fun requestAppNotificationPermission(): Boolean? = suspendCoroutine {
+        if (notificationPermissionGranted != null) {
+            it.resumeWith(Result.success(notificationPermissionGranted))
+            return@suspendCoroutine
+        }
+
         permissionRequestContinuation = it
         showNotificationPermissionDialog = true
     }

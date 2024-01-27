@@ -18,10 +18,11 @@
 
 package xyz.xfqlittlefan.fhraise
 
+import AndroidPermissionImpl
 import Notification
 import Permission
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.NotificationManager
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -30,12 +31,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
 import compositionLocals.LocalActivity
@@ -43,8 +42,6 @@ import data.AppComponentContextValues.ColorMode.*
 import data.components.AppRootComponent
 import isMiui
 import ui.pages.Root
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.suspendCoroutine
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,28 +78,15 @@ class MainActivity : ComponentActivity() {
             notificationManager.createNotificationChannel(verifyCodeChannel)
         }
 
-        var notificationPermissionRequestContinuation: Continuation<Boolean>? = null
-        val notificationPermissionRequestLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-                notificationPermissionRequestContinuation?.resumeWith(Result.success(granted))
-            }
+        val notificationPermission =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Permission(POST_NOTIFICATIONS) else null
 
-        Permission.checkNotificationPermissionGranted = {
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || ContextCompat.checkSelfPermission(
-                this, android.Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        }
+        AndroidPermissionImpl.checkNotificationPermissionGranted =
+            notificationPermission?.run { { granted } } ?: { true }
 
-        Permission.requestNotificationPermission = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && Permission.checkNotificationPermissionGranted() != true) {
-                suspendCoroutine {
-                    notificationPermissionRequestContinuation = it
-                    notificationPermissionRequestLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                }
-            } else {
-                true
-            }
-        }
+        AndroidPermissionImpl.requestNotificationPermission = notificationPermission?.run {
+            registerRequestLauncher { it }
+        } ?: { true }
 
         Notification.send = { channel, title, message, priority ->
             val notification = NotificationCompat.Builder(this, "verifyCode").apply {

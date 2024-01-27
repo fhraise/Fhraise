@@ -16,12 +16,9 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-object AndroidPermissionImpl {
-    var checkNotificationPermissionGranted: () -> Boolean? = { null }
-    var requestNotificationPermission: suspend () -> Boolean? = { null }
-}
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 
-actual val notificationPermissionGranted: Boolean?
-    get() = AndroidPermissionImpl.checkNotificationPermissionGranted()
-
-actual suspend fun requestNotificationPermission(): Boolean? = AndroidPermissionImpl.requestNotificationPermission()
+val Context.permissionsDataStore: DataStore<Preferences> by preferencesDataStore(name = "permissions")
