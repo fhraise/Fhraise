@@ -22,7 +22,7 @@ jobs:
           - platform: Windows
             os: windows-latest
 
-    if: "github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.event.head_commit.message, 'chore: increase build number to')"
+    if: "github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.event.head_commit.message, 'chore: increase build number to'))"
 
     name: Build and Release ${{ matrix.platform }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
