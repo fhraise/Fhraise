@@ -64,6 +64,9 @@ interface SignInComponent : AppComponentContext {
             var canInputVerifyCode: Boolean
             var verifyCode: String
 
+            val textFieldError
+                get() = phoneNumber.isNotEmpty() && !phoneNumberVerified
+
             fun sendVerifyCode()
         }
 
@@ -134,18 +137,18 @@ class AppSignInComponent(
                 Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
 
             private var _phoneNumber by mutableStateOf(phoneNumber)
-            override var phoneNumber: String
+            override var phoneNumber
                 get() = _phoneNumber
                 set(value) {
                     canInputVerifyCode = false
                     _phoneNumber = value
                 }
 
-            override val phoneNumberVerified: Boolean
+            override val phoneNumberVerified
                 get() = phoneNumberRegex.matches(phoneNumber)
 
             private var _canInputVerifyCode by mutableStateOf(canInputVerifyCode)
-            override var canInputVerifyCode: Boolean
+            override var canInputVerifyCode
                 get() = _canInputVerifyCode
                 set(value) {
                     if (!phoneNumberVerified) {

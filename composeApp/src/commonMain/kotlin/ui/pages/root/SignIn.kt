@@ -641,14 +641,14 @@ fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.PhoneNumber() {
         prefix = { Text(text = "+86") },
         supportingText = {
             AnimatedVisibility(
-                visible = !phoneNumberVerified,
+                visible = textFieldError,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically(),
             ) {
                 Text(text = "手机号格式不正确")
             }
         },
-        isError = !phoneNumberVerified,
+        isError = textFieldError,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next
         ),
@@ -676,6 +676,7 @@ fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.VerifyCode() {
 fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.NextOrSubmitButton() {
     Button(
         onClick = ::nextOrSubmit,
+        enabled = phoneNumberVerified,
         shape = MaterialTheme.shapes.large,
     ) {
         AnimatedContent(
