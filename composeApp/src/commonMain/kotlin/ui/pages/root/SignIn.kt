@@ -676,6 +676,7 @@ fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.VerifyCode() {
 fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.NextOrSubmitButton() {
     Button(
         onClick = ::nextOrSubmit,
+        enabled = phoneNumberVerified,
         shape = MaterialTheme.shapes.large,
     ) {
         AnimatedContent(
