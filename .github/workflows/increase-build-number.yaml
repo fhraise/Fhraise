@@ -25,6 +25,7 @@ jobs:
 
       - name: Commit and push changes
         run: |
+          git config user.name github-actions
           git add build-number.properties
           git commit -m "chore: increase build number to $buildNumber"
           git push
