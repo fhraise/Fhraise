@@ -20,6 +20,7 @@ kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }
 androidx-window = { module = "androidx.window:window", version.ref = "androidx-window" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
+androidx-datastore-preferences-core = { module = "androidx.datastore:datastore-preferences-core", version.ref = "androidx-datastore-preferences" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore-preferences" }
 decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
 decompose-extensions-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
