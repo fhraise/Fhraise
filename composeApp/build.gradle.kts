@@ -81,17 +81,6 @@ kotlin {
     jvm("desktop")
 
     sourceSets {
-        val desktopMain by getting
-
-        androidMain.dependencies {
-            implementation(libs.kotlin.reflect)
-            implementation(libs.kotlinx.coroutines.android)
-            implementation(libs.androidx.core.splashscreen)
-            implementation(libs.androidx.window)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.datastore.preferences)
-            implementation(compose.preview)
-        }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -109,10 +98,31 @@ kotlin {
             implementation(libs.ktor.client.websockets)
             implementation(projects.shared)
         }
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.kotlinx.coroutines.swing)
-            implementation(libs.androidx.datastore.preferences.core)
+
+        jvmMain.dependencies {
+            implementation(libs.okio)
+        }
+
+        androidMain {
+            dependsOn(jvmMain.get())
+            dependencies {
+                implementation(libs.kotlin.reflect)
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.androidx.core.splashscreen)
+                implementation(libs.androidx.window)
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.androidx.datastore.preferences)
+                implementation(compose.preview)
+            }
+        }
+
+        named("desktopMain") {
+            dependsOn(jvmMain.get())
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutines.swing)
+                implementation(libs.androidx.datastore.preferences.core)
+            }
         }
     }
 }

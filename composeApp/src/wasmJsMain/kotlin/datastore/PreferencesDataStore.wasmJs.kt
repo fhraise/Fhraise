@@ -16,9 +16,10 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import android.content.Context
-import androidx.datastore.preferences.preferencesDataStore
-import datastore.DataStore
-import datastore.Preferences
+package datastore
 
-val Context.permissionsDataStore: DataStore<Preferences> by preferencesDataStore(name = "permissions")
+import kotlin.properties.ReadOnlyProperty
+
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<*, DataStore<Preferences>> {
+    TODO("Not yet implemented")
+}

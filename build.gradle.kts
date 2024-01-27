@@ -30,6 +30,16 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
 }
 
+buildscript {
+    dependencies {
+        classpath(libs.kotlinx.atomicfu)
+    }
+}
+
+allprojects {
+    apply(plugin = "kotlinx-atomicfu")
+}
+
 val versionPropertiesFile = file("version.properties")
 val versionProperties = Properties().apply {
     with(versionPropertiesFile) {
