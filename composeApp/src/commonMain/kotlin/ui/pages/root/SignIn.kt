@@ -136,6 +136,7 @@ fun SignIn(component: SignInComponent) {
                                 listOf(Color.Red.copy(alpha = 0.7f), Color.Blue.copy(alpha = 0.7f))
                             )
                         ),
+                        infinite = false,
                     )
                 }
             },
