@@ -56,6 +56,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ui.WindowSizeClass
 import ui.WindowWidthSizeClass
+import ui.composables.TypeWriter
 import ui.composables.VerticalScrollbar
 import ui.modifiers.applyBrush
 import kotlin.math.max
@@ -127,17 +128,16 @@ fun SignIn(component: SignInComponent) {
             modifier = Modifier.fillMaxSize(),
             contentPadding = paddingValues,
             header = {
-                Text(
-                    text = "开启你的\n 美食之旅_",
-                    modifier = Modifier.applyBrush(
-                        brush = Brush.horizontalGradient(
-                            listOf(
-                                Color.Red.copy(alpha = 0.7f), Color.Blue.copy(alpha = 0.7f)
+                CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.displayMedium) {
+                    TypeWriter(
+                        text = "开启你的\n 美食之旅",
+                        modifier = Modifier.applyBrush(
+                            brush = Brush.horizontalGradient(
+                                listOf(Color.Red.copy(alpha = 0.7f), Color.Blue.copy(alpha = 0.7f))
                             )
-                        )
-                    ),
-                    style = MaterialTheme.typography.displayMedium,
-                )
+                        ),
+                    )
+                }
             },
             content = {
                 Column(modifier = Modifier.fillMaxWidth()) {
