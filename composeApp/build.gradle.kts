@@ -82,6 +82,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(libs.kotlinx.coroutines.core)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.animation)
@@ -127,6 +128,12 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
+            }
+        }
+
+        val wasmJsMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.serialization.cbor)
             }
         }
     }

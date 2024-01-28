@@ -32,22 +32,37 @@
  * limitations under the License.
  */
 
-package datastore
+package androidx.datastore.preferences.core
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.Preferences
+/**
+ * Get a new empty Preferences.
+ *
+ * @return a new Preferences instance with no preferences set
+ */
+fun emptyPreferences(): Preferences = MutablePreferences(startFrozen = true)
 
-internal class PreferenceDataStore(private val delegate: DataStore<Preferences>) : DataStore<Preferences> by delegate {
-    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-        return delegate.updateData {
-            val transformed = transform(it)
-            // Freeze the preferences since any future mutations will break DataStore. If a user
-            // tunnels the value out of DataStore and mutates it, this could be problematic.
-            // This is a safe cast, since MutablePreferences is the only implementation of
-            // Preferences.
-            (transformed as MutablePreferences).freeze()
-            transformed
-        }
-    }
-}
+/**
+ * Construct a Preferences object with a list of Preferences.Pair<T>. Comparable to mapOf().
+ *
+ * Example usage:
+ * ```
+ * val counterKey = intPreferencesKey("counter")
+ * val preferences = preferencesOf(counterKey to 100)
+ * ```
+ *
+ * @param pairs the key value pairs with which to construct the preferences
+ */
+fun preferencesOf(vararg pairs: Preferences.Pair<*>): Preferences = mutablePreferencesOf(*pairs)
+
+/**
+ * Construct a MutablePreferences object with a list of Preferences.Pair<T>. Comparable to mapOf().
+ *
+ * Example usage:
+ * ```
+ * val counterKey = intPreferencesKey("counter")
+ * val preferences = mutablePreferencesOf(counterKey to 100)
+ * ```
+ * @param pairs the key value pairs with which to construct the preferences
+ */
+fun mutablePreferencesOf(vararg pairs: Preferences.Pair<*>): MutablePreferences =
+    MutablePreferences(startFrozen = false).apply { putAll(*pairs) }

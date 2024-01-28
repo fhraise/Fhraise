@@ -18,14 +18,35 @@
 
 package datastore
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.core.readData
+import androidx.datastore.core.writeData
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.browser.document
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 
-actual class DataStoreImpl<T> : DataStore<T> {
-    override val data: Flow<T>
-        get() = TODO("Not yet implemented")
-
-    override suspend fun updateData(transform: suspend (t: T) -> T): T {
-        TODO("Not yet implemented")
+actual class PreferencesDataStoreImpl(storage: PreferencesBrowserStorage) : DataStore<Preferences> {
+    private val storageConnection: PreferencesBrowserStorageConnection by lazy {
+        storage.createConnection()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
+    override val data: Flow<Preferences> = flow {
+        document.addEventListener(storageConnection.eventName) {
+            GlobalScope.launch(Dispatchers.Default) {
+                emit(storageConnection.readData())
+            }
+        }
+    }
+
+    override suspend fun updateData(transform: suspend (preferences: Preferences) -> Preferences): Preferences {
+        val newPreferences = transform(storageConnection.readData().toPreferences())
+        storageConnection.writeData(newPreferences)
+        return newPreferences
+    }
 }

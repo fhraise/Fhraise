@@ -16,10 +16,14 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package datastore
+package js
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import kotlin.properties.ReadOnlyProperty
-
-expect fun preferencesDataStore(name: String): ReadOnlyProperty<Any, DataStore<Preferences>>
+fun <T : JsAny> JsArray<T>.toList(
+    transform: JsArray<T>.(index: Int) -> T = {
+        get(it)!!
+    }
+): List<T> {
+    return (0 until length).map {
+        transform(it)
+    }
+}

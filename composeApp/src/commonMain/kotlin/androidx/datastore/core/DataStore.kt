@@ -32,7 +32,7 @@
  * limitations under the License.
  */
 
-package datastore
+package androidx.datastore.core
 
 import kotlinx.coroutines.flow.Flow
 

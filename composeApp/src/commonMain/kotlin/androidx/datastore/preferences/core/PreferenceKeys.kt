@@ -32,7 +32,7 @@
  * limitations under the License.
  */
 
-package datastore
+package androidx.datastore.preferences.core
 
 /**
  * Get a key for an Int preference. You should not have multiple keys with the same name (for use

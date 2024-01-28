@@ -19,6 +19,8 @@
 package datastore
 
 import androidx.annotation.GuardedBy
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import java.io.File
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty

@@ -17,7 +17,7 @@
  */
 
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,22 +32,31 @@
  * limitations under the License.
  */
 
-package datastore
+package androidx.datastore.core
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.sync.Mutex
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
-internal class PreferenceDataStore(private val delegate: DataStore<Preferences>) : DataStore<Preferences> by delegate {
-    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-        return delegate.updateData {
-            val transformed = transform(it)
-            // Freeze the preferences since any future mutations will break DataStore. If a user
-            // tunnels the value out of DataStore and mutates it, this could be problematic.
-            // This is a safe cast, since MutablePreferences is the only implementation of
-            // Preferences.
-            (transformed as MutablePreferences).freeze()
-            transformed
+/**
+ * Provide similar functionality of {@link kotlinx.coroutines.sync.Mutex#withLock} but don't
+ * wait for the lock if unavailable, instead it passes a Boolean into the [block] lambda to
+ * indicate if it is able to get the lock and run [block] immediately.
+ *
+ * [block] is guaranteed to be called once and only once by this function.
+ */
+@ExperimentalContracts
+internal inline fun <R> Mutex.withTryLock(owner: Any? = null, block: (Boolean) -> R): R {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+    val locked: Boolean = tryLock(owner)
+    try {
+        return block(locked)
+    } finally {
+        if (locked) {
+            unlock(owner)
         }
     }
 }

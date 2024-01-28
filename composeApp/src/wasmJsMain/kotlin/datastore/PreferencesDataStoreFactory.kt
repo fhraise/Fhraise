@@ -18,4 +18,13 @@
 
 package datastore
 
-actual object PreferenceDataStoreFactory
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+
+object PreferenceDataStoreFactory {
+    fun create(name: String): DataStore<Preferences> {
+        return PreferencesDataStoreImpl(
+            storage = PreferencesBrowserStorage(name)
+        )
+    }
+}

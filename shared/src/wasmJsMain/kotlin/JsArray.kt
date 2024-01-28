@@ -16,6 +16,8 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package datastore
+private fun <T : JsAny?> pushImpl(array: JsArray<T>, value: T) {
+    js("array.push(value)")
+}
 
-expect class DataStoreImpl<T> : DataStore<T>
+fun <T : JsAny?> JsArray<T>.push(value: T) = pushImpl(this, value)

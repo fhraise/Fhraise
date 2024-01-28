@@ -32,22 +32,22 @@
  * limitations under the License.
  */
 
-package datastore
+package androidx.datastore.core
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.Preferences
-
-internal class PreferenceDataStore(private val delegate: DataStore<Preferences>) : DataStore<Preferences> by delegate {
-    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-        return delegate.updateData {
-            val transformed = transform(it)
-            // Freeze the preferences since any future mutations will break DataStore. If a user
-            // tunnels the value out of DataStore and mutates it, this could be problematic.
-            // This is a safe cast, since MutablePreferences is the only implementation of
-            // Preferences.
-            (transformed as MutablePreferences).freeze()
-            transformed
-        }
-    }
+/**
+ * Storage provides a way to create StorageConnections that allow read and write a particular type
+ * <T> of data.  Storage is used to construct DataStore objects, and encapsulates all the specifics
+ * of the data format and persistence.
+ *
+ * Implementers provide the specifics of how and where the data is stored.
+ */
+interface Storage<T> {
+    /**
+     * Creates a storage connection which allows reading and writing to the underlying storage.
+     *
+     * Should be closed after usage.
+     *
+     * @throws IOException Unrecoverable IO exception when trying to access the underlying storage.
+     */
+    fun createConnection(): StorageConnection<T>
 }

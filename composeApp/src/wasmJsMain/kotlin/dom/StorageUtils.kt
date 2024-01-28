@@ -16,10 +16,14 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package datastore
+package dom
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import kotlin.properties.ReadOnlyProperty
+import org.w3c.dom.Storage
 
-expect fun preferencesDataStore(name: String): ReadOnlyProperty<Any, DataStore<Preferences>>
+fun Storage.toMap(): Map<String, String> {
+    return (0 until length).associate { index ->
+        val key = key(index)!!
+        val value = getItem(key)!!
+        key to value
+    }
+}

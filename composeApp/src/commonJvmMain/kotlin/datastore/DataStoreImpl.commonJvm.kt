@@ -19,5 +19,6 @@
 package datastore
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 
-actual class DataStoreImpl<T>(delegate: DataStore<T>) : datastore.DataStore<T>, DataStore<T> by delegate
+actual class PreferencesDataStoreImpl(delegate: DataStore<Preferences>) : DataStore<Preferences> by delegate

@@ -32,8 +32,9 @@
  * limitations under the License.
  */
 
-package datastore
+package androidx.datastore.preferences.core
 
+import androidx.datastore.core.DataStore
 import kotlinx.atomicfu.atomic
 
 /**

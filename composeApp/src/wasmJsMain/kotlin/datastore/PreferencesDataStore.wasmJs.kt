@@ -18,8 +18,36 @@
 
 package datastore
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.atomicfu.locks.synchronized
 import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KProperty
 
-actual fun preferencesDataStore(name: String): ReadOnlyProperty<*, DataStore<Preferences>> {
-    TODO("Not yet implemented")
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<Any, DataStore<Preferences>> {
+    return PreferenceDataStoreSingletonDelegate(name)
+}
+
+internal class PreferenceDataStoreSingletonDelegate<T> internal constructor(
+    private val name: String
+) : ReadOnlyProperty<T, DataStore<Preferences>> {
+
+    private val lock = Any()
+
+    private var INSTANCE: DataStore<Preferences>? = null
+
+    /**
+     * Gets the instance of the DataStore.
+     *
+     * @param thisRef must be an instance of [Context]
+     * @param property not used
+     */
+    override fun getValue(thisRef: T, property: KProperty<*>): DataStore<Preferences> {
+        return INSTANCE ?: synchronized(lock) {
+            if (INSTANCE == null) {
+                INSTANCE = PreferenceDataStoreFactory.create(name)
+            }
+            INSTANCE!!
+        }
+    }
 }

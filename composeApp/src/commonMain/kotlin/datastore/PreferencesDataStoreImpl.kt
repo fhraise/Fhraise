@@ -18,9 +18,7 @@
 
 package datastore
 
-fun emptyPreferences(): Preferences = MutablePreferences(startFrozen = true)
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 
-fun preferencesOf(vararg pairs: Preferences.Pair<*>): Preferences = mutablePreferencesOf(*pairs)
-
-fun mutablePreferencesOf(vararg pairs: Preferences.Pair<*>): MutablePreferences =
-    MutablePreferences(startFrozen = false).apply { putAll(*pairs) }
+expect class PreferencesDataStoreImpl : DataStore<Preferences>

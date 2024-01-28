@@ -32,22 +32,51 @@
  * limitations under the License.
  */
 
-package datastore
+package androidx.datastore.core
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.Preferences
+/**
+ * Datastore common version of java.io.Closeable
+ */
+@Suppress("NotCloseable") // No closable in KMP common.
+interface Closeable {
 
-internal class PreferenceDataStore(private val delegate: DataStore<Preferences>) : DataStore<Preferences> by delegate {
-    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-        return delegate.updateData {
-            val transformed = transform(it)
-            // Freeze the preferences since any future mutations will break DataStore. If a user
-            // tunnels the value out of DataStore and mutates it, this could be problematic.
-            // This is a safe cast, since MutablePreferences is the only implementation of
-            // Preferences.
-            (transformed as MutablePreferences).freeze()
-            transformed
+    /**
+     * Closes the specified resource.
+     */
+    fun close()
+}
+
+/**
+ * Ensures a Closeable object has its close() method called at the end of the supplied block.
+ *
+ * @throws Throwable any exceptions thrown in the block will propagate through this method.
+ */
+@Suppress("NotCloseable", "DocumentExceptions") // No closable in KMP common.
+inline fun <T : Closeable, R> T.use(block: (T) -> R): R {
+    var thrown: Throwable? = null
+
+    try {
+        return block(this)
+    } catch (t: Throwable) {
+        thrown = t
+    } finally {
+        try {
+            this.close()
+        } catch (t: Throwable) {
+            if (thrown == null) {
+                thrown = t
+            } else {
+                thrown.addSuppressed(t)
+            }
+        }
+
+        if (thrown != null) {
+            throw thrown
         }
     }
+    // We either returned in the try block, or thrown must be not null, so this code is unreachable.
+    error(
+        """Unreachable code. If this occurs, please file a bug here:
+        https://b.corp.google.com/issues/new?component=907884&template=1466542"""
+    )
 }

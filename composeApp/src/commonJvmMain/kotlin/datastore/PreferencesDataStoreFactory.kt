@@ -19,10 +19,13 @@
 package datastore
 
 import androidx.datastore.core.DataMigration
+import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.Storage
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.core.okio.OkioStorage
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferencesSerializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,7 +33,9 @@ import okio.FileSystem
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
-actual object PreferenceDataStoreFactory {
+const val preferenceFileExtension = "preferences_pb"
+
+object PreferenceDataStoreFactory {
     fun create(
         corruptionHandler: ReplaceFileCorruptionHandler<Preferences>? = null,
         migrations: List<DataMigration<Preferences>> = listOf(),
@@ -40,8 +45,8 @@ actual object PreferenceDataStoreFactory {
         val delegate = create(
             storage = OkioStorage(FileSystem.SYSTEM, PreferencesSerializer) {
                 val file = produceFile()
-                check(file.extension == PreferencesSerializer.fileExtension) {
-                    "File extension for file: $file does not match required extension for" + " Preferences file: ${PreferencesSerializer.fileExtension}"
+                check(file.extension == preferenceFileExtension) {
+                    "File extension for file: $file does not match required extension for Preferences file: $preferenceFileExtension"
                 }
                 file.absoluteFile.toOkioPath()
             }, corruptionHandler = corruptionHandler, migrations = migrations, scope = scope
@@ -56,7 +61,7 @@ actual object PreferenceDataStoreFactory {
         scope: CoroutineScope,
     ): DataStore<Preferences> {
         return PreferenceDataStore(
-            DataStoreImpl(
+            PreferencesDataStoreImpl(
                 DataStoreFactory.create(
                     storage = storage, corruptionHandler = corruptionHandler, migrations = migrations, scope = scope
                 )

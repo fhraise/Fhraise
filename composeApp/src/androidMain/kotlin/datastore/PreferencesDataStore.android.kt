@@ -19,10 +19,13 @@
 package datastore
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlin.properties.ReadOnlyProperty
 
-actual fun preferencesDataStore(name: String): ReadOnlyProperty<*, DataStore<Preferences>> =
-    PreferenceDataStoreSingletonDelegate<Context> {
-        applicationContext.preferencesDataStoreFile(name)
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<Any, DataStore<Preferences>> {
+    return PreferenceDataStoreSingletonDelegate {
+        (this as Context).applicationContext.preferencesDataStoreFile(name)
     }
+}
