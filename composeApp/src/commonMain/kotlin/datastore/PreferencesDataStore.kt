@@ -22,4 +22,4 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import kotlin.properties.ReadOnlyProperty
 
-expect fun preferencesDataStore(name: String): ReadOnlyProperty<Any, DataStore<Preferences>>
+expect fun preferencesDataStore(name: String): ReadOnlyProperty<Nothing?, DataStore<Preferences>>

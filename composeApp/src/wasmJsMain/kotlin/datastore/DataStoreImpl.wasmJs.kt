@@ -27,7 +27,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
 
 actual class PreferencesDataStoreImpl(storage: PreferencesBrowserStorage) : DataStore<Preferences> {
@@ -36,10 +36,10 @@ actual class PreferencesDataStoreImpl(storage: PreferencesBrowserStorage) : Data
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override val data: Flow<Preferences> = flow {
+    override val data: Flow<Preferences> = channelFlow {
         document.addEventListener(storageConnection.eventName) {
             GlobalScope.launch(Dispatchers.Default) {
-                emit(storageConnection.readData())
+                trySend(storageConnection.readData())
             }
         }
     }

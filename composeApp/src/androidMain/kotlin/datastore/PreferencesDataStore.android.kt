@@ -24,8 +24,12 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlin.properties.ReadOnlyProperty
 
-actual fun preferencesDataStore(name: String): ReadOnlyProperty<Any, DataStore<Preferences>> {
+object PreferencesDataStore {
+    var applicationContext: Context? = null
+}
+
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<Nothing?, DataStore<Preferences>> {
     return PreferenceDataStoreSingletonDelegate {
-        (this as Context).applicationContext.preferencesDataStoreFile(name)
+        PreferencesDataStore.applicationContext!!.preferencesDataStoreFile(name)
     }
 }
