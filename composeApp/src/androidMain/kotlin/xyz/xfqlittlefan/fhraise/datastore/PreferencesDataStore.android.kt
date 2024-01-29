@@ -28,7 +28,7 @@ object PreferencesDataStore {
     var applicationContext: Context? = null
 }
 
-actual fun preferencesDataStore(name: String): ReadOnlyProperty<Nothing?, DataStore<Preferences>> {
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<Any?, DataStore<Preferences>> {
     return PreferenceDataStoreSingletonDelegate {
         PreferencesDataStore.applicationContext!!.preferencesDataStoreFile(name)
     }

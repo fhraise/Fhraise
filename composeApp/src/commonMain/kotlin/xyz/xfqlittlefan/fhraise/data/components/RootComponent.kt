@@ -32,6 +32,7 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.backhandler.BackHandlerOwner
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import xyz.xfqlittlefan.fhraise.SettingsDataStore
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues
 import xyz.xfqlittlefan.fhraise.data.componentScope
@@ -62,11 +63,7 @@ class AppRootComponent(
 ) : RootComponent, ComponentContext by componentContext {
     private val navigation = StackNavigation<Configuration>()
 
-    override val colorMode = mutableStateOf(AppComponentContextValues.ColorMode.SYSTEM)
-
-    override fun changeColorMode(colorMode: AppComponentContextValues.ColorMode) {
-        this.colorMode.value = colorMode
-    }
+    override val settings = SettingsDataStore.Preferences(componentScope)
 
     override val snackbarHostState = SnackbarHostState()
 

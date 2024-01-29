@@ -65,7 +65,7 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 fun SignIn(component: SignInComponent) {
-    val colorMode by component.colorMode
+    val colorMode by component.settings.colorMode.collectAsState()
     val pop by component.pop
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
@@ -113,7 +113,7 @@ fun SignIn(component: SignInComponent) {
                                     DARK -> Icons.Default.DarkMode
                                     SYSTEM -> Icons.Default.Adjust
                                 },
-                                contentDescription = "当前颜色模式：${component.colorMode.value.displayName}，改变到：${component.nextColorMode.displayName}",
+                                contentDescription = "当前颜色模式：${colorMode.displayName}，改变到：${colorMode.next.displayName}",
                             )
                         },
                     )

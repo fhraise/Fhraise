@@ -23,15 +23,18 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import com.arkivanov.decompose.ComponentContext
+import xyz.xfqlittlefan.fhraise.SettingsDataStore
 
 interface AppComponentContext : ComponentContext, AppComponentContextValues
 
 interface AppComponentContextValues {
-    val colorMode: State<ColorMode>
-    fun changeColorMode(colorMode: ColorMode)
+    val settings: SettingsDataStore.Preferences
 
     enum class ColorMode(val displayName: String) {
-        LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统")
+        LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统");
+
+        val next
+            get() = ColorMode.entries[(ordinal + 1) % ColorMode.entries.size]
     }
 
     val pop: State<(() -> Unit)?>

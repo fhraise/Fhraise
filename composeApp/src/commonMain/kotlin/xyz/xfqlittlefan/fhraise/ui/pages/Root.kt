@@ -24,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.Children
@@ -42,7 +43,7 @@ import xyz.xfqlittlefan.fhraise.ui.windowSizeClass
 @OptIn(ExperimentalDecomposeApi::class)
 @Composable
 fun Root(component: RootComponent) {
-    val colorMode by component.colorMode
+    val colorMode by component.settings.colorMode.collectAsState()
 
     CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
         AppTheme(
