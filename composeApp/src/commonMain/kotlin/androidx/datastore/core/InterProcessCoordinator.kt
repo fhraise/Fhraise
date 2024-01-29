@@ -91,10 +91,3 @@ interface InterProcessCoordinator {
      */
     suspend fun incrementAndGetVersion(): Int
 }
-
-/**
- * Create a coordinator for single process use cases.
- *
- * @param filePath The canonical file path of the file managed by [SingleProcessCoordinator]
- */
-fun createSingleProcessCoordinator(filePath: String): InterProcessCoordinator = SingleProcessCoordinator(filePath)
