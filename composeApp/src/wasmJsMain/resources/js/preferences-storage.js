@@ -29,7 +29,7 @@ class Preference {
 }
 
 class PreferencesStorage {
-  eventName = "preferencesChanged";
+  eventName;
   preferences;
   subscription;
 
@@ -39,6 +39,7 @@ class PreferencesStorage {
       preferences: "key, value, type",
     });
 
+    this.eventName = `preferences-changed-${name}-${version}`;
     const event = new Event(this.eventName);
 
     const observable = Dexie.liveQuery(() => this.db.preferences.toArray());
@@ -51,9 +52,11 @@ class PreferencesStorage {
   async write(preferencesArray) {
     this.preferences = preferencesArray;
     try {
-      await this.db.preferences.bulkUpdate(preferencesArray.map((preference) => {
-        return { key: preference.key, changes: { value: preference.value, type: preference.type } };
-      }));
+      const keys = preferencesArray.map((preference) => preference.key);
+      const values = preferencesArray.map((preference) => {
+        return { value: preference.value, type: preference.type };
+      });
+      await this.db.preferences.bulkPut(preferencesArray);
     } catch (e) {
       console.error("Error writing preferences", e);
     }
