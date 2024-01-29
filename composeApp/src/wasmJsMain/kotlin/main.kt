@@ -22,11 +22,11 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.lifecycle.stop
-import data.components.AppRootComponent
 import kotlinx.browser.document
 import org.w3c.dom.Document
 import org.w3c.dom.get
-import ui.pages.Root
+import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
+import xyz.xfqlittlefan.fhraise.ui.pages.Root
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {

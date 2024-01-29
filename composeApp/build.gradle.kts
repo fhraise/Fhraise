@@ -58,7 +58,7 @@ val String.outputDirectory
 
 kotlin {
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
-        moduleName = "composeApp"
+        moduleName = "fhraise"
         browser {
             commonWebpackConfig {
                 outputFileName = "fhraise.js"

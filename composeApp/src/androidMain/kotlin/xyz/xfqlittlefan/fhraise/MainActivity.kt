@@ -18,9 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import AndroidPermissionImpl
-import Notification
-import Permission
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.NotificationManager
 import android.graphics.Color
@@ -37,12 +34,11 @@ import androidx.compose.runtime.getValue
 import androidx.core.app.NotificationCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arkivanov.decompose.defaultComponentContext
-import compositionLocals.LocalActivity
-import data.AppComponentContextValues.ColorMode.*
-import data.components.AppRootComponent
-import datastore.PreferencesDataStore
-import isMiui
-import ui.pages.Root
+import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
+import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
+import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
+import xyz.xfqlittlefan.fhraise.datastore.PreferencesDataStore
+import xyz.xfqlittlefan.fhraise.ui.pages.Root
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

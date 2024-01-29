@@ -27,16 +27,17 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
-import compositionLocals.LocalWindowSize
-import data.components.AppRootComponent
-import datastore.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import ui.pages.Root
+import xyz.xfqlittlefan.fhraise.Notification
+import xyz.xfqlittlefan.fhraise.compositionLocals.LocalWindowSize
+import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
+import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
+import xyz.xfqlittlefan.fhraise.ui.pages.Root
 import javax.swing.SwingUtilities
 
 val windowDataStore by preferencesDataStore(name = "window")
