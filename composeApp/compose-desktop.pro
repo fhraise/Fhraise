@@ -3,5 +3,3 @@
 -keep class com.arkivanov.decompose.extensions.compose.** { *; }
 
 -dontwarn org.slf4j.**
--dontwarn androidx.datastore.preferences.core.**
--dontwarn ui.pages.**
