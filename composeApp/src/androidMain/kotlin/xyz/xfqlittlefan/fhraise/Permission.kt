@@ -19,38 +19,32 @@
 package xyz.xfqlittlefan.fhraise
 
 import android.Manifest
-import android.app.Activity
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.suspendCoroutine
 
-class Permission(private val permission: String) {
-    private val Context.firstRequestFlow
-        get() = permissionsDataStore.data.map { it[booleanPreferencesKey(permission)] ?: true }
+class Permission(private val activity: ComponentActivity, private val permission: String) {
+    private var firstRequest by PermissionDataStore.Permission(activity.lifecycleScope, permission)
 
-    val Activity.granted: Boolean?
+    val granted: Boolean?
         get() {
-            if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) return true
+            if (ContextCompat.checkSelfPermission(
+                    activity, permission
+                ) == PackageManager.PERMISSION_GRANTED
+            ) return true
 
-            if (runBlocking { firstRequestFlow.first() }) return null
+            if (firstRequest) return null
 
-            return if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) null else false
+            return if (activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) null else false
         }
 
-    fun <T> ComponentActivity.registerRequestLauncher(onRegister: (request: suspend () -> Boolean?) -> T): T {
+    fun <T> registerRequestLauncher(onRegister: (request: suspend () -> Boolean?) -> T): T {
         var continuation: Continuation<Boolean?>? = null
-        val launcher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        val launcher = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) {
             val result = if (it) true else granted
             continuation?.resumeWith(Result.success(result))
         }
@@ -59,10 +53,10 @@ class Permission(private val permission: String) {
             suspendCoroutine { cont ->
                 continuation = cont
                 launcher.launch(permission)
-                lifecycleScope.launch {
-                    permissionsDataStore.edit { it[booleanPreferencesKey(permission)] = false }
-                }
+                firstRequest = false
             }
         }
     }
 }
+
+fun ComponentActivity.permission(permission: String) = Permission(this, permission)

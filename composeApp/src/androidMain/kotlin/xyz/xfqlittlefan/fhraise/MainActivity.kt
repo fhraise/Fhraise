@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val notificationPermission =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Permission(POST_NOTIFICATIONS) else null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission(POST_NOTIFICATIONS) else null
 
         AndroidPermissionImpl.checkNotificationPermissionGranted =
             notificationPermission?.run { { granted } } ?: { true }

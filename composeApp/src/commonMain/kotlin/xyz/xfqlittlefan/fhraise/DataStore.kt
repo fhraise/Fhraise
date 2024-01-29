@@ -29,11 +29,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode
 import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 object SettingsDataStore {
     private val store by preferencesDataStore("settings")
 
-    class Preferences(val scope: CoroutineScope) {
+    class Preferences(scope: CoroutineScope) {
         val colorMode = PreferenceStateFlow(
             scope,
             store,
@@ -55,7 +57,7 @@ open class PreferenceStateFlow<K, V>(
     @Suppress("UNCHECKED_CAST") transform: (K) -> V = { it as V },
     @Suppress("UNCHECKED_CAST") private val restore: (V) -> K = { it as K },
     defaultValue: V
-) : PreferenceStateFlowBase<V>(MutableStateFlow(defaultValue)) {
+) : PreferenceStateFlowBase<V>(MutableStateFlow(defaultValue)), ReadWriteProperty<Any?, V> {
     init {
         scope.launch {
             store.data[key].transform(transform).map { it ?: defaultValue }.collect { base.value = it }
@@ -70,6 +72,12 @@ open class PreferenceStateFlow<K, V>(
         scope.launch {
             store.edit { it[key] = value.let(restore) }
         }
+    }
+
+    override fun getValue(thisRef: Any?, property: KProperty<*>) = value
+
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: V) {
+        this.value = value
     }
 }
 

@@ -18,7 +18,14 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import android.content.Context
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import kotlinx.coroutines.CoroutineScope
+import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
 
-val Context.permissionsDataStore by preferencesDataStore(name = "permissions")
+
+object PermissionDataStore {
+    private val store by preferencesDataStore("permissions")
+
+    class Permission(scope: CoroutineScope, key: String) :
+        PreferenceStateFlow<Boolean, Boolean>(scope, store, booleanPreferencesKey(key), defaultValue = true)
+}
