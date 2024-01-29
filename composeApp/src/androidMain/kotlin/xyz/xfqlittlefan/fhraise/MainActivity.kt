@@ -40,6 +40,7 @@ import com.arkivanov.decompose.defaultComponentContext
 import compositionLocals.LocalActivity
 import data.AppComponentContextValues.ColorMode.*
 import data.components.AppRootComponent
+import datastore.PreferencesDataStore
 import isMiui
 import ui.pages.Root
 
@@ -60,6 +61,8 @@ class MainActivity : ComponentActivity() {
                 WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
             )
         }
+
+        PreferencesDataStore.applicationContext = applicationContext
 
         super.onCreate(savedInstanceState)
 

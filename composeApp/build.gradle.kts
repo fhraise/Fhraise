@@ -81,37 +81,66 @@ kotlin {
     jvm("desktop")
 
     sourceSets {
-        val desktopMain by getting
+        commonMain {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.animation)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+                implementation(libs.decompose)
+                implementation(libs.decompose.extensions.compose)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.auth)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.client.websockets)
+                implementation(projects.shared)
+            }
+        }
 
-        androidMain.dependencies {
-            implementation(libs.kotlin.reflect)
-            implementation(libs.kotlinx.coroutines.android)
-            implementation(libs.androidx.core.splashscreen)
-            implementation(libs.androidx.window)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.datastore.preferences)
-            implementation(compose.preview)
+        val commonJvmMain by creating {
+            dependsOn(commonMain.get())
+            dependencies {
+                implementation(libs.androidx.datastore.core)
+                implementation(libs.androidx.datastore.core.okio)
+                implementation(libs.androidx.datastore.preferences.core)
+                implementation(libs.okio)
+            }
+
+            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
+                exclude("androidx/datastore/**")
+            }
         }
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.animation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(libs.decompose)
-            implementation(libs.decompose.extensions.compose)
-            implementation(libs.ktor.serialization.kotlinx.json)
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.auth)
-            implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.client.websockets)
-            implementation(projects.shared)
+
+        androidMain {
+            dependsOn(commonJvmMain)
+            dependencies {
+                implementation(libs.kotlin.reflect)
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.androidx.core.splashscreen)
+                implementation(libs.androidx.window)
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.androidx.datastore.preferences)
+                implementation(compose.preview)
+            }
         }
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.kotlinx.coroutines.swing)
+
+        val desktopMain by getting {
+            dependsOn(commonJvmMain)
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutines.swing)
+            }
+        }
+
+        val wasmJsMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.serialization.cbor)
+            }
         }
     }
 }
@@ -185,6 +214,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Msi)
+            modules("jdk.unsupported")
             packageName = "Fhraise"
             packageVersion = version
             description = "Fhraise"
