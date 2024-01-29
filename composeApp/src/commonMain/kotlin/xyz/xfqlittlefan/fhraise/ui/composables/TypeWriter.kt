@@ -44,7 +44,7 @@ fun TypeWriter(
     var showSuffixTimes by remember { mutableStateOf(0) }
 
     Box(modifier = modifier) {
-        if (reserveSpace) Text(text = "${text.replace("\n", "\n$suffix")}$suffix", modifier = Modifier.alpha(0f))
+        if (reserveSpace) Text(text = "$text$suffix", modifier = Modifier.alpha(0f))
         Text(text = "${text.substring(0, index)}${if (showSuffix) suffix else ""}")
     }
 
