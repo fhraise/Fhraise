@@ -36,7 +36,7 @@ fun main() {
 
     lifecycleRegistry.attachToDocument()
 
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") { Root(component = rootComponent) }
+    CanvasBasedWindow(canvasElementId = "fhraise") { Root(component = rootComponent) }
 }
 
 private fun LifecycleRegistry.attachToDocument() {
