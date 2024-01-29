@@ -26,19 +26,10 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
-import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode
-import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.sendVerifyCodeNotification
 
 interface SignInComponent : AppComponentContext {
-    val nextColorMode: ColorMode
-        get() = when (colorMode.value) {
-            LIGHT -> DARK
-            DARK -> SYSTEM
-            SYSTEM -> LIGHT
-        }
-
     fun switchColorMode()
 
     val state: ComponentState
@@ -113,13 +104,7 @@ class AppSignInComponent(
     override var state: ComponentState by mutableStateOf(stateBuilder())
 
     override fun switchColorMode() {
-        changeColorMode(
-            when (colorMode.value) {
-                LIGHT -> DARK
-                DARK -> SYSTEM
-                SYSTEM -> LIGHT
-            }
-        )
+        settings.colorMode.value = settings.colorMode.value.next
     }
 
     sealed class ComponentState(context: AppComponentContext) : AppComponentContext by context,

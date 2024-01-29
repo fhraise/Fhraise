@@ -24,7 +24,7 @@ import kotlinx.atomicfu.locks.synchronized
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-actual fun preferencesDataStore(name: String): ReadOnlyProperty<Nothing?, DataStore<Preferences>> {
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<Any?, DataStore<Preferences>> {
     return PreferenceDataStoreSingletonDelegate(name)
 }
 

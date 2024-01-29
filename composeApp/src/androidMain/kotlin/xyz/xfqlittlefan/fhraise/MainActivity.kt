@@ -30,6 +30,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.app.NotificationCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -105,7 +106,7 @@ class MainActivity : ComponentActivity() {
         val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
 
         setContent {
-            val colorMode by rootComponent.colorMode
+            val colorMode by rootComponent.settings.colorMode.collectAsState()
 
             LaunchedEffect(colorMode) {
                 val systemBarStyle = when (colorMode) {
