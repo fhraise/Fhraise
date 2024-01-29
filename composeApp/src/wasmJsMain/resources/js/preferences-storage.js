@@ -36,29 +36,27 @@ class PreferencesStorage {
   constructor(name, version) {
     this.db = new Dexie(name);
     this.db.version(version).stores({
-      preferences: "key, value",
+      preferences: "key, value, type",
     });
 
     const event = new Event(this.eventName);
 
     const observable = Dexie.liveQuery(() => this.db.preferences.toArray());
     this.subscription = observable.subscribe(async (preferences) => {
-      const preferencesArray = [];
-      for (const preference of preferences) {
-        preferencesArray.push(new Preference(preference.key, preference.value));
-      }
-      this.preferences = preferencesArray;
+      this.preferences = preferences;
       document.dispatchEvent(event);
     });
   }
 
   async write(preferencesArray) {
     this.preferences = preferencesArray;
-    // await this.db.preferences.clear();
-    await this.db.preferences.bulkAdd(preferencesArray);
-    // for (const preference of preferencesArray) {
-    //   await this.db.preferences.add(preference);
-    // }
+    try {
+      await this.db.preferences.bulkUpdate(preferencesArray.map((preference) => {
+        return { key: preference.key, changes: { value: preference.value, type: preference.type } };
+      }));
+    } catch (e) {
+      console.error("Error writing preferences", e);
+    }
   }
 
   unsubscribe() {

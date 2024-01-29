@@ -48,13 +48,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import data.AppComponentContextValues.ColorMode.*
-import data.componentScope
 import data.components.root.SignInComponent
-import datastore.preferencesDataStore
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -66,9 +61,6 @@ import ui.composables.VerticalScrollbar
 import ui.modifiers.applyBrush
 import kotlin.math.max
 import kotlin.math.roundToInt
-
-val dataStore by preferencesDataStore(name = "root")
-val v = dataStore.data.map { it[intPreferencesKey("v")] ?: 0 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
@@ -150,19 +142,6 @@ fun SignIn(component: SignInComponent) {
             },
             content = {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    val vv by v.collectAsState(0)
-                    Text(vv.toString())
-                    Button(
-                        onClick = {
-                            component.componentScope.launch {
-                                dataStore.edit {
-                                    it[intPreferencesKey("v")] = vv + 1
-                                }
-                            }
-                        },
-                    ) {
-                        Text("a")
-                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     with(state) {
                         if (this is SignInComponent.ComponentState.SignIn) {

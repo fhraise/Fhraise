@@ -122,7 +122,7 @@ abstract class Preferences internal constructor() {
      * @return a MutablePreferences with all the preferences from this Preferences
      */
     fun toMutablePreferences(): MutablePreferences {
-        return MutablePreferences(asMap().toMutableMap())
+        return MutablePreferences(asMap().toMutableMap(), startFrozen = false)
     }
 
     /**
@@ -133,7 +133,7 @@ abstract class Preferences internal constructor() {
      * @return a copy of this Preferences
      */
     fun toPreferences(): Preferences {
-        return MutablePreferences(asMap().toMutableMap())
+        return MutablePreferences(asMap().toMutableMap(), startFrozen = true)
     }
 }
 

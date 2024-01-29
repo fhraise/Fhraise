@@ -23,9 +23,7 @@ import androidx.datastore.core.readData
 import androidx.datastore.core.writeData
 import androidx.datastore.preferences.core.Preferences
 import kotlinx.browser.document
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
@@ -35,12 +33,15 @@ actual class PreferencesDataStoreImpl(storage: PreferencesBrowserStorage) : Data
         storage.createConnection()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override val data: Flow<Preferences> = channelFlow {
         document.addEventListener(storageConnection.eventName) {
-            GlobalScope.launch(Dispatchers.Default) {
-                trySend(storageConnection.readData())
+            launch {
+                send(storageConnection.readData())
             }
+        }
+
+        awaitClose {
+            storageConnection.close()
         }
     }
 

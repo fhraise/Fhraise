@@ -84,18 +84,12 @@ class PreferencesBrowserStorageConnection(name: String) : StorageConnection<Pref
         override suspend fun incrementAndGetVersion() = ++version
     }
 
-    override fun close() {
-        storage.unsubscribe()
-    }
-
+    override fun close() = storage.unsubscribe()
 }
 
 internal class PreferencesBrowserReadScope(private val storage: PreferencesStorage) : ReadScope<Preferences> {
-    override suspend fun readData(): Preferences {
-        return storage.preferences.toPreferences()
-    }
-
-    override fun close() {}
+    override suspend fun readData() = storage.preferences.toPreferences()
+    override fun close() = Unit
 }
 
 internal class PreferencesBrowserWriteScope(private val storage: PreferencesStorage) : WriteScope<Preferences> {
@@ -103,11 +97,8 @@ internal class PreferencesBrowserWriteScope(private val storage: PreferencesStor
         storage.write(value.toJsPreferences()).await()
     }
 
-    override suspend fun readData(): Preferences {
-        return storage.preferences.toPreferences()
-    }
-
-    override fun close() {}
+    override suspend fun readData() = storage.preferences.toPreferences()
+    override fun close() = Unit
 }
 
 internal fun JsPreferences.toPreferences(): Preferences {
