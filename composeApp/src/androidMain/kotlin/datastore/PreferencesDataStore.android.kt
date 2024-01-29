@@ -16,7 +16,20 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import android.content.Context
-import androidx.datastore.preferences.preferencesDataStore
+package datastore
 
-val Context.permissionsDataStore by preferencesDataStore(name = "permissions")
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
+import kotlin.properties.ReadOnlyProperty
+
+object PreferencesDataStore {
+    var applicationContext: Context? = null
+}
+
+actual fun preferencesDataStore(name: String): ReadOnlyProperty<Nothing?, DataStore<Preferences>> {
+    return PreferenceDataStoreSingletonDelegate {
+        PreferencesDataStore.applicationContext!!.preferencesDataStoreFile(name)
+    }
+}

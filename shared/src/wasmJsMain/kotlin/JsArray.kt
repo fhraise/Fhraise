@@ -16,7 +16,8 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import android.content.Context
-import androidx.datastore.preferences.preferencesDataStore
+private fun <T : JsAny?> pushImpl(array: JsArray<T>, value: T) {
+    js("array.push(value)")
+}
 
-val Context.permissionsDataStore by preferencesDataStore(name = "permissions")
+fun <T : JsAny?> JsArray<T>.push(value: T) = pushImpl(this, value)

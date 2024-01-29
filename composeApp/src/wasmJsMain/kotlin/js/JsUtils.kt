@@ -16,7 +16,14 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import android.content.Context
-import androidx.datastore.preferences.preferencesDataStore
+package js
 
-val Context.permissionsDataStore by preferencesDataStore(name = "permissions")
+fun <T : JsAny> JsArray<T>.toList(
+    transform: JsArray<T>.(index: Int) -> T = {
+        get(it)!!
+    }
+): List<T> {
+    return (0 until length).map {
+        transform(it)
+    }
+}

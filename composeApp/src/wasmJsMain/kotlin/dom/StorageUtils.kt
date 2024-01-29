@@ -16,7 +16,14 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import android.content.Context
-import androidx.datastore.preferences.preferencesDataStore
+package dom
 
-val Context.permissionsDataStore by preferencesDataStore(name = "permissions")
+import org.w3c.dom.Storage
+
+fun Storage.toMap(): Map<String, String> {
+    return (0 until length).associate { index ->
+        val key = key(index)!!
+        val value = getItem(key)!!
+        key to value
+    }
+}

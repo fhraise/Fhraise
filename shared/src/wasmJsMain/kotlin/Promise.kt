@@ -22,7 +22,10 @@ import kotlin.coroutines.suspendCoroutine
 import kotlin.js.Promise
 
 suspend fun <T : JsAny?> Promise<T>.await(): T = suspendCoroutine { continuation ->
-    then({ continuation.resume(it).toJsReference() }, {
-        it.toThrowableOrNull()?.let { throwable -> continuation.resumeWithException(throwable).toJsReference() }
-    })
+    then(
+        onFulfilled = { continuation.resume(it).toJsReference() },
+        onRejected = {
+            it.toThrowableOrNull()?.let { throwable -> continuation.resumeWithException(throwable).toJsReference() }
+        },
+    )
 }
