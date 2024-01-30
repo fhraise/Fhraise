@@ -21,10 +21,10 @@ package xyz.xfqlittlefan.fhraise
 import io.ktor.serialization.kotlinx.cbor.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.openapi.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.resources.post
@@ -40,7 +40,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import xyz.xfqlittlefan.fhraise.api.Auth
 import xyz.xfqlittlefan.fhraise.models.VerifyCode
 import xyz.xfqlittlefan.fhraise.models.VerifyCodes
-import xyz.xfqlittlefan.fhraise.models.verifyCodeExpireTime
+import xyz.xfqlittlefan.fhraise.models.verifyCodeTtl
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -66,14 +66,16 @@ fun Application.module() {
         }
     }
 
-    install(ContentNegotiation) {
-        cbor()
-    }
+    install(ContentNegotiation) { cbor() }
 
     launch {
         database.dbQuery {
             VerifyCode.all().forEach {
-                if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verifyCodeExpireTime.milliseconds < Clock.System.now()) {
+                org.jetbrains.exposed.sql.exposedLogger.info(
+                    (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verifyCodeTtl.milliseconds).toString()
+                )
+                org.jetbrains.exposed.sql.exposedLogger.info(Clock.System.now().toString())
+                if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verifyCodeTtl.milliseconds < Clock.System.now()) {
                     it.delete()
                 }
             }
@@ -81,7 +83,6 @@ fun Application.module() {
     }
 
     routing {
-        openAPI("/openapi", "openapi/documentation.yaml")
         rateLimit(RateLimitName("verifyCode")) {
             post<Auth.PhoneNumber> { req ->
                 if (req.phoneNumber.length != 11) {
@@ -101,7 +102,7 @@ fun Application.module() {
                     }
 
                     launch {
-                        delay(verifyCodeExpireTime)
+                        delay(verifyCodeTtl)
 
                         database.dbQuery {
                             newCode.delete()
@@ -111,8 +112,10 @@ fun Application.module() {
                     newCode
                 }
 
-                call.respond(Auth.PhoneNumber.Response.Success(verifyCode.code))
+                call.respond(Auth.PhoneNumber.Response.Success(verifyCode.code, verifyCodeTtl))
             }
         }
     }
 }
+
+val applicationConfig = ApplicationConfig("application.yaml")

@@ -23,8 +23,17 @@ import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.resources.*
+import io.ktor.serialization.kotlinx.cbor.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.serialization.ExperimentalSerializationApi
+import xyz.xfqlittlefan.fhraise.SERVER_PORT
+import xyz.xfqlittlefan.fhraise.api.Auth
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.sendVerifyCodeNotification
@@ -142,26 +151,40 @@ class AppSignInComponent(
 
             private var verifyCodeSentSnackbarJob: Job? = null
 
+            @OptIn(ExperimentalSerializationApi::class)
             override fun sendVerifyCode() {
                 canInputVerifyCode = true
                 if (!canInputVerifyCode) return
 
                 componentScope.launch {
                     val requestResult = requestAppNotificationPermission()
-                    doSendVerifyCode()
-                    if (requestResult != true) {
-                        verifyCode = "114514" // TODO
+                    verifyCodeSentSnackbarJob?.cancel()
+                    verifyCodeSentSnackbarJob = componentScope.launch {
+                        snackbarHostState.showSnackbar("验证码已获取", withDismissAction = true)
+                    }
+                    val client = HttpClient {
+                        install(Resources)
+                        install(ContentNegotiation) { cbor() }
+                        defaultRequest {
+                            host = "192.168.2.42"
+                            port = SERVER_PORT
+                        }
+                    }
+
+                    val code = try {
+                        val response = client.post(Auth.PhoneNumber(phoneNumber = phoneNumber))
+                        response.body<Auth.PhoneNumber.Response.Success>().verifyCode
+                    } catch (e: Throwable) {
                         verifyCodeSentSnackbarJob?.cancel()
+                        snackbarHostState.showSnackbar("验证码获取失败", withDismissAction = true)
+                        e.printStackTrace()
+                        return@launch
+                    }
+                    sendVerifyCodeNotification(code)
+                    if (requestResult != true) {
+                        verifyCode = code
                         snackbarHostState.showSnackbar("通知权限未授予，验证码已自动填写", withDismissAction = true)
                     }
-                }
-            }
-
-            private fun doSendVerifyCode() {
-                sendVerifyCodeNotification("114514") // TODO
-                verifyCodeSentSnackbarJob?.cancel()
-                verifyCodeSentSnackbarJob = componentScope.launch {
-                    snackbarHostState.showSnackbar("验证码已发送", withDismissAction = true)
                 }
             }
 

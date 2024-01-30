@@ -93,6 +93,7 @@ kotlin {
                 implementation(libs.decompose)
                 implementation(libs.decompose.extensions.compose)
                 implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.resources)
                 implementation(libs.ktor.client.auth)
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.client.websockets)
@@ -107,6 +108,7 @@ kotlin {
                 implementation(libs.androidx.datastore.core)
                 implementation(libs.androidx.datastore.preferences.core)
                 implementation(compose.preview)
+                implementation(libs.ktor.client.okhttp)
             }
         }
 
@@ -126,6 +128,12 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(compose.desktop.currentOs)
+            }
+        }
+
+        val wasmJsMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.js)
             }
         }
     }

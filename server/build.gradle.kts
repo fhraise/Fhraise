@@ -50,7 +50,6 @@ dependencies {
     implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.server.openapi)
     implementation(libs.ktor.serialization.kotlinx.cbor)
     implementation(libs.hikaricp)
     implementation(libs.exposed.core)

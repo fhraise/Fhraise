@@ -18,17 +18,16 @@
 
 package xyz.xfqlittlefan.fhraise.models
 
-import io.ktor.server.application.*
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.kotlin.datetime.datetime
+import xyz.xfqlittlefan.fhraise.applicationConfig
 import kotlin.time.Duration.Companion.minutes
 
-val Application.verifyCodeExpireTime
-    get() = environment.config.propertyOrNull("app.verify-code.expire-time")?.getString()?.toLongOrNull()
-        ?: 5.minutes.inWholeMilliseconds
+val verifyCodeTtl = applicationConfig.propertyOrNull("app.verify-code.ttl")?.getString()?.toLongOrNull()
+    ?: 5.minutes.inWholeMilliseconds
 
 object VerifyCodes : IdTable<String>() {
     val phoneNumber = char("phone_number", 11)

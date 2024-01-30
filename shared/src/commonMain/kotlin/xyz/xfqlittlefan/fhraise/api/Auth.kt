@@ -28,7 +28,7 @@ class Auth {
         @Serializable
         sealed class Response {
             @Serializable
-            data class Success(val verifyCode: String) : Response()
+            data class Success(val verifyCode: String, val ttlMillis: Long) : Response()
 
             @Serializable
             data class Failure(val reason: Reason) : Response() {
