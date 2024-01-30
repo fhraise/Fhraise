@@ -40,7 +40,9 @@ kotlin {
 
     sourceSets {
         val commonMain by getting {
-            dependencies {}
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+            }
         }
 
         val commonJvmMain by creating {
@@ -67,9 +69,7 @@ kotlin {
         }
 
         val wasmJsMain by getting {
-            dependencies {
-                implementation(libs.kotlinx.coroutines.core)
-            }
+            dependencies {}
         }
     }
 }
