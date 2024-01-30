@@ -92,11 +92,11 @@ kotlin {
                 implementation(compose.components.resources)
                 implementation(libs.decompose)
                 implementation(libs.decompose.extensions.compose)
-                implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.auth)
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.client.websockets)
+                implementation(libs.ktor.serialization.kotlinx.cbor)
                 implementation(projects.shared)
             }
         }

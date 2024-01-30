@@ -1,0 +1,41 @@
+openapi: "3.0.3"
+info:
+  title: "Fhraise API"
+  description: "Fhraise API"
+  version: "1.0.0"
+servers:
+  - url: "https://Fhraise"
+paths:
+  /auth/phoneNumber:
+    post:
+      description: ""
+      parameters:
+        - name: "phoneNumber"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema: { }
+components:
+  schemas:
+    Failure:
+      type: "object"
+      properties:
+        reason:
+          type: "string"
+          enum:
+            - "INVALID_PHONE_NUMBER"
+      required:
+        - "reason"
+    Success:
+      type: "object"
+      properties:
+        verifyCode:
+          type: "string"
+      required:
+        - "verifyCode"

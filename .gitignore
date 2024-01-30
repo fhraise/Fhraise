@@ -18,3 +18,5 @@ captures
 *key.jks*
 *key.properties*
 version.properties
+*.db
+server/docs

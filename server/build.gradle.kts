@@ -20,6 +20,7 @@ import java.util.*
 
 plugins {
     alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ktor)
     application
 }
@@ -44,11 +45,19 @@ dependencies {
     implementation(projects.shared)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.config.yaml)
+    implementation(libs.ktor.server.resources)
+    implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.openapi)
+    implementation(libs.ktor.serialization.kotlinx.cbor)
+    implementation(libs.hikaricp)
     implementation(libs.exposed.core)
     implementation(libs.exposed.crypt)
     implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.kotlin.datetime)
     implementation(libs.h2)
     implementation(libs.logback)
     testImplementation(libs.kotlin.test.junit)

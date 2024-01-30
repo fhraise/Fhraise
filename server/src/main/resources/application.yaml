@@ -1,0 +1,3 @@
+app:
+  verify-code:
+    expire-time: 300000
