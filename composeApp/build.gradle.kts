@@ -81,7 +81,7 @@ kotlin {
     jvm("desktop")
 
     sourceSets {
-        commonMain {
+        val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(compose.runtime)
@@ -103,12 +103,12 @@ kotlin {
         }
 
         val commonJvmMain by creating {
-            dependsOn(commonMain.get())
+            dependsOn(commonMain)
             dependencies {
                 implementation(libs.androidx.datastore.core)
                 implementation(libs.androidx.datastore.core.okio)
                 implementation(libs.androidx.datastore.preferences.core)
-                implementation(libs.okio)
+                implementation(compose.preview)
             }
 
             tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
@@ -116,7 +116,7 @@ kotlin {
             }
         }
 
-        androidMain {
+        val androidMain by getting {
             dependsOn(commonJvmMain)
             dependencies {
                 implementation(libs.kotlin.reflect)
@@ -125,21 +125,14 @@ kotlin {
                 implementation(libs.androidx.window)
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.datastore.preferences)
-                implementation(compose.preview)
             }
         }
 
         val desktopMain by getting {
             dependsOn(commonJvmMain)
             dependencies {
-                implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
-            }
-        }
-
-        val wasmJsMain by getting {
-            dependencies {
-                implementation(libs.kotlinx.serialization.cbor)
+                implementation(compose.desktop.currentOs)
             }
         }
     }
