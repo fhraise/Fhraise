@@ -16,14 +16,8 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.dom
+package xyz.xfqlittlefan.fhraise
 
-import org.w3c.dom.Storage
-
-fun Storage.toMap(): Map<String, String> {
-    return (0 until length).associate { index ->
-        val key = key(index)!!
-        val value = getItem(key)!!
-        key to value
-    }
+class JvmPlatform(addition: String = "") : Platform {
+    override val name: String = "Java ${System.getProperty("java.version")} $addition"
 }

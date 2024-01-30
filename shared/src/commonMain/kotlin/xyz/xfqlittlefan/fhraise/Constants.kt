@@ -16,16 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
-import kotlin.js.Promise
+package xyz.xfqlittlefan.fhraise
 
-suspend fun <T : JsAny?> Promise<T>.await(): T = suspendCoroutine { continuation ->
-    then(
-        onFulfilled = { continuation.resume(it).toJsReference() },
-        onRejected = {
-            it.toThrowableOrNull()?.let { throwable -> continuation.resumeWithException(throwable).toJsReference() }
-        },
-    )
-}
+const val SERVER_PORT = 8080

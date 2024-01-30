@@ -83,7 +83,6 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(libs.kotlinx.coroutines.core)
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.animation)
@@ -106,13 +105,8 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.androidx.datastore.core)
-                implementation(libs.androidx.datastore.core.okio)
                 implementation(libs.androidx.datastore.preferences.core)
                 implementation(compose.preview)
-            }
-
-            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
-                exclude("androidx/datastore/**")
             }
         }
 
@@ -124,7 +118,6 @@ kotlin {
                 implementation(libs.androidx.core.splashscreen)
                 implementation(libs.androidx.window)
                 implementation(libs.androidx.activity.compose)
-                implementation(libs.androidx.datastore.preferences)
             }
         }
 

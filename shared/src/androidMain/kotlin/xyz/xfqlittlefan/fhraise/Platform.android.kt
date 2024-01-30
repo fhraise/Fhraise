@@ -16,14 +16,12 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.js
+package xyz.xfqlittlefan.fhraise
 
-fun <T : JsAny> JsArray<T>.toList(
-    transform: JsArray<T>.(index: Int) -> T = {
-        get(it)!!
-    }
-): List<T> {
-    return (0 until length).map {
-        transform(it)
-    }
+import android.os.Build
+
+class AndroidPlatform : Platform {
+    override val name: String = "Android ${Build.VERSION.SDK_INT}"
 }
+
+actual fun getPlatform(): Platform = AndroidPlatform()

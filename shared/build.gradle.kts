@@ -39,8 +39,37 @@ kotlin {
     jvm()
 
     sourceSets {
-        commonMain.dependencies {
-            // put your Multiplatform dependencies here
+        val commonMain by getting {
+            dependencies {}
+        }
+
+        val commonJvmMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.androidx.datastore.core)
+                implementation(libs.androidx.datastore.preferences.core)
+            }
+
+            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
+                exclude("androidx/datastore/**")
+            }
+        }
+
+        val androidMain by getting {
+            dependsOn(commonJvmMain)
+            dependencies {
+                implementation(libs.androidx.datastore.preferences)
+            }
+        }
+
+        val jvmMain by getting {
+            dependsOn(commonJvmMain)
+        }
+
+        val wasmJsMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+            }
         }
     }
 }

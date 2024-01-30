@@ -16,4 +16,25 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-const val SERVER_PORT = 8080
+package xyz.xfqlittlefan.fhraise
+
+actual fun getPlatform(): Platform = JvmPlatform(DesktopPlatform.Current.name)
+
+enum class DesktopPlatform {
+    Linux, Windows, MacOS, Unknown;
+
+    companion object {
+        /**
+         * Identify OS on which the application is currently running.
+         */
+        val Current: DesktopPlatform by lazy {
+            val name = System.getProperty("os.name")
+            when {
+                name?.startsWith("Linux") == true -> Linux
+                name?.startsWith("Win") == true -> Windows
+                name == "Mac OS X" -> MacOS
+                else -> Unknown
+            }
+        }
+    }
+}

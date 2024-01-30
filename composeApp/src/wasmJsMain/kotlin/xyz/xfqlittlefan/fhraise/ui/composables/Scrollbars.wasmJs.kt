@@ -19,9 +19,13 @@
 package xyz.xfqlittlefan.fhraise.ui.composables
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
 actual fun VerticalScrollbar(scrollState: ScrollState, modifier: Modifier) {
+    androidx.compose.foundation.VerticalScrollbar(
+        adapter = rememberScrollbarAdapter(scrollState = scrollState), modifier = modifier
+    )
 }

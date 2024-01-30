@@ -18,17 +18,32 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import SERVER_PORT
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.routing.*
+import io.ktor.util.*
 
 fun main() {
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module).start(wait = true)
 }
 
 fun Application.module() {
+    authentication {
+        val myRealm = "MyRealm"
+        val usersInMyRealmToHA1: Map<String, ByteArray> = mapOf(
+            // pass="test", HA1=MD5("test:MyRealm:pass")="fb12475e62dedc5c2744d98eb73b8877"
+            "test" to hex("fb12475e62dedc5c2744d98eb73b8877")
+        )
+
+        digest("myDigestAuth") {
+            digestProvider { userName, realm ->
+                usersInMyRealmToHA1[userName]
+            }
+        }
+    }
+
     routing {
         get("/") {}
     }

@@ -16,6 +16,8 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+package xyz.xfqlittlefan.fhraise
+
 interface Platform {
     val name: String
 }

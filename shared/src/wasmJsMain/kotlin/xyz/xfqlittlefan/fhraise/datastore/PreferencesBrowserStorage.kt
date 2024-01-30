@@ -20,12 +20,13 @@ package xyz.xfqlittlefan.fhraise.datastore
 
 import androidx.datastore.core.*
 import androidx.datastore.preferences.core.*
-import await
-import io.ktor.util.*
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.flow.flow
 import org.khronos.webgl.Int8Array
-import push
+import xyz.xfqlittlefan.fhraise.js.await
+import xyz.xfqlittlefan.fhraise.js.push
+import xyz.xfqlittlefan.fhraise.js.toByteArray
+import xyz.xfqlittlefan.fhraise.js.toJsArray
 import kotlin.js.Promise
 
 internal const val preferencesVersion = 1

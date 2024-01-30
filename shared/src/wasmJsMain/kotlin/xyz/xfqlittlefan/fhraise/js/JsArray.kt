@@ -16,8 +16,30 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class WasmPlatform : Platform {
-    override val name: String = "Web with Kotlin/Wasm"
+package xyz.xfqlittlefan.fhraise.js
+
+import org.khronos.webgl.Int8Array
+import org.khronos.webgl.get
+import org.khronos.webgl.set
+
+private fun <T : JsAny?> pushImpl(array: JsArray<T>, value: T) {
+    js("array.push(value)")
 }
 
-actual fun getPlatform(): Platform = WasmPlatform()
+fun <T : JsAny?> JsArray<T>.push(value: T) = pushImpl(this, value)
+
+fun Int8Array.toByteArray(): ByteArray {
+    val result = ByteArray(this.length)
+    for (i in 0 until this.length) {
+        result[i] = this[i]
+    }
+    return result
+}
+
+fun ByteArray.toJsArray(): Int8Array {
+    val result = Int8Array(this.size)
+    forEachIndexed { index, byte ->
+        result[index] = byte
+    }
+    return result
+}

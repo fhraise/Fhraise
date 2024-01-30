@@ -16,8 +16,18 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-private fun <T : JsAny?> pushImpl(array: JsArray<T>, value: T) {
-    js("array.push(value)")
-}
+package xyz.xfqlittlefan.fhraise.js
 
-fun <T : JsAny?> JsArray<T>.push(value: T) = pushImpl(this, value)
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
+import kotlin.js.Promise
+
+suspend fun <T : JsAny?> Promise<T>.await(): T = suspendCoroutine { continuation ->
+    then(
+        onFulfilled = { continuation.resume(it).toJsReference() },
+        onRejected = {
+            it.toThrowableOrNull()?.let { throwable -> continuation.resumeWithException(throwable).toJsReference() }
+        },
+    )
+}
