@@ -144,6 +144,7 @@ fun SignIn(component: SignInComponent) {
             content = {
                 AnimatedContent(
                     targetState = component.step,
+                    modifier = Modifier.fillMaxSize(),
                     transitionSpec = {
                         if (targetState.ordinal > initialState.ordinal) {
                             slideInVertically { it / 2 } + fadeIn() togetherWith slideOutHorizontally() + fadeOut()
@@ -151,10 +152,13 @@ fun SignIn(component: SignInComponent) {
                             slideInHorizontally() + fadeIn() togetherWith slideOutVertically { it / 2 } + fadeOut()
                         }
                     },
-                ) { targetState ->
-                    when (targetState) {
+                    contentAlignment = Alignment.Center,
+                ) { step ->
+                    when (step) {
                         EnteringCredential -> {
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 FlowRow {
                                     SignInComponent.CredentialType.entries.forEachIndexed { index, it ->
@@ -180,23 +184,40 @@ fun SignIn(component: SignInComponent) {
                         }
 
                         SelectingVerification -> {
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
                                 Spacer(modifier = Modifier.height(16.dp))
-                                component.BackButton(requiredStep = targetState)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = { component.verificationType = component.emailCodeVerification() },
-                                ) {
-                                    Text(text = "使用电子邮件验证码")
+                                component.BackButton(requiredStep = step)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
+                                component.defaultVerifications.forEach { verifycation ->
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Card(
+                                        onClick = { component.verificationType = verifycation },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(16.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = verifycation.icon,
+                                                contentDescription = verifycation.displayName,
+                                            )
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Text(text = verifycation.displayName)
+                                        }
+                                    }
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
 
                         Verification -> {
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
                                 Spacer(modifier = Modifier.height(16.dp))
-                                component.BackButton(requiredStep = targetState)
+                                component.BackButton(requiredStep = step)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
@@ -529,6 +550,7 @@ fun SignInMainLayout(
             val headerPlaceable = headerMeasurable.measure(headerConstraints)
 
             val headerActualWidth = headerWidth + headerPaddingHorizontal
+            val headerActualHeight = headerPlaceable.height + headerPaddingVertical
 
             val headerX = (headerWidth - headerPlaceable.width) * animationFirstStage + headerPaddingLeft
 
@@ -536,7 +558,9 @@ fun SignInMainLayout(
                 ((boxHeight - headerIntrinsicActualHeight) / 2f + scrollState.value) * animationFirstStage + headerPaddingTop
 
             // == Measure main content ==
-            val mainContentHeight = mainContentIntrinsicHeight.roundToInt()
+            val mainContentHeight = max(
+                mainContentIntrinsicHeight, boxHeight - headerActualHeight - mainContentPaddingVertical
+            ).roundToInt()
 
             val mainContentConstraintWidth = mainContentWidth.coerceAtMost(mainContentMaxWidth).roundToInt()
             val mainContentConstraints = Constraints(

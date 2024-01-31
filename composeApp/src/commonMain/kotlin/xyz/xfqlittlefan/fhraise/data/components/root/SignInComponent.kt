@@ -19,9 +19,12 @@
 package xyz.xfqlittlefan.fhraise.data.components.root
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -37,6 +40,7 @@ import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialType.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.EnteringCredential
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.Verification
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.Password
 import xyz.xfqlittlefan.fhraise.models.usernameRegex
 
@@ -73,12 +77,26 @@ interface SignInComponent : AppComponentContext {
         )
     }
 
-    sealed class VerificationType(internal val onRequest: OnRequest, internal val onVerify: OnVerify) {
-        class FhraiseToken(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
-        class SmsCode(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
-        class EmailCode(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
-        class Password(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
-        class Face(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
+    sealed class VerificationType(
+        val displayName: String,
+        val icon: ImageVector,
+        internal val onRequest: OnRequest,
+        internal val onVerify: OnVerify
+    ) {
+        class FhraiseToken(onRequest: OnRequest, onVerify: OnVerify) :
+            VerificationType("Fhraise令牌", Icons.Default.Key, onRequest, onVerify)
+
+        class SmsCode(onRequest: OnRequest, onVerify: OnVerify) :
+            VerificationType("短信验证", Icons.Default.Sms, onRequest, onVerify)
+
+        class EmailCode(onRequest: OnRequest, onVerify: OnVerify) :
+            VerificationType("电子邮件验证", Icons.Default.Mail, onRequest, onVerify)
+
+        class Password(onRequest: OnRequest, onVerify: OnVerify) :
+            VerificationType("密码", Icons.Default.Password, onRequest, onVerify)
+
+        class Face(onRequest: OnRequest, onVerify: OnVerify) :
+            VerificationType("人脸", Icons.Default.Face, onRequest, onVerify)
     }
 
     fun switchShowMoreSignInOptions() {
@@ -92,6 +110,28 @@ interface SignInComponent : AppComponentContext {
     fun forward() {
         step++
     }
+
+    val defaultVerifications
+        get() = listOf(
+            VerificationType.FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            VerificationType.SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            VerificationType.EmailCode(
+                onRequest = { client, credential ->
+                    val result = try {
+                        client.post(Auth.Email.Request(email = credential)).body<Auth.Email.Request.Response>()
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
+                        null
+                    } ?: return@EmailCode false
+                    true
+                },
+                onVerify = { client, credential, verification ->
+                    false
+                },
+            ),
+            Password(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            VerificationType.Face(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+        )
 
     fun emailCodeVerification() = VerificationType.EmailCode(
         onRequest = { client, credential ->
@@ -176,6 +216,12 @@ class AppSignInComponent(
             else -> true
         }
         _verificationType = type
+        step = if (type != null) {
+            requestVerification()
+            Verification
+        } else {
+            EnteringCredential
+        }
     }
 
     @OptIn(ExperimentalSerializationApi::class)
