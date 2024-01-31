@@ -42,6 +42,7 @@ import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialT
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.EnteringCredential
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.Verification
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.Password
+import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.models.usernameRegex
 
 internal typealias OnRequest = suspend (client: HttpClient, credential: String) -> Boolean
@@ -152,6 +153,9 @@ interface SignInComponent : AppComponentContext {
     fun enter()
     fun onAdminSignIn()
 
+    val serverHost: PreferenceStateFlow<String, String>
+    val serverPort: PreferenceStateFlow<Int, Int>
+
     val scrollState: ScrollState
 }
 
@@ -224,19 +228,24 @@ class AppSignInComponent(
         }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    val client by lazy {
-        HttpClient {
-            install(Resources)
-            install(ContentNegotiation) { cbor() }
-            defaultRequest {
-                host = serverDataStore.serverHost.value
-                port = serverDataStore.serverPort.value
-            }
-        }
-    }
-
     private val serverDataStore by ServerDataStore.Preferences.preferences()
+
+    override val serverHost = serverDataStore.serverHost
+    override val serverPort = serverDataStore.serverPort
+
+    private var _client: HttpClient? = null
+    private val client
+        get() = _client ?: createClient()
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun createClient() = HttpClient {
+        install(Resources)
+        install(ContentNegotiation) { cbor() }
+        defaultRequest {
+            host = serverHost.value
+            port = serverPort.value
+        }
+    }.also { _client = it }
 
     override val scrollState: ScrollState = ScrollState(initial = 0)
 }

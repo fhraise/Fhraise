@@ -189,10 +189,10 @@ fun SignIn(component: SignInComponent) {
                                 component.BackButton(requiredStep = step)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
-                                component.defaultVerifications.forEach { verifycation ->
+                                component.defaultVerifications.forEach { verification ->
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Card(
-                                        onClick = { component.verificationType = verifycation },
+                                        onClick = { component.verificationType = verification },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Row(
@@ -200,11 +200,11 @@ fun SignIn(component: SignInComponent) {
                                             modifier = Modifier.padding(16.dp),
                                         ) {
                                             Icon(
-                                                imageVector = verifycation.icon,
-                                                contentDescription = verifycation.displayName,
+                                                imageVector = verification.icon,
+                                                contentDescription = verification.displayName,
                                             )
                                             Spacer(modifier = Modifier.width(16.dp))
-                                            Text(text = verifycation.displayName)
+                                            Text(text = verification.displayName)
                                         }
                                     }
                                 }
