@@ -18,4 +18,4 @@
 
 package xyz.xfqlittlefan.fhraise
 
-const val SERVER_PORT = 8080
+const val DefaultServerPort = 8080

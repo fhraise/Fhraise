@@ -32,7 +32,7 @@ import io.ktor.serialization.kotlinx.cbor.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import xyz.xfqlittlefan.fhraise.SERVER_PORT
+import xyz.xfqlittlefan.fhraise.DefaultServerPort
 import xyz.xfqlittlefan.fhraise.api.Auth
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
@@ -167,7 +167,7 @@ class AppSignInComponent(
                         install(ContentNegotiation) { cbor() }
                         defaultRequest {
                             host = "192.168.2.42"
-                            port = SERVER_PORT
+                            port = DefaultServerPort
                         }
                     }
 

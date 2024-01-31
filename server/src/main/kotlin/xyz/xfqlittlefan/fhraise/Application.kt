@@ -42,7 +42,7 @@ import xyz.xfqlittlefan.fhraise.models.*
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
-    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module).start(wait = true)
+    embeddedServer(Netty, port = DefaultServerPort, host = "0.0.0.0", module = Application::module).start(wait = true)
 }
 
 @OptIn(ExperimentalSerializationApi::class)

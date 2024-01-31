@@ -32,7 +32,7 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.backhandler.BackHandlerOwner
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import xyz.xfqlittlefan.fhraise.SettingsDataStore
+import xyz.xfqlittlefan.fhraise.SettingsDataStore.Preferences.Companion.preferences
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues
 import xyz.xfqlittlefan.fhraise.data.componentScope
@@ -63,7 +63,7 @@ class AppRootComponent(
 ) : RootComponent, ComponentContext by componentContext {
     private val navigation = StackNavigation<Configuration>()
 
-    override val settings = SettingsDataStore.Preferences(componentScope)
+    override val settings by preferences()
 
     override val snackbarHostState = SnackbarHostState()
 
