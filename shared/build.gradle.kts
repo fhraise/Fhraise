@@ -44,7 +44,6 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.ktor.resources)
-                implementation(libs.bcrypt)
             }
         }
 

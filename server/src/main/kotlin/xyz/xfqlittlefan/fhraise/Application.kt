@@ -18,6 +18,7 @@
 
 package xyz.xfqlittlefan.fhraise
 
+import com.sanctionco.jmail.JMail
 import io.ktor.serialization.kotlinx.cbor.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -34,14 +35,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.ExperimentalSerializationApi
 import xyz.xfqlittlefan.fhraise.api.Auth
-import xyz.xfqlittlefan.fhraise.models.VerifyCode
-import xyz.xfqlittlefan.fhraise.models.VerifyCodes
-import xyz.xfqlittlefan.fhraise.models.verifyCodeTtl
-import kotlin.time.Duration.Companion.milliseconds
+import xyz.xfqlittlefan.fhraise.models.*
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
@@ -68,34 +65,22 @@ fun Application.module() {
 
     install(ContentNegotiation) { cbor() }
 
-    launch {
-        database.dbQuery {
-            VerifyCode.all().forEach {
-                org.jetbrains.exposed.sql.exposedLogger.info(
-                    (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verifyCodeTtl.milliseconds).toString()
-                )
-                org.jetbrains.exposed.sql.exposedLogger.info(Clock.System.now().toString())
-                if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verifyCodeTtl.milliseconds < Clock.System.now()) {
-                    it.delete()
-                }
-            }
-        }
-    }
+    cleanupVerifyCodes()
 
     routing {
         rateLimit(RateLimitName("verifyCode")) {
-            post<Auth.PhoneNumber> { req ->
-                if (req.phoneNumber.length != 11) {
-                    call.respond(Auth.PhoneNumber.Response.Failure(Auth.PhoneNumber.Response.Failure.Reason.INVALID_PHONE_NUMBER))
+            post<Auth.Email> { req ->
+                if (!JMail.strictValidator().isValid(req.email)) {
+                    call.respond(Auth.Email.Response.InvalidEmailAddress)
                     return@post
                 }
 
                 val verifyCode = database.dbQuery {
-                    VerifyCode.find { VerifyCodes.phoneNumber eq req.phoneNumber }.firstOrNull()
+                    VerifyCode.find { VerifyCodes.email eq req.email }.firstOrNull()
                 } ?: run {
                     val newCode = database.dbQuery {
                         VerifyCode.new {
-                            phoneNumber = req.phoneNumber
+                            email = req.email
                             code = (0 until 6).map { (0..9).random() }.joinToString("")
                             createdAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                         }
@@ -112,10 +97,14 @@ fun Application.module() {
                     newCode
                 }
 
-                call.respond(Auth.PhoneNumber.Response.Success(verifyCode.code, verifyCodeTtl))
+                call.respondEmailVerifyCode {
+                    email = req.email
+                    code = verifyCode.code
+                }
             }
         }
     }
 }
 
 val applicationConfig = ApplicationConfig("application.yaml")
+val applicationSecret = ApplicationConfig("secret.yaml")

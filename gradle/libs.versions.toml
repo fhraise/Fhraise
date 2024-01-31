@@ -15,6 +15,7 @@ hikaricp = "5.1.0"
 exposed = "0.46.0"
 h2 = "2.2.224"
 bcrypt = "0.10.2"
+mail = "8.6.2"
 logback = "1.4.14"
 
 [libraries]
@@ -47,6 +48,7 @@ ktor-server-resources = { module = "io.ktor:ktor-server-resources", version.ref 
 ktor-server-rate-limit = { module = "io.ktor:ktor-server-rate-limit", version.ref = "ktor" }
 ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-server-html-builder = { module = "io.ktor:ktor-server-html-builder", version.ref = "ktor" }
 ktor-server-tests = { module = "io.ktor:ktor-server-tests", version.ref = "ktor" }
 ktor-serialization-kotlinx-cbor = { module = "io.ktor:ktor-serialization-kotlinx-cbor", version.ref = "ktor-client" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
@@ -57,6 +59,7 @@ exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "e
 exposed-kotlin-datetime = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
+mail = { module = "org.simplejavamail:simple-java-mail", version.ref = "mail" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 [plugins]

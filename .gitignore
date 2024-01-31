@@ -20,3 +20,4 @@ captures
 version.properties
 *.db
 server/docs
+*secret*
