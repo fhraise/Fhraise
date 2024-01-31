@@ -30,6 +30,10 @@ interface AppComponentContext : ComponentContext, AppComponentContextValues
 interface AppComponentContextValues {
     val settings: SettingsDataStore.Preferences
 
+    fun switchColorMode() {
+        settings.colorMode.value = settings.colorMode.value.next
+    }
+
     enum class ColorMode(val displayName: String) {
         LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统");
 

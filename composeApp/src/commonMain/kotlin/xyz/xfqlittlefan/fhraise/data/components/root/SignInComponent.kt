@@ -30,8 +30,6 @@ import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.sendVerifyCodeNotification
 
 interface SignInComponent : AppComponentContext {
-    fun switchColorMode()
-
     val state: ComponentState
 
     sealed interface ComponentState {
@@ -102,10 +100,6 @@ class AppSignInComponent(
     componentContext: AppComponentContext, stateBuilder: AppSignInComponent.() -> ComponentState
 ) : SignInComponent, AppComponentContext by componentContext {
     override var state: ComponentState by mutableStateOf(stateBuilder())
-
-    override fun switchColorMode() {
-        settings.colorMode.value = settings.colorMode.value.next
-    }
 
     sealed class ComponentState(context: AppComponentContext) : AppComponentContext by context,
         SignInComponent.ComponentState {
