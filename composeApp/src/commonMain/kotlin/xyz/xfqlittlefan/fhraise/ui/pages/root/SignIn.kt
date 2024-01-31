@@ -30,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,8 +42,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -54,6 +51,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.ui.WindowSizeClass
 import xyz.xfqlittlefan.fhraise.ui.WindowWidthSizeClass
 import xyz.xfqlittlefan.fhraise.ui.composables.TypeWriter
@@ -62,14 +60,17 @@ import xyz.xfqlittlefan.fhraise.ui.modifiers.applyBrush
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalResourceApi::class,
+    ExperimentalLayoutApi::class,
+    ExperimentalAnimationApi::class
+)
 @Composable
 fun SignIn(component: SignInComponent) {
     val colorMode by component.settings.colorMode.collectAsState()
     val pop by component.pop
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
-
-    val state = component.state
 
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(connection = scrollBehavior.nestedScrollConnection),
@@ -141,31 +142,69 @@ fun SignIn(component: SignInComponent) {
                 }
             },
             content = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    with(state) {
-                        if (this is SignInComponent.ComponentState.SignIn) {
-                            PhoneNumber()
-                            AnimatedVisibility(visible = canInputVerifyCode) {
+                AnimatedContent(
+                    targetState = component.step,
+                    transitionSpec = {
+                        if (targetState.ordinal > initialState.ordinal) {
+                            slideInVertically { it / 2 } + fadeIn() togetherWith slideOutHorizontally() + fadeOut()
+                        } else {
+                            slideInHorizontally() + fadeIn() togetherWith slideOutVertically { it / 2 } + fadeOut()
+                        }
+                    },
+                ) { targetState ->
+                    when (targetState) {
+                        EnteringCredential -> {
+                            Column(modifier = Modifier.fillMaxWidth()) {
                                 Spacer(modifier = Modifier.height(16.dp))
-                                VerifyCode()
+                                FlowRow {
+                                    SignInComponent.CredentialType.entries.forEachIndexed { index, it ->
+                                        if (index != 0) Spacer(modifier = Modifier.width(8.dp))
+                                        FilterChip(
+                                            selected = component.credentialType == it,
+                                            onClick = { component.credentialType = it },
+                                            label = { Text(text = "使用${it.displayName}") },
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                component.Credential()
+                                Spacer(modifier = Modifier.height(32.dp))
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    component.ForwardButton(requiredStep = EnteringCredential)
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
-                            Spacer(modifier = Modifier.height(32.dp))
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                NextOrSubmitButton()
+                        }
+
+                        SelectingVerification -> {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                component.BackButton(requiredStep = targetState)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = { component.verificationType = component.emailCodeVerification() },
+                                ) {
+                                    Text(text = "使用电子邮件验证码")
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
+
+                        Verification -> {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                component.BackButton(requiredStep = targetState)
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             },
             additionalContent = {
-                if (state is SignInComponent.ComponentState.SignIn) {
-                    state.MoreMethods(modifier = Modifier.fillMaxWidth())
-                }
+                component.MoreMethods(modifier = Modifier.fillMaxWidth())
             },
         )
     }
@@ -530,32 +569,8 @@ fun SignInMainLayout(
 }
 
 @Composable
-fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modifier) {
+fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        FilledTonalButton(
-            onClick = onGuestSignIn,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Icon(
-                imageVector = Icons.Default.NoAccounts,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "游客登录")
-        }
-        FilledTonalButton(
-            onClick = onFaceSignIn,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Face,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "人脸登录")
-        }
         TextButton(
             onClick = ::switchShowMoreSignInOptions,
             modifier = Modifier.fillMaxWidth(),
@@ -588,115 +603,74 @@ fun SignInComponent.ComponentState.SignIn.MoreMethods(modifier: Modifier = Modif
 }
 
 @Composable
-fun SignInComponent.ComponentState.UsernamePasswordState.UserName() {
+fun SignInComponent.Credential() {
     OutlinedTextField(
-        value = username,
-        onValueChange = ::username::set,
+        value = credential,
+        onValueChange = ::credential::set,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        label = { Text(text = "用户名") },
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Text, imeAction = ImeAction.Next
-        ),
-        maxLines = 1,
-    )
-}
-
-@Composable
-fun SignInComponent.ComponentState.UsernamePasswordState.Password() {
-    OutlinedTextField(
-        value = password,
-        onValueChange = ::password::set,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        label = { Text(text = "密码") },
-        trailingIcon = {
-            IconButton(
-                onClick = ::switchShowPassword,
-                content = {
-                    Icon(
-                        imageVector = if (showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = if (showPassword) "隐藏密码" else "显示密码",
-                    )
-                },
-            )
-        },
-        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(onDone = onDone),
-        maxLines = 1,
-    )
-}
-
-@Composable
-fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.PhoneNumber() {
-    OutlinedTextField(
-        value = phoneNumber,
-        onValueChange = ::phoneNumber::set,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        label = { Text(text = "手机号") },
-        prefix = { Text(text = "+86") },
+        label = { Text(text = credentialType.displayName) },
+        prefix = if (credentialType == SignInComponent.CredentialType.PhoneNumber) {
+            { Text(text = "+86") }
+        } else null,
         supportingText = {
             AnimatedVisibility(
-                visible = textFieldError,
+                visible = credential.isNotEmpty() && !credentialValid,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically(),
             ) {
-                Text(text = "手机号格式不正确")
+                Text(text = "${credentialType.displayName}格式不正确")
             }
         },
-        isError = textFieldError,
+        isError = credential.isNotEmpty() && !credentialValid,
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next
+            keyboardType = credentialType.keyboardType, imeAction = ImeAction.Next
         ),
-        keyboardActions = KeyboardActions(onNext = onNext),
+        keyboardActions = KeyboardActions(onNext = { forward() }),
         maxLines = 1,
     )
 }
 
 @Composable
-fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.VerifyCode() {
+fun SignInComponent.VerifyCode() {
     OutlinedTextField(
-        value = verifyCode,
-        onValueChange = ::verifyCode::set,
+        value = verification,
+        onValueChange = ::verification::set,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         label = { Text(text = "验证码") },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
         ),
-        keyboardActions = KeyboardActions(onDone = onDone),
+        keyboardActions = KeyboardActions(onDone = { enter() }),
         maxLines = 1,
     )
 }
 
 @Composable
-fun SignInComponent.ComponentState.PhoneNumberVerifyCodeState.NextOrSubmitButton() {
+fun SignInComponent.BackButton(requiredStep: SignInComponent.Step) {
+    TextButton(onClick = ::back, enabled = step == requiredStep) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+            contentDescription = "返回",
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = "返回")
+    }
+}
+
+@Composable
+fun SignInComponent.ForwardButton(requiredStep: SignInComponent.Step) {
     Button(
-        onClick = ::nextOrSubmit,
-        enabled = phoneNumberVerified,
+        onClick = ::forward,
+        enabled = step == requiredStep && when (requiredStep) {
+            EnteringCredential -> credentialValid
+            Verification -> verification.isNotBlank()
+            else -> false
+        },
         shape = MaterialTheme.shapes.large,
     ) {
-        AnimatedContent(
-            targetState = canInputVerifyCode,
-            transitionSpec = {
-                if (targetState) {
-                    fadeIn() + slideInHorizontally { -it } togetherWith fadeOut() + slideOutHorizontally { it }
-                } else {
-                    fadeIn() + slideInHorizontally { it } togetherWith fadeOut() + slideOutHorizontally { -it }
-                }
-            },
-        ) { targetState ->
-            if (targetState) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Default.ArrowForward,
-                    contentDescription = "登录",
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Default.Send,
-                    contentDescription = "发送验证码",
-                )
-            }
-        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Default.ArrowForward,
+            contentDescription = requiredStep.next.displayName,
+        )
     }
 }

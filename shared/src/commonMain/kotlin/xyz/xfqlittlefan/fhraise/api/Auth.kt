@@ -39,10 +39,21 @@ class Auth {
     }
 
     @Resource("email")
-    class Email(val parent: Auth = Auth(), val email: String) {
-        @Serializable
-        enum class Response {
-            Success, InvalidEmailAddress, Failure
+    class Email(val parent: Auth = Auth()) {
+        @Resource("request")
+        class Request(val parent: Email = Email(), val email: String) {
+            @Serializable
+            enum class Response {
+                Success, InvalidEmailAddress, Failure
+            }
+        }
+
+        @Resource("verify")
+        class Verify(val parent: Email = Email(), val email: String, val verifyCode: String) {
+            @Serializable
+            enum class Response {
+                Success, Failure
+            }
         }
     }
 }

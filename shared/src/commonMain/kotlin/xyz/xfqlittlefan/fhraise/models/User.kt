@@ -18,24 +18,4 @@
 
 package xyz.xfqlittlefan.fhraise.models
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
-import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
-import java.util.*
-
-object Users : UUIDTable() {
-    val username = varchar("username", 16)
-    val email = text("email")
-    val phoneNumber = char("phone_number", 11)
-    val password = varchar("password", 72)
-}
-
-class User(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<User>(Users)
-
-    var username by Users.username
-    var email by Users.email
-    var phoneNumber by Users.phoneNumber
-    var password by Users.password
-}
+val usernameRegex = Regex("^[a-zA-Z0-9_-]{4,16}\$")

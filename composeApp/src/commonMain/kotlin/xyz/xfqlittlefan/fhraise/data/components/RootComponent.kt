@@ -92,21 +92,7 @@ class AppRootComponent(
             object : AppComponentContext, ComponentContext by componentContext, AppComponentContextValues by this {}
         return when (config) {
             is Configuration.SignIn -> RootComponent.Child.SignIn(
-                component = AppSignInComponent(componentContext = childComponentContext) {
-                    AppSignInComponent.ComponentState.SignIn(
-                        context = this,
-                        onGuestSignIn = {},
-                        onFaceSignIn = {},
-                    )
-                },
-            )
-
-            is Configuration.SignUp -> RootComponent.Child.SignIn(
-                component = AppSignInComponent(componentContext = childComponentContext) {
-                    AppSignInComponent.ComponentState.SignUp(
-                        context = this,
-                    )
-                },
+                component = AppSignInComponent(componentContext = childComponentContext) {},
             )
         }
     }
@@ -116,8 +102,8 @@ class AppRootComponent(
         @Serializable
         data object SignIn : Configuration()
 
-        @Serializable
-        data object SignUp : Configuration()
+//        @Serializable
+//        data object SignUp : Configuration()
     }
 
     override var showNotificationPermissionDialog by mutableStateOf(false)

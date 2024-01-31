@@ -19,228 +19,178 @@
 package xyz.xfqlittlefan.fhraise.data.components.root
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.resources.*
 import io.ktor.serialization.kotlinx.cbor.*
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import xyz.xfqlittlefan.fhraise.DefaultServerPort
+import xyz.xfqlittlefan.fhraise.ServerDataStore
 import xyz.xfqlittlefan.fhraise.api.Auth
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
-import xyz.xfqlittlefan.fhraise.sendVerifyCodeNotification
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialType.*
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.EnteringCredential
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.Password
+import xyz.xfqlittlefan.fhraise.models.usernameRegex
+
+internal typealias OnRequest = suspend (client: HttpClient, credential: String) -> Boolean
+internal typealias OnVerify = suspend (client: HttpClient, credential: String, verification: String) -> Boolean
 
 interface SignInComponent : AppComponentContext {
-    val state: ComponentState
+    var step: Step
+    var credentialType: CredentialType
+    var credential: String
+    var verificationType: VerificationType?
+    var verification: String
+    var showVerification: Boolean
 
-    sealed interface ComponentState {
-        fun submit()
+    val credentialValid: Boolean
 
-        interface KeyboardNextState : ComponentState {
-            val onNext: KeyboardActionScope.() -> Unit
-        }
+    var showMoreSignInOptions: Boolean
 
-        interface KeyboardDoneState : ComponentState {
-            val onDone: KeyboardActionScope.() -> Unit
-        }
+    enum class Step(val displayName: String) {
+        EnteringCredential("输入凭证"), SelectingVerification("选择验证方式"), Verification("验证");
 
-        interface MultiStepState : ComponentState {
-            fun nextOrSubmit()
-        }
+        val previous
+            get() = entries[(ordinal - 1 + entries.size) % entries.size]
+        val next
+            get() = entries[(ordinal + 1) % entries.size]
 
-        interface PhoneNumberVerifyCodeState : ComponentState, MultiStepState, KeyboardNextState, KeyboardDoneState {
-            var phoneNumber: String
-            val phoneNumberVerified: Boolean
-            var canInputVerifyCode: Boolean
-            var verifyCode: String
-
-            val textFieldError
-                get() = phoneNumber.isNotEmpty() && !phoneNumberVerified
-
-            fun sendVerifyCode()
-        }
-
-        interface UsernamePasswordState : ComponentState, KeyboardDoneState {
-            var username: String
-            var password: String
-            var showPassword: Boolean
-
-            fun switchShowPassword() {
-                showPassword = !showPassword
-            }
-        }
-
-        interface SignIn : ComponentState, PhoneNumberVerifyCodeState {
-            var showMoreSignInOptions: Boolean
-
-            fun switchShowMoreSignInOptions() {
-                showMoreSignInOptions = !showMoreSignInOptions
-            }
-
-            val onGuestSignIn: () -> Unit
-            val onFaceSignIn: () -> Unit
-
-            fun onAdminSignIn()
-        }
-
-        interface SignUp : ComponentState, UsernamePasswordState {
-            var email: String
-            var confirmPassword: String
-            var showConfirmPassword: Boolean
-
-            fun switchShowConfirmPassword() {
-                showConfirmPassword = !showConfirmPassword
-            }
-        }
+        operator fun dec(): Step = previous
+        operator fun inc(): Step = next
     }
+
+    enum class CredentialType(val displayName: String, val keyboardType: KeyboardType) {
+        Username("用户名", KeyboardType.Text), PhoneNumber("手机号", KeyboardType.Phone), Email(
+            "电子邮件地址", KeyboardType.Email
+        )
+    }
+
+    sealed class VerificationType(internal val onRequest: OnRequest, internal val onVerify: OnVerify) {
+        class FhraiseToken(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
+        class SmsCode(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
+        class EmailCode(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
+        class Password(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
+        class Face(onRequest: OnRequest, onVerify: OnVerify) : VerificationType(onRequest, onVerify)
+    }
+
+    fun switchShowMoreSignInOptions() {
+        showMoreSignInOptions = !showMoreSignInOptions
+    }
+
+    fun back() {
+        step--
+    }
+
+    fun forward() {
+        step++
+    }
+
+    fun emailCodeVerification() = VerificationType.EmailCode(
+        onRequest = { client, credential ->
+            val result = try {
+                client.post(Auth.Email.Request(email = credential)).body<Auth.Email.Request.Response>()
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                null
+            } ?: return@EmailCode false
+            true
+        },
+        onVerify = { client, credential, verification ->
+            false
+        },
+    )
+
+    fun requestVerification()
+    fun enter()
+    fun onAdminSignIn()
 
     val scrollState: ScrollState
 }
 
 class AppSignInComponent(
-    componentContext: AppComponentContext, stateBuilder: AppSignInComponent.() -> ComponentState
+    componentContext: AppComponentContext, private val onEnter: () -> Unit
 ) : SignInComponent, AppComponentContext by componentContext {
-    override var state: ComponentState by mutableStateOf(stateBuilder())
+    override var step by mutableStateOf(EnteringCredential)
+    override var credentialType by mutableStateOf(Username)
+    override var credential by mutableStateOf("")
+    private var _verificationType: SignInComponent.VerificationType? by mutableStateOf(null)
+    override var verificationType
+        get() = _verificationType
+        set(value) = changeVerificationType(value)
+    override var verification by mutableStateOf("")
+    override var showVerification by mutableStateOf(false)
 
-    sealed class ComponentState(context: AppComponentContext) : AppComponentContext by context,
-        SignInComponent.ComponentState {
-        class SignIn(
-            context: AppComponentContext,
-            phoneNumber: String = "",
-            verifyCode: String = "",
-            canInputVerifyCode: Boolean = false,
-            showMoreSignInOptions: Boolean = false,
-            override val onGuestSignIn: () -> Unit,
-            override val onFaceSignIn: () -> Unit,
-        ) : ComponentState(context), SignInComponent.ComponentState.SignIn {
-            private val phoneNumberRegex =
-                Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
-
-            private var _phoneNumber by mutableStateOf(phoneNumber)
-            override var phoneNumber
-                get() = _phoneNumber
-                set(value) {
-                    canInputVerifyCode = false
-                    _phoneNumber = value
-                }
-
-            override val phoneNumberVerified
-                get() = phoneNumberRegex.matches(phoneNumber)
-
-            private var _canInputVerifyCode by mutableStateOf(canInputVerifyCode)
-            override var canInputVerifyCode
-                get() = _canInputVerifyCode
-                set(value) {
-                    if (!phoneNumberVerified) {
-                        _canInputVerifyCode = false
-                        return
-                    }
-                    _canInputVerifyCode = value
-                    if (!value) {
-                        verifyCode = ""
-                    }
-                }
-
-            private var verifyCodeSentSnackbarJob: Job? = null
-
-            @OptIn(ExperimentalSerializationApi::class)
-            override fun sendVerifyCode() {
-                canInputVerifyCode = true
-                if (!canInputVerifyCode) return
-
-                componentScope.launch {
-                    val requestResult = requestAppNotificationPermission()
-                    verifyCodeSentSnackbarJob?.cancel()
-                    verifyCodeSentSnackbarJob = componentScope.launch {
-                        snackbarHostState.showSnackbar("验证码已获取", withDismissAction = true)
-                    }
-                    val client = HttpClient {
-                        install(Resources)
-                        install(ContentNegotiation) { cbor() }
-                        defaultRequest {
-                            host = "192.168.2.42"
-                            port = DefaultServerPort
-                        }
-                    }
-
-                    val code = try {
-                        val response = client.post(Auth.PhoneNumber(phoneNumber = phoneNumber))
-                        response.body<Auth.PhoneNumber.Response.Success>().verifyCode
-                    } catch (e: Throwable) {
-                        verifyCodeSentSnackbarJob?.cancel()
-                        snackbarHostState.showSnackbar("验证码获取失败", withDismissAction = true)
-                        e.printStackTrace()
-                        return@launch
-                    }
-                    sendVerifyCodeNotification(code)
-                    if (requestResult != true) {
-                        verifyCode = code
-                        snackbarHostState.showSnackbar("通知权限未授予，验证码已自动填写", withDismissAction = true)
-                    }
-                }
-            }
-
-            override var verifyCode by mutableStateOf(verifyCode)
-            override var showMoreSignInOptions by mutableStateOf(showMoreSignInOptions)
-
-            override fun submit() {
-                // TODO
-            }
-
-            override val onNext: KeyboardActionScope.() -> Unit = {
-                sendVerifyCode()
-            }
-
-            override fun nextOrSubmit() {
-                if (canInputVerifyCode) {
-                    submit()
-                } else {
-                    sendVerifyCode()
-                }
-            }
-
-            override val onDone: KeyboardActionScope.() -> Unit = {
-                submit()
-            }
-
-            override fun onAdminSignIn() {
-                // TODO
-            }
+    override val credentialValid
+        get() = when (credentialType) {
+            Username -> usernameRegex.matches(credential)
+            PhoneNumber -> phoneNumberRegex.matches(credential)
+            Email -> emailRegex.matches(credential)
         }
 
-        class SignUp(
-            context: AppComponentContext,
-            email: String = "",
-            username: String = "",
-            password: String = "",
-            showPassword: Boolean = false,
-            confirmPassword: String = "",
-            showConfirmPassword: Boolean = false
-        ) : ComponentState(context), SignInComponent.ComponentState.SignUp {
-            override var email by mutableStateOf(email)
-            override var username by mutableStateOf(username)
-            override var password by mutableStateOf(password)
-            override var showPassword by mutableStateOf(showPassword)
-            override var confirmPassword by mutableStateOf(confirmPassword)
-            override var showConfirmPassword by mutableStateOf(showConfirmPassword)
+    private val phoneNumberRegex =
+        Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
+    private val emailRegex = Regex("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+\$")
 
-            override fun submit() {
+    override var showMoreSignInOptions by mutableStateOf(false)
+
+    override fun requestVerification() {
+        val verification = verificationType ?: return
+
+        componentScope.launch {
+            if (verification.onRequest(client, credential)) {
                 // TODO
-            }
-
-            override val onDone: KeyboardActionScope.() -> Unit = {
-                submit()
             }
         }
     }
+
+    override fun enter() {
+        if (!credentialValid) return
+        val verification = verificationType
+        if (verification == null) {
+            // TODO: 询问是否验证
+            onEnter()
+        } else {
+            componentScope.launch {
+                if (verification.onVerify(client, credential, this@AppSignInComponent.verification)) {
+                    onEnter()
+                }
+            }
+        }
+    }
+
+    override fun onAdminSignIn() {
+        // TODO
+    }
+
+    private fun changeVerificationType(type: SignInComponent.VerificationType?) {
+        showVerification = when (type) {
+            is Password -> false
+            else -> true
+        }
+        _verificationType = type
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    val client by lazy {
+        HttpClient {
+            install(Resources)
+            install(ContentNegotiation) { cbor() }
+            defaultRequest {
+                host = serverDataStore.serverHost.value
+                port = serverDataStore.serverPort.value
+            }
+        }
+    }
+
+    private val serverDataStore by ServerDataStore.Preferences.preferences()
 
     override val scrollState: ScrollState = ScrollState(initial = 0)
 }
