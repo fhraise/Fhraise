@@ -37,8 +37,7 @@ interface AppComponentContextValues {
     enum class ColorMode(val displayName: String) {
         LIGHT("亮色"), DARK("暗色"), SYSTEM("跟随系统");
 
-        val next
-            get() = ColorMode.entries[(ordinal + 1) % ColorMode.entries.size]
+        val next = ColorMode.entries[(ordinal + 1) % ColorMode.entries.size]
     }
 
     val pop: State<(() -> Unit)?>
