@@ -72,7 +72,7 @@ class VerifyCode(id: EntityID<String>) : Entity<String>(id) {
 
 suspend fun RoutingCall.respondEmailVerifyCode(block: EmailVerifyCode.() -> Unit) {
     if (!smtpReady) {
-        respond(Auth.Email.Response.Failure)
+        respond(Auth.Email.Request.Response.Failure)
         return
     }
 
@@ -96,7 +96,7 @@ suspend fun RoutingCall.respondEmailVerifyCode(block: EmailVerifyCode.() -> Unit
     MailerBuilder.withTransportStrategy(TransportStrategy.SMTPS)
         .withSMTPServer(smtpServer!!, smtpPort!!, smtpUsername!!, smtpPassword!!).buildMailer().sendMail(email, true)
 
-    respond(Auth.Email.Response.Success)
+    respond(Auth.Email.Request.Response.Success)
 }
 
 class EmailVerifyCode internal constructor() {

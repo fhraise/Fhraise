@@ -44,6 +44,7 @@ import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.Verifi
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.Password
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.models.usernameRegex
+import kotlin.js.JsName
 
 internal typealias OnRequest = suspend (client: HttpClient, credential: String) -> Boolean
 internal typealias OnVerify = suspend (client: HttpClient, credential: String, verification: String) -> Boolean
@@ -59,6 +60,8 @@ interface SignInComponent : AppComponentContext {
     val credentialValid: Boolean
 
     var showMoreSignInOptions: Boolean
+
+    var showServerSettings: Boolean
 
     enum class Step(val displayName: String) {
         EnteringCredential("输入凭证"), SelectingVerification("选择验证方式"), Verification("验证");
@@ -134,24 +137,18 @@ interface SignInComponent : AppComponentContext {
             VerificationType.Face(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
         )
 
-    fun emailCodeVerification() = VerificationType.EmailCode(
-        onRequest = { client, credential ->
-            val result = try {
-                client.post(Auth.Email.Request(email = credential)).body<Auth.Email.Request.Response>()
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                null
-            } ?: return@EmailCode false
-            true
-        },
-        onVerify = { client, credential, verification ->
-            false
-        },
-    )
-
     fun requestVerification()
     fun enter()
     fun onAdminSignIn()
+
+    @JsName("fun_showServerSettings")
+    fun showServerSettings() {
+        showServerSettings = true
+    }
+
+    fun hideServerSettings() {
+        showServerSettings = false
+    }
 
     val serverHost: PreferenceStateFlow<String, String>
     val serverPort: PreferenceStateFlow<Int, Int>
@@ -185,6 +182,8 @@ class AppSignInComponent(
 
     override var showMoreSignInOptions by mutableStateOf(false)
 
+    override var showServerSettings by mutableStateOf(false)
+
     override fun requestVerification() {
         val verification = verificationType ?: return
 
@@ -212,6 +211,7 @@ class AppSignInComponent(
 
     override fun onAdminSignIn() {
         // TODO
+        showServerSettings()
     }
 
     private fun changeVerificationType(type: SignInComponent.VerificationType?) {
@@ -229,6 +229,11 @@ class AppSignInComponent(
     }
 
     private val serverDataStore by ServerDataStore.Preferences.preferences()
+
+    override fun hideServerSettings() {
+        super.hideServerSettings()
+        createClient()
+    }
 
     override val serverHost = serverDataStore.serverHost
     override val serverPort = serverDataStore.serverPort

@@ -69,9 +69,9 @@ fun Application.module() {
 
     routing {
         rateLimit(RateLimitName("verifyCode")) {
-            post<Auth.Email> { req ->
+            post<Auth.Email.Request> { req ->
                 if (!JMail.strictValidator().isValid(req.email)) {
-                    call.respond(Auth.Email.Response.InvalidEmailAddress)
+                    call.respond(Auth.Email.Request.Response.InvalidEmailAddress)
                     return@post
                 }
 

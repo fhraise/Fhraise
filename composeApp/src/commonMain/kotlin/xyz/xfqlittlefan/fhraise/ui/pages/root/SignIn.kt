@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import xyz.xfqlittlefan.fhraise.asMutableState
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
@@ -61,10 +62,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 @OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalResourceApi::class,
-    ExperimentalLayoutApi::class,
-    ExperimentalAnimationApi::class
+    ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalLayoutApi::class
 )
 @Composable
 fun SignIn(component: SignInComponent) {
@@ -201,7 +199,7 @@ fun SignIn(component: SignInComponent) {
                                         ) {
                                             Icon(
                                                 imageVector = verification.icon,
-                                                contentDescription = verification.displayName,
+                                                contentDescription = null,
                                             )
                                             Spacer(modifier = Modifier.width(16.dp))
                                             Text(text = verification.displayName)
@@ -226,6 +224,34 @@ fun SignIn(component: SignInComponent) {
             },
             additionalContent = {
                 component.MoreMethods(modifier = Modifier.fillMaxWidth())
+            },
+        )
+    }
+
+    if (component.showServerSettings) {
+        var host by component.serverHost.asMutableState()
+        var port by component.serverPort.asMutableState()
+
+        AlertDialog(
+            onDismissRequest = component::hideServerSettings,
+            confirmButton = {
+                Button(onClick = component::hideServerSettings) {
+                    Text("确定")
+                }
+            },
+            title = { Text("服务器设置") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = host,
+                        onValueChange = { host = it },
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = port.toString(),
+                        onValueChange = { port = it.toIntOrNull() ?: 0 },
+                    )
+                }
             },
         )
     }
@@ -595,6 +621,19 @@ fun SignInMainLayout(
 @Composable
 fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
+        FilledTonalButton(
+            onClick = ::enter,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = Icons.Default.NoAccounts,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "仅浏览")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         TextButton(
             onClick = ::switchShowMoreSignInOptions,
             modifier = Modifier.fillMaxWidth(),
@@ -610,17 +649,20 @@ fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
         AnimatedVisibility(
             visible = showMoreSignInOptions,
         ) {
-            FilledTonalButton(
-                onClick = ::onAdminSignIn,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AdminPanelSettings,
-                    contentDescription = null,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "管理员登录")
+            Column {
+                Spacer(modifier = Modifier.height(8.dp))
+                FilledTonalButton(
+                    onClick = ::onAdminSignIn,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AdminPanelSettings,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "管理员登录")
+                }
             }
         }
     }

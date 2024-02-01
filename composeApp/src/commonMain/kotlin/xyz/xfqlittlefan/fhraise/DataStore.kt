@@ -18,6 +18,9 @@
 
 package xyz.xfqlittlefan.fhraise
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.arkivanov.decompose.ComponentContext
@@ -67,5 +70,21 @@ object ServerDataStore {
             PreferenceStateFlow(scope, store, stringPreferencesKey("serverHost"), defaultValue = "localhost")
         val serverPort =
             PreferenceStateFlow(scope, store, intPreferencesKey("serverPort"), defaultValue = DefaultServerPort)
+    }
+}
+
+@Composable
+fun <K, V> PreferenceStateFlow<K, V>.asMutableState(): MutableState<V> {
+    val mutableState = mutableStateOf(value)
+    return object : MutableState<V> by mutableState {
+        override var value: V
+            get() = mutableState.value
+            set(value) {
+                this@asMutableState.value = value
+                mutableState.value = value
+            }
+
+        override fun component1() = value
+        override fun component2(): (V) -> Unit = { value = it }
     }
 }
