@@ -27,6 +27,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.ratelimit.*
+import io.ktor.server.request.*
 import io.ktor.server.resources.*
 import io.ktor.server.resources.post
 import io.ktor.server.response.*
@@ -37,8 +38,8 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.ExperimentalSerializationApi
-import xyz.xfqlittlefan.fhraise.api.Auth
 import xyz.xfqlittlefan.fhraise.models.*
+import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
@@ -69,9 +70,10 @@ fun Application.module() {
 
     routing {
         rateLimit(RateLimitName("verifyCode")) {
-            post<Auth.Email.Request> { req ->
+            post<Api.Auth.Email.Request> {
+                val req = call.receive<Api.Auth.Email.Request.RequestBody>()
                 if (!JMail.strictValidator().isValid(req.email)) {
-                    call.respond(Auth.Email.Request.Response.InvalidEmailAddress)
+                    call.respond(Api.Auth.Email.Request.ResponseBody.InvalidEmailAddress)
                     return@post
                 }
 
@@ -97,9 +99,30 @@ fun Application.module() {
                     newCode
                 }
 
+                if (req.dry) {
+                    call.respond(Api.Auth.Email.Request.ResponseBody.Success)
+                    return@post
+                }
+
                 call.respondEmailVerifyCode {
                     email = req.email
                     code = verifyCode.code
+                }
+            }
+
+            post<Api.Auth.Email.Verify> {
+                val req = call.receive<Api.Auth.Email.Verify.RequestBody>()
+                val verifyCode = database.dbQuery {
+                    VerifyCode.find { VerifyCodes.email eq req.email }.firstOrNull()
+                }
+
+                if (verifyCode == null || verifyCode.code != req.code) {
+                    call.respond(Api.Auth.Email.Verify.ResponseBody.Failure)
+                } else {
+                    database.dbQuery {
+                        verifyCode.delete()
+                    }
+                    call.respond(Api.Auth.Email.Verify.ResponseBody.Success)
                 }
             }
         }

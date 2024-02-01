@@ -31,11 +31,12 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.resources.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.cbor.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import xyz.xfqlittlefan.fhraise.ServerDataStore
-import xyz.xfqlittlefan.fhraise.api.Auth
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialType.*
@@ -44,6 +45,7 @@ import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.Verifi
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.Password
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.models.usernameRegex
+import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.js.JsName
 
 internal typealias OnRequest = suspend (client: HttpClient, credential: String) -> Boolean
@@ -121,12 +123,10 @@ interface SignInComponent : AppComponentContext {
             VerificationType.SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
             VerificationType.EmailCode(
                 onRequest = { client, credential ->
-                    val result = try {
-                        client.post(Auth.Email.Request(email = credential)).body<Auth.Email.Request.Response>()
-                    } catch (e: Throwable) {
-                        e.printStackTrace()
-                        null
-                    } ?: return@EmailCode false
+                    client.post(Api.Auth.Email.Request()) {
+                        contentType(ContentType.Application.Cbor)
+                        setBody(Api.Auth.Email.Request.RequestBody(credential))
+                    }.body<Api.Auth.Email.Request.ResponseBody>()
                     true
                 },
                 onVerify = { client, credential, verification ->
@@ -137,7 +137,7 @@ interface SignInComponent : AppComponentContext {
             VerificationType.Face(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
         )
 
-    fun requestVerification()
+    suspend fun requestVerification(): Boolean
     fun enter()
     fun onAdminSignIn()
 
@@ -184,15 +184,14 @@ class AppSignInComponent(
 
     override var showServerSettings by mutableStateOf(false)
 
-    override fun requestVerification() {
-        val verification = verificationType ?: return
-
-        componentScope.launch {
-            if (verification.onRequest(client, credential)) {
-                // TODO
-            }
+    override suspend fun requestVerification() = verificationType?.run {
+        try {
+            onRequest(client, credential)
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            false
         }
-    }
+    } ?: false
 
     override fun enter() {
         if (!credentialValid) return
@@ -220,11 +219,14 @@ class AppSignInComponent(
             else -> true
         }
         _verificationType = type
-        step = if (type != null) {
-            requestVerification()
-            Verification
-        } else {
-            EnteringCredential
+        componentScope.launch {
+            if (requestVerification()) {
+                step = Verification
+            } else {
+                snackbarHostState.showSnackbar(
+                    message = "请求验证失败", withDismissAction = true
+                )
+            }
         }
     }
 

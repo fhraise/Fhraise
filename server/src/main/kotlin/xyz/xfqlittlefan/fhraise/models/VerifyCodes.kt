@@ -38,9 +38,9 @@ import org.simplejavamail.api.mailer.config.TransportStrategy
 import org.simplejavamail.email.EmailBuilder
 import org.simplejavamail.mailer.MailerBuilder
 import xyz.xfqlittlefan.fhraise.AppDatabase
-import xyz.xfqlittlefan.fhraise.api.Auth
 import xyz.xfqlittlefan.fhraise.applicationConfig
 import xyz.xfqlittlefan.fhraise.applicationSecret
+import xyz.xfqlittlefan.fhraise.routes.Api
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -72,7 +72,7 @@ class VerifyCode(id: EntityID<String>) : Entity<String>(id) {
 
 suspend fun RoutingCall.respondEmailVerifyCode(block: EmailVerifyCode.() -> Unit) {
     if (!smtpReady) {
-        respond(Auth.Email.Request.Response.Failure)
+        respond(Api.Auth.Email.Request.ResponseBody.Failure)
         return
     }
 
@@ -96,7 +96,7 @@ suspend fun RoutingCall.respondEmailVerifyCode(block: EmailVerifyCode.() -> Unit
     MailerBuilder.withTransportStrategy(TransportStrategy.SMTPS)
         .withSMTPServer(smtpServer!!, smtpPort!!, smtpUsername!!, smtpPassword!!).buildMailer().sendMail(email, true)
 
-    respond(Auth.Email.Request.Response.Success)
+    respond(Api.Auth.Email.Request.ResponseBody.Success)
 }
 
 class EmailVerifyCode internal constructor() {
