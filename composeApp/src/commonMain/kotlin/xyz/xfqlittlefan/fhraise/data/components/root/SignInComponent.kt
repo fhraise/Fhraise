@@ -40,8 +40,7 @@ import xyz.xfqlittlefan.fhraise.ServerDataStore
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialType.*
-import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.EnteringCredential
-import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.Verification
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.Password
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.models.usernameRegex
@@ -66,7 +65,7 @@ interface SignInComponent : AppComponentContext {
     var showServerSettings: Boolean
 
     enum class Step(val displayName: String) {
-        EnteringCredential("输入凭证"), SelectingVerification("选择验证方式"), Verification("验证");
+        EnteringCredential("输入凭证"), SelectingVerification("选择验证方式"), Verification("验证"), Done("完成");
 
         val previous
             get() = entries[(ordinal - 1 + entries.size) % entries.size]
@@ -114,7 +113,11 @@ interface SignInComponent : AppComponentContext {
     }
 
     fun forward() {
-        step++
+        if (step.next != Done) {
+            step++
+        } else {
+            enter()
+        }
     }
 
     val defaultVerifications
@@ -130,7 +133,10 @@ interface SignInComponent : AppComponentContext {
                     true
                 },
                 onVerify = { client, credential, verification ->
-                    false
+                    client.post(Api.Auth.Email.Verify()) {
+                        contentType(ContentType.Application.Cbor)
+                        setBody(Api.Auth.Email.Verify.RequestBody(credential, verification))
+                    }.body<Api.Auth.Email.Verify.ResponseBody>() == Api.Auth.Email.Verify.ResponseBody.Success
                 },
             ),
             Password(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
@@ -202,7 +208,14 @@ class AppSignInComponent(
         } else {
             componentScope.launch {
                 if (verification.onVerify(client, credential, this@AppSignInComponent.verification)) {
+                    snackbarHostState.showSnackbar(
+                        message = "验证成功", withDismissAction = true
+                    )
                     onEnter()
+                } else {
+                    snackbarHostState.showSnackbar(
+                        message = "验证失败", withDismissAction = true
+                    )
                 }
             }
         }
@@ -210,7 +223,6 @@ class AppSignInComponent(
 
     override fun onAdminSignIn() {
         // TODO
-        showServerSettings()
     }
 
     private fun changeVerificationType(type: SignInComponent.VerificationType?) {

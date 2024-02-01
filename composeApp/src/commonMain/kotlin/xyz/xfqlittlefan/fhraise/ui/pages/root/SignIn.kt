@@ -51,6 +51,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import xyz.xfqlittlefan.fhraise.asMutableState
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
+import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.ui.WindowSizeClass
@@ -175,7 +176,7 @@ fun SignIn(component: SignInComponent) {
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    component.ForwardButton(requiredStep = EnteringCredential)
+                                    component.ForwardButton(requiredStep = step)
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -211,14 +212,35 @@ fun SignIn(component: SignInComponent) {
                         }
 
                         Verification -> {
+                            val type = component.verificationType ?: error("Verification type is not selected")
                             Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 component.BackButton(requiredStep = step)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(16.dp))
+                                when (type) {
+                                    is SignInComponent.VerificationType.FhraiseToken -> {}
+                                    is SignInComponent.VerificationType.SmsCode -> {}
+                                    is SignInComponent.VerificationType.EmailCode -> {
+                                        component.VerificationCode()
+                                    }
+
+                                    is SignInComponent.VerificationType.Password -> {}
+                                    is SignInComponent.VerificationType.Face -> TODO()
+                                }
+                                Spacer(modifier = Modifier.height(32.dp))
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    component.ForwardButton(requiredStep = step)
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
+
+                        Done -> {}
                     }
                 }
             },
@@ -245,11 +267,18 @@ fun SignIn(component: SignInComponent) {
                     OutlinedTextField(
                         value = host,
                         onValueChange = { host = it },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        maxLines = 1,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = port.toString(),
-                        onValueChange = { port = it.toIntOrNull() ?: 0 },
+                        onValueChange = { port = it.toIntOrNull() ?: 8080 },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { component.hideServerSettings() }),
+                        maxLines = 1,
                     )
                 }
             },
@@ -663,6 +692,19 @@ fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "管理员登录")
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                FilledTonalButton(
+                    onClick = ::showServerSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "服务器设置")
+                }
             }
         }
     }
@@ -697,7 +739,7 @@ fun SignInComponent.Credential() {
 }
 
 @Composable
-fun SignInComponent.VerifyCode() {
+fun SignInComponent.VerificationCode() {
     OutlinedTextField(
         value = verification,
         onValueChange = ::verification::set,
@@ -724,9 +766,9 @@ fun SignInComponent.BackButton(requiredStep: SignInComponent.Step) {
 }
 
 @Composable
-fun SignInComponent.ForwardButton(requiredStep: SignInComponent.Step) {
+fun SignInComponent.ForwardButton(requiredStep: SignInComponent.Step, condition: suspend () -> Boolean = { true }) {
     Button(
-        onClick = ::forward,
+        onClick = { componentScope.launch { if (condition()) forward() } },
         enabled = step == requiredStep && when (requiredStep) {
             EnteringCredential -> credentialValid
             Verification -> verification.isNotBlank()
