@@ -19,7 +19,6 @@
 package xyz.xfqlittlefan.fhraise
 
 import android.Manifest.permission.POST_NOTIFICATIONS
-import android.app.NotificationManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -61,23 +60,6 @@ class MainActivity : ComponentActivity() {
 
         PreferencesDataStore.applicationContext = applicationContext
 
-        super.onCreate(savedInstanceState)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val verifyCodeChannelId = "verifyCode"
-            val verifyCodeChannelName = "模拟验证码"
-            val verifyCodeChannelDescription = "模拟验证码的通知"
-            val verifyCodeChannelImportance = NotificationManager.IMPORTANCE_HIGH
-            val verifyCodeChannel = android.app.NotificationChannel(
-                verifyCodeChannelId, verifyCodeChannelName, verifyCodeChannelImportance
-            ).apply {
-                description = verifyCodeChannelDescription
-            }
-
-            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
-            notificationManager.createNotificationChannel(verifyCodeChannel)
-        }
-
         val notificationPermission =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission(POST_NOTIFICATIONS) else null
 
@@ -89,7 +71,7 @@ class MainActivity : ComponentActivity() {
         } ?: { true }
 
         Notification.send = { channel, title, message, priority ->
-            val notification = NotificationCompat.Builder(this, "verifyCode").apply {
+            val notification = NotificationCompat.Builder(this, channel).apply {
                 setSmallIcon(R.drawable.ic_launcher_foreground)
                 setContentTitle(title)
                 setContentText(message)
@@ -104,6 +86,8 @@ class MainActivity : ComponentActivity() {
         }
 
         val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
+
+        super.onCreate(savedInstanceState)
 
         setContent {
             val colorMode by rootComponent.settings.colorMode.collectAsState()

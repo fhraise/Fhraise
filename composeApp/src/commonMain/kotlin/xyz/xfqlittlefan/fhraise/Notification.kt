@@ -17,5 +17,3 @@
  */
 
 package xyz.xfqlittlefan.fhraise
-
-expect fun sendVerifyCodeNotification(code: String)

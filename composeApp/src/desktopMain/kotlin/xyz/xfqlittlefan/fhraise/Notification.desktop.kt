@@ -23,7 +23,3 @@ import androidx.compose.ui.window.Notification.Type
 object Notification {
     var send: (title: String, message: String, type: Type) -> Unit = { _, _, _ -> }
 }
-
-actual fun sendVerifyCodeNotification(code: String) {
-    Notification.send("验证码", code, Type.Info)
-}

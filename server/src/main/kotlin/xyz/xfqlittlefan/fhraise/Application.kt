@@ -32,13 +32,11 @@ import io.ktor.server.resources.*
 import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.ExperimentalSerializationApi
-import xyz.xfqlittlefan.fhraise.models.*
+import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
+import xyz.xfqlittlefan.fhraise.models.queryVerificationCode
+import xyz.xfqlittlefan.fhraise.models.respondEmailVerificationCode
+import xyz.xfqlittlefan.fhraise.models.verifyCode
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.time.Duration.Companion.seconds
 
@@ -53,7 +51,7 @@ fun Application.module() {
     install(Resources)
 
     install(RateLimit) {
-        register(RateLimitName("verifyCode")) {
+        register(RateLimitName("codeVerification")) {
             rateLimiter(limit = 30, refillPeriod = 60.seconds)
         }
     }
@@ -66,10 +64,10 @@ fun Application.module() {
 
     install(ContentNegotiation) { cbor() }
 
-    cleanupVerifyCodes()
+    cleanupVerificationCodes()
 
     routing {
-        rateLimit(RateLimitName("verifyCode")) {
+        rateLimit(RateLimitName("codeVerification")) {
             post<Api.Auth.Email.Request> {
                 val req = call.receive<Api.Auth.Email.Request.RequestBody>()
                 if (!JMail.strictValidator().isValid(req.email)) {
@@ -77,52 +75,26 @@ fun Application.module() {
                     return@post
                 }
 
-                val verifyCode = database.dbQuery {
-                    VerifyCode.find { VerifyCodes.email eq req.email }.firstOrNull()
-                } ?: run {
-                    val newCode = database.dbQuery {
-                        VerifyCode.new {
-                            email = req.email
-                            code = (0 until 6).map { (0..9).random() }.joinToString("")
-                            createdAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                        }
-                    }
-
-                    launch {
-                        delay(verifyCodeTtl)
-
-                        database.dbQuery {
-                            newCode.delete()
-                        }
-                    }
-
-                    newCode
-                }
+                val code = database.queryVerificationCode(this) { emailOwner(req.email) }
 
                 if (req.dry) {
                     call.respond(Api.Auth.Email.Request.ResponseBody.Success)
                     return@post
                 }
 
-                call.respondEmailVerifyCode {
+                call.respondEmailVerificationCode {
                     email = req.email
-                    code = verifyCode.code
+                    this.code = code.code
                 }
             }
 
             post<Api.Auth.Email.Verify> {
                 val req = call.receive<Api.Auth.Email.Verify.RequestBody>()
-                val verifyCode = database.dbQuery {
-                    VerifyCode.find { VerifyCodes.email eq req.email }.firstOrNull()
-                }
 
-                if (verifyCode == null || verifyCode.code != req.code) {
-                    call.respond(Api.Auth.Email.Verify.ResponseBody.Failure)
-                } else {
-                    database.dbQuery {
-                        verifyCode.delete()
-                    }
+                if (database.verifyCode(req.code) { emailOwner(req.email) }) {
                     call.respond(Api.Auth.Email.Verify.ResponseBody.Success)
+                } else {
+                    call.respond(Api.Auth.Email.Verify.ResponseBody.Failure)
                 }
             }
         }

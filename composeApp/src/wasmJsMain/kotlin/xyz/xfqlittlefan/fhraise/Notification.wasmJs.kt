@@ -17,12 +17,3 @@
  */
 
 package xyz.xfqlittlefan.fhraise
-
-import org.w3c.notifications.Notification
-import org.w3c.notifications.NotificationOptions
-
-actual fun sendVerifyCodeNotification(code: String) {
-    Notification(
-        title = "验证码", options = NotificationOptions(body = code)
-    )
-}

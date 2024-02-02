@@ -42,7 +42,7 @@ import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialType.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
-import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.Password
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.models.usernameRegex
 import xyz.xfqlittlefan.fhraise.routes.Api
@@ -142,9 +142,9 @@ interface SignInComponent : AppComponentContext {
 
     val defaultVerifications
         get() = listOf(
-            VerificationType.FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
-            VerificationType.SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
-            VerificationType.EmailCode(
+            FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            EmailCode(
                 onRequest = { client, credential ->
                     client.post(Api.Auth.Email.Request()) {
                         contentType(ContentType.Application.Cbor)
@@ -160,7 +160,7 @@ interface SignInComponent : AppComponentContext {
                 },
             ),
             Password(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
-            VerificationType.Face(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            Face(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
         )
 
     suspend fun requestVerification(): Boolean

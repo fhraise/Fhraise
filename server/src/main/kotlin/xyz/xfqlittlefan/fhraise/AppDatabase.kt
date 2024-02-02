@@ -26,7 +26,7 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import xyz.xfqlittlefan.fhraise.models.Users
-import xyz.xfqlittlefan.fhraise.models.VerifyCodes
+import xyz.xfqlittlefan.fhraise.models.VerificationCodes
 
 class AppDatabase private constructor(private val database: Database) {
     companion object {
@@ -35,7 +35,7 @@ class AppDatabase private constructor(private val database: Database) {
             get() = _instance ?: run {
                 val db = AppDatabase(Database.connect(createHikariDataSource()))
                 _instance = db
-                transaction { SchemaUtils.create(Users, VerifyCodes) }
+                transaction { SchemaUtils.create(Users, VerificationCodes) }
                 db
             }
 

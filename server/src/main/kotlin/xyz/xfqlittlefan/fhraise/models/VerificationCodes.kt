@@ -21,12 +21,14 @@ package xyz.xfqlittlefan.fhraise.models
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.html.*
-import kotlinx.html.dom.create
 import kotlinx.html.stream.appendHTML
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
@@ -41,11 +43,11 @@ import xyz.xfqlittlefan.fhraise.AppDatabase
 import xyz.xfqlittlefan.fhraise.applicationConfig
 import xyz.xfqlittlefan.fhraise.applicationSecret
 import xyz.xfqlittlefan.fhraise.routes.Api
-import javax.xml.parsers.DocumentBuilderFactory
+import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
-val verifyCodeTtl = applicationConfig.propertyOrNull("app.verify-code.ttl")?.getString()?.toLongOrNull()
+val verificationCodeTtl = applicationConfig.propertyOrNull("app.verify-code.ttl")?.getString()?.toLongOrNull()
     ?: 5.minutes.inWholeMilliseconds
 
 val smtpServer = applicationSecret.propertyOrNull("auth.email.smtp.server")?.getString()
@@ -54,33 +56,74 @@ val smtpUsername = smtpPort?.let { applicationSecret.propertyOrNull("auth.email.
 val smtpPassword = smtpUsername?.let { applicationSecret.propertyOrNull("auth.email.smtp.password")?.getString() }
 val smtpReady = smtpPassword != null
 
-object VerifyCodes : IdTable<String>() {
-    val email = text("email")
+object VerificationCodes : IdTable<String>() {
+    val owner = text("owner")
     val code = char("code", 6)
     val createdAt = datetime("created_at")
-    override val id = email.entityId()
-    override val primaryKey = PrimaryKey(email)
+    override val id = owner.entityId()
+    override val primaryKey = PrimaryKey(owner)
 }
 
-class VerifyCode(id: EntityID<String>) : Entity<String>(id) {
-    companion object : EntityClass<String, VerifyCode>(VerifyCodes)
+class VerificationCode(id: EntityID<String>) : Entity<String>(id) {
+    companion object : EntityClass<String, VerificationCode>(VerificationCodes)
 
-    var email by VerifyCodes.email
-    var code by VerifyCodes.code
-    var createdAt by VerifyCodes.createdAt
+    var owner by VerificationCodes.owner
+        internal set
+    var code by VerificationCodes.code
+        internal set
+    var createdAt by VerificationCodes.createdAt
+        internal set
 }
 
-suspend fun RoutingCall.respondEmailVerifyCode(block: EmailVerifyCode.() -> Unit) {
+object VerificationCodeOwnerBuilder {
+    fun userOwner(uuid: UUID) = "user:$uuid"
+    fun phoneNumberOwner(phoneNumber: String) = "phone:$phoneNumber"
+    fun emailOwner(email: String) = "email:$email"
+}
+
+suspend fun AppDatabase.queryVerificationCode(scope: CoroutineScope, build: VerificationCodeOwnerBuilder.() -> String) =
+    VerificationCodeOwnerBuilder.build().let {
+        dbQuery {
+            VerificationCode.find { VerificationCodes.owner eq it }.firstOrNull()
+        } ?: run {
+            val newCode = dbQuery {
+                VerificationCode.new {
+                    owner = it
+                    code = (0 until 6).map { (0..9).random() }.joinToString("")
+                    createdAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                }
+            }
+
+            scope.launch {
+                delay(verificationCodeTtl)
+
+                dbQuery {
+                    newCode.delete()
+                }
+            }
+
+            newCode
+        }
+    }
+
+suspend fun AppDatabase.verifyCode(code: String, build: VerificationCodeOwnerBuilder.() -> String) = dbQuery {
+    VerificationCode.find { VerificationCodes.owner eq VerificationCodeOwnerBuilder.build() }.firstOrNull()?.let {
+        if (it.code == code) {
+            it.delete()
+            true
+        } else {
+            false
+        }
+    } ?: false
+}
+
+suspend fun RoutingCall.respondEmailVerificationCode(block: EmailVerificationCode.() -> Unit) {
     if (!smtpReady) {
         respond(Api.Auth.Email.Request.ResponseBody.Failure)
         return
     }
 
-    val config = EmailVerifyCode().apply(block).verifyDsl()
-
-    val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
-
-    document.create
+    val config = EmailVerificationCode().apply(block).verifyContent()
 
     val email = EmailBuilder.startingBlank().apply {
         from("Fhraise", smtpUsername!!)
@@ -88,7 +131,7 @@ suspend fun RoutingCall.respondEmailVerifyCode(block: EmailVerifyCode.() -> Unit
         withSubject("Fhraise 邮件地址验证")
         withHTMLText(buildString {
             appendText("<!DOCTYPE html>")
-            appendHTML().emailVerifyCode(config.code!!)
+            appendHTML().emailVerificationCode(config.code!!)
             appendLine()
         })
     }.buildEmail()
@@ -99,18 +142,18 @@ suspend fun RoutingCall.respondEmailVerifyCode(block: EmailVerifyCode.() -> Unit
     respond(Api.Auth.Email.Request.ResponseBody.Success)
 }
 
-class EmailVerifyCode internal constructor() {
+class EmailVerificationCode internal constructor() {
     var email: String? = null
     var code: String? = null
 
-    internal fun verifyDsl(): EmailVerifyCode {
+    internal fun verifyContent(): EmailVerificationCode {
         requireNotNull(email) { "Email is required" }
         requireNotNull(code) { "Code is required" }
         return this
     }
 }
 
-fun TagConsumer<StringBuilder>.emailVerifyCode(code: String) = html {
+fun TagConsumer<StringBuilder>.emailVerificationCode(code: String) = html {
     head {
         style {
             unsafe {
@@ -197,13 +240,13 @@ fun TagConsumer<StringBuilder>.emailVerifyCode(code: String) = html {
     }
 }
 
-fun Application.cleanupVerifyCodes() {
+fun Application.cleanupVerificationCodes() {
     launch {
-        exposedLogger.trace("Cleaning up expired verify codes, ttl: $verifyCodeTtl")
+        exposedLogger.trace("Cleaning up expired verify codes, ttl: $verificationCodeTtl")
         AppDatabase.current.dbQuery {
-            VerifyCode.all().forEach {
+            VerificationCode.all().forEach {
                 exposedLogger.trace("Checking verify code {} created at {}", it.id, it.createdAt)
-                if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verifyCodeTtl.milliseconds < Clock.System.now()) {
+                if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verificationCodeTtl.milliseconds < Clock.System.now()) {
                     exposedLogger.trace("Verify code {} is expired, deleting", it.id)
                     it.delete()
                 } else {

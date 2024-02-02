@@ -18,12 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import androidx.core.app.NotificationCompat
-
 object Notification {
     var send: (channel: String, title: String, message: String, priority: Int) -> Unit = { _, _, _, _ -> }
-}
-
-actual fun sendVerifyCodeNotification(code: String) {
-    Notification.send("verifyCode", "验证码", code, NotificationCompat.PRIORITY_HIGH)
 }
