@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(LocalActivity provides this@MainActivity) {
-                Root(component = rootComponent)
+                rootComponent.Root()
             }
         }
     }

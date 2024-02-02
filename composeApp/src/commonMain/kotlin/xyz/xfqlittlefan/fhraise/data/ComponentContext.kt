@@ -45,6 +45,7 @@ interface AppComponentContextValues {
 
     val snackbarHostState: SnackbarHostState
 
+    // 不能替换为成员，否则会因为未知原因的找不到 setter 而崩溃
     @Composable
     fun SnackbarHost() {
         SnackbarHost(hostState = snackbarHostState)

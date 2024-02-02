@@ -42,6 +42,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
@@ -55,6 +57,7 @@ import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
+import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.ui.AnimationValue
 import xyz.xfqlittlefan.fhraise.ui.DensityScope
 import xyz.xfqlittlefan.fhraise.ui.WindowSizeClass
@@ -68,9 +71,9 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun SignIn(component: SignInComponent) {
-    val colorMode by component.settings.colorMode.collectAsState()
-    val pop by component.pop
+fun SignInComponent.SignIn() {
+    val colorMode by settings.colorMode.collectAsState()
+    val pop by pop
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
@@ -107,7 +110,7 @@ fun SignIn(component: SignInComponent) {
                 },
                 actions = {
                     IconButton(
-                        onClick = component::switchColorMode,
+                        onClick = ::switchColorMode,
                         content = {
                             Icon(
                                 imageVector = when (colorMode) {
@@ -123,7 +126,7 @@ fun SignIn(component: SignInComponent) {
                 scrollBehavior = scrollBehavior,
             )
         },
-        snackbarHost = { component.SnackbarHost() },
+        snackbarHost = { SnackbarHost() },
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { paddingValues ->
         SignInLayout(
@@ -144,8 +147,7 @@ fun SignIn(component: SignInComponent) {
             },
             content = { padding ->
                 AnimatedContent(
-                    targetState = component.step,
-                    modifier = Modifier.fillMaxSize(),
+                    targetState = step,
                     transitionSpec = {
                         if (targetState.ordinal > initialState.ordinal) {
                             slideInVertically { it / 2 } + fadeIn() togetherWith slideOutHorizontally() + fadeOut()
@@ -157,7 +159,7 @@ fun SignIn(component: SignInComponent) {
                 ) { step ->
                     when (step) {
                         EnteringCredential -> {
-                            Column(modifier = Modifier.padding(padding).fillMaxWidth().wrapContentHeight()) {
+                            Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -167,36 +169,35 @@ fun SignIn(component: SignInComponent) {
                                 ) {
                                     SignInComponent.CredentialType.entries.forEach {
                                         FilterChip(
-                                            selected = component.credentialType == it,
-                                            onClick = { component.credentialType = it },
+                                            selected = credentialType == it,
+                                            onClick = it.use,
                                             label = { Text(text = "使用${it.displayName}") },
                                         )
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                component.Credential()
+                                Credential()
                                 Spacer(modifier = Modifier.height(32.dp))
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    component.ForwardButton(requiredStep = step)
+                                    ForwardButton(requiredStep = step)
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
 
                         SelectingVerification -> {
-                            Column(modifier = Modifier.padding(padding).fillMaxWidth().wrapContentHeight()) {
+                            Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
                                 Spacer(modifier = Modifier.height(16.dp))
-                                component.BackButton(requiredStep = step)
+                                BackButton(requiredStep = step)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
-                                component.defaultVerifications.forEach { verification ->
+                                defaultVerifications.forEach { verification ->
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Card(
-                                        onClick = { component.verificationType = verification },
-                                        modifier = Modifier.fillMaxWidth()
+                                        onClick = verification.use, modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
@@ -216,29 +217,30 @@ fun SignIn(component: SignInComponent) {
                         }
 
                         Verification -> {
-                            val type = component.verificationType ?: error("Verification type is not selected")
-                            Column(modifier = Modifier.padding(padding).fillMaxWidth().wrapContentHeight()) {
+                            val type = verificationType ?: error("Verification type is not selected")
+                            Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
                                 Spacer(modifier = Modifier.height(16.dp))
-                                component.BackButton(requiredStep = step)
+                                BackButton(requiredStep = step)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 when (type) {
-                                    is SignInComponent.VerificationType.FhraiseToken -> {}
-                                    is SignInComponent.VerificationType.SmsCode -> {}
-                                    is SignInComponent.VerificationType.EmailCode -> {
-                                        component.VerificationCode()
+                                    is FhraiseToken, is SmsCode, is EmailCode -> {
+                                        VerificationCode()
                                     }
 
-                                    is SignInComponent.VerificationType.Password -> {}
-                                    is SignInComponent.VerificationType.Face -> TODO()
+                                    is Password -> {
+                                        Password()
+                                    }
+
+                                    is Face -> {}
                                 }
                                 Spacer(modifier = Modifier.height(32.dp))
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    component.ForwardButton(requiredStep = step)
+                                    ForwardButton(requiredStep = step)
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -249,19 +251,19 @@ fun SignIn(component: SignInComponent) {
                 }
             },
             additionalContent = {
-                component.MoreMethods(modifier = Modifier.fillMaxWidth().padding(it))
+                MoreMethods(modifier = Modifier.fillMaxWidth().padding(it))
             },
         )
     }
 
-    if (component.showServerSettings) {
-        var host by component.serverHost.asMutableState()
-        var port by component.serverPort.asMutableState()
+    if (showServerSettings) {
+        var host by serverHost.asMutableState()
+        var port by serverPort.asMutableState()
 
         AlertDialog(
-            onDismissRequest = component::hideServerSettings,
+            onDismissRequest = ::hideServerSettings,
             confirmButton = {
-                Button(onClick = component::hideServerSettings) {
+                Button(onClick = ::hideServerSettings) {
                     Text("确定")
                 }
             },
@@ -281,7 +283,7 @@ fun SignIn(component: SignInComponent) {
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
                         ),
-                        keyboardActions = KeyboardActions(onDone = { component.hideServerSettings() }),
+                        keyboardActions = KeyboardActions(onDone = hideServerSettingsAction),
                         maxLines = 1,
                     )
                 }
@@ -666,7 +668,7 @@ private fun SignInComponent.Credential() {
         keyboardOptions = KeyboardOptions(
             keyboardType = credentialType.keyboardType, imeAction = ImeAction.Next
         ),
-        keyboardActions = KeyboardActions(onNext = { forward() }),
+        keyboardActions = KeyboardActions(onNext = forwardAction),
         maxLines = 1,
     )
 }
@@ -681,7 +683,31 @@ private fun SignInComponent.VerificationCode() {
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
         ),
-        keyboardActions = KeyboardActions(onDone = { enter() }),
+        keyboardActions = KeyboardActions(onDone = enterAction),
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun SignInComponent.Password() {
+    OutlinedTextField(
+        value = verification,
+        onValueChange = ::verification::set,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        label = { Text(text = "密码") },
+        trailingIcon = {
+            IconButton(onClick = ::switchShowVerification) {
+                Icon(
+                    imageVector = if (showVerification) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (showVerification) "隐藏密码" else "显示密码",
+                )
+            }
+        },
+        visualTransformation = if (showVerification) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onDone = enterAction),
         maxLines = 1,
     )
 }

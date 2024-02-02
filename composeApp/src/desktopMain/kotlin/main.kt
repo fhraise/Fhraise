@@ -88,7 +88,7 @@ fun main() {
             icon = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
         ) {
             CompositionLocalProvider(LocalWindowSize provides windowState.size) {
-                Root(component = rootComponent)
+                rootComponent.Root()
             }
         }
 

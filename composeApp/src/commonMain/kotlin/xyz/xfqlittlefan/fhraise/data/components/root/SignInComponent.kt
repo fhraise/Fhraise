@@ -19,6 +19,7 @@
 package xyz.xfqlittlefan.fhraise.data.components.root
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.getValue
@@ -104,6 +105,20 @@ interface SignInComponent : AppComponentContext {
             VerificationType("人脸", Icons.Default.Face, onRequest, onVerify)
     }
 
+    val CredentialType.use: () -> Unit
+        get() = {
+            credentialType = this
+        }
+
+    val VerificationType.use: () -> Unit
+        get() = {
+            verificationType = this
+        }
+
+    fun switchShowVerification() {
+        showVerification = !showVerification
+    }
+
     fun switchShowMoreSignInOptions() {
         showMoreSignInOptions = !showMoreSignInOptions
     }
@@ -119,6 +134,11 @@ interface SignInComponent : AppComponentContext {
             enter()
         }
     }
+
+    val forwardAction: KeyboardActionScope.() -> Unit
+        get() = {
+            forward()
+        }
 
     val defaultVerifications
         get() = listOf(
@@ -144,7 +164,14 @@ interface SignInComponent : AppComponentContext {
         )
 
     suspend fun requestVerification(): Boolean
+
     fun enter()
+
+    val enterAction: KeyboardActionScope.() -> Unit
+        get() = {
+            enter()
+        }
+
     fun onAdminSignIn()
 
     @JsName("fun_showServerSettings")
@@ -155,6 +182,11 @@ interface SignInComponent : AppComponentContext {
     fun hideServerSettings() {
         showServerSettings = false
     }
+
+    val hideServerSettingsAction: KeyboardActionScope.() -> Unit
+        get() = {
+            hideServerSettings()
+        }
 
     val serverHost: PreferenceStateFlow<String, String>
     val serverPort: PreferenceStateFlow<Int, Int>

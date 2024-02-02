@@ -42,8 +42,8 @@ import xyz.xfqlittlefan.fhraise.ui.windowSizeClass
 
 @OptIn(ExperimentalDecomposeApi::class)
 @Composable
-fun Root(component: RootComponent) {
-    val colorMode by component.settings.colorMode.collectAsState()
+fun RootComponent.Root() {
+    val colorMode by settings.colorMode.collectAsState()
 
     CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
         AppTheme(
@@ -54,30 +54,28 @@ fun Root(component: RootComponent) {
             },
         ) {
             Children(
-                stack = component.stack,
+                stack = stack,
                 animation = predictiveBackAnimation(
-                    backHandler = component.backHandler,
-                    fallbackAnimation = stackAnimation(fade() + scale()),
-                    onBack = component::onBack
+                    backHandler = backHandler, fallbackAnimation = stackAnimation(fade() + scale()), onBack = ::onBack
                 ),
             ) {
                 when (val child = it.instance) {
-                    is RootComponent.Child.SignIn -> SignIn(component = child.component)
+                    is RootComponent.Child.SignIn -> child.component.SignIn()
                 }
             }
 
-            if (component.showNotificationPermissionDialog) {
+            if (showNotificationPermissionDialog) {
                 AlertDialog(
-                    onDismissRequest = component::cancelNotificationPermissionRequest,
+                    onDismissRequest = ::cancelNotificationPermissionRequest,
                     title = { Text("请授予通知权限") },
-                    text = { Text("由于发送短信需要大量资费，本 Demo 版应用程序使用通知模拟发送短信。请在接下来弹出的窗口中为应用程序授予通知权限") },
+                    text = { Text("开启通知权限，及时接收最新消息") },
                     confirmButton = {
-                        Button(onClick = component::startNotificationPermissionRequest) {
+                        Button(onClick = ::startNotificationPermissionRequest) {
                             Text("确定")
                         }
                     },
                     dismissButton = {
-                        Button(onClick = component::cancelNotificationPermissionRequest) {
+                        Button(onClick = ::cancelNotificationPermissionRequest) {
                             Text("取消")
                         }
                     },
