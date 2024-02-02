@@ -61,6 +61,7 @@ import xyz.xfqlittlefan.fhraise.ui.WindowSizeClass
 import xyz.xfqlittlefan.fhraise.ui.WindowWidthSizeClass
 import xyz.xfqlittlefan.fhraise.ui.composables.TypeWriter
 import xyz.xfqlittlefan.fhraise.ui.composables.VerticalScrollbar
+import xyz.xfqlittlefan.fhraise.ui.composables.safeDrawingWithoutIme
 import xyz.xfqlittlefan.fhraise.ui.modifiers.applyBrush
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -248,7 +249,7 @@ fun SignIn(component: SignInComponent) {
                 }
             },
             additionalContent = {
-                component.MoreMethods(modifier = Modifier.fillMaxWidth())
+                component.MoreMethods(modifier = Modifier.fillMaxWidth().padding(it))
             },
         )
     }
@@ -298,7 +299,7 @@ private fun SignInLayout(
     additionalContentScrollState: ScrollState = rememberScrollState(),
     header: @Composable (PaddingValues) -> Unit,
     content: @Composable (PaddingValues) -> Unit,
-    additionalContent: @Composable () -> Unit,
+    additionalContent: @Composable (PaddingValues) -> Unit,
 ) {
     var windowSizeClass: WindowWidthSizeClass? by remember { mutableStateOf(null) }
     val animationTargetValue = when (windowSizeClass) {
@@ -308,7 +309,7 @@ private fun SignInLayout(
         else -> null
     }
 
-    val systemBarsInsets = WindowInsets.systemBars
+    val insetsWithoutIme = WindowInsets.safeDrawingWithoutIme
 
     var animatable: Animatable<Float, AnimationVector1D>? by remember { mutableStateOf(null) }
     val animation = animatable?.value
@@ -325,7 +326,6 @@ private fun SignInLayout(
         val contentPaddingRight = contentPadding.calculateRightPadding(layoutDirection).toPx()
         val contentPaddingBottom = contentPadding.calculateBottomPadding().toPx()
         val contentPaddingVertical = contentPaddingTop + contentPaddingBottom
-        val contentPaddingHorizontal = contentPaddingLeft + contentPaddingRight
 
         // == Layout sizes ==
         val width = constraints.maxWidth
@@ -339,46 +339,34 @@ private fun SignInLayout(
 
         with(SignInLayoutScope(this, animation)) {
             // == Measure additional content ==
+            val insetsBottom = insetsWithoutIme.getBottom(this@SubcomposeLayout)
+
+            val additionalContentWidth = (AnimationValue(width, width * 2f / 9f).animatedSecondStage).roundToInt()
+
             val additionalContentMeasurable = subcompose(slotId = "additionalContent") {
                 Box(modifier = Modifier.verticalScroll(state = additionalContentScrollState)) {
-                    additionalContent()
+                    additionalContent(
+                        PaddingValues(
+                            start = (AnimationValue(32, 16).animatedSecondStage.dpAsPx + contentPaddingLeft).toDp(),
+                            top = 8.dpAsPx.animatedFirstStageToZero.toDp(),
+                            end = (32.dpAsPx + contentPaddingRight).toDp(),
+                            bottom = (16.dpAsPx + insetsBottom).animatedSecondStageToZero.toDp()
+                        )
+                    )
                 }
-            }.firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
-
-            val additionalContentPaddingLeft = AnimationValue(32.dpAsPx, 16.dpAsPx).animatedSecondStage
-            val additionalContentPaddingTop = 8.dpAsPx.animatedFirstStageToZero
-            val additionalContentPaddingRight = 32.dpAsPx
-            val additionalContentPaddingBottom = 16.dpAsPx.animatedSecondStageToZero
-
-            val additionalContentPaddingHorizontal = additionalContentPaddingLeft + additionalContentPaddingRight
-            val additionalContentPaddingVertical = additionalContentPaddingTop + additionalContentPaddingBottom
-
-            val additionalContentWidth = (AnimationValue(
-                width, width * 2f / 9f
-            ).animatedSecondStage - additionalContentPaddingHorizontal - contentPaddingHorizontal).roundToInt()
-                .coerceAtLeast(0)
-
-            val additionalContentHeight = safeHeight - additionalContentPaddingVertical
+            }.first()
 
             val additionalContentConstraints = Constraints(
                 minWidth = additionalContentWidth,
                 maxWidth = additionalContentWidth,
                 minHeight = 0,
-                maxHeight = additionalContentHeight.roundToInt().coerceAtLeast(0)
+                maxHeight = safeHeight.roundToInt().coerceAtLeast(0)
             )
             val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
-            val additionalContentActualWidth =
-                additionalContentPlaceable.width + additionalContentPaddingHorizontal + contentPaddingHorizontal
-            val additionalContentActualHeight = additionalContentPlaceable.height + additionalContentPaddingVertical
-
-            val systemBarsInsetsValue = systemBarsInsets.getBottom(this@SubcomposeLayout)
-            val additionalContentYDelta =
-                (contentPaddingBottom - systemBarsInsetsValue).animatedSecondStageToZero.roundToInt()
-
             // == Measure main ==
-            val mainBottomSpace =
-                (additionalContentPlaceable.height + additionalContentPaddingVertical).animatedSecondStageToZero
+            val mainPaddingBottom =
+                max(contentPaddingBottom, additionalContentPlaceable.height.animatedSecondStageToZero)
 
             val mainMeasurable = subcompose("main") {
                 SignInMainLayout(
@@ -386,8 +374,7 @@ private fun SignInLayout(
                     contentPaddingLeft = contentPaddingLeft,
                     contentPaddingTop = contentPaddingTop,
                     contentPaddingRight = contentPaddingRight,
-                    contentPaddingBottom = contentPaddingBottom,
-                    bottomSpace = mainBottomSpace.roundToInt(),
+                    contentPaddingBottom = mainPaddingBottom,
                     header = header,
                     mainContent = content,
                 )
@@ -399,11 +386,9 @@ private fun SignInLayout(
             val mainPlaceable = mainMeasurable.measure(mainConstraints)
 
             // == Place ==
-            val additionalContentX =
-                mainPlaceable.width.animatedSecondStageFromZero + additionalContentPaddingLeft + contentPaddingLeft
+            val additionalContentX = mainPlaceable.width.animatedSecondStageFromZero
 
-            val additionalContentCompatMediumY =
-                (height - additionalContentPlaceable.height).toFloat() - additionalContentPaddingBottom - contentPaddingBottom
+            val additionalContentCompatMediumY = height - additionalContentPlaceable.height
             val additionalContentExpandedY = (safeHeight - additionalContentPlaceable.height) / 2f + contentPaddingTop
             val additionalContentY =
                 AnimationValue(additionalContentCompatMediumY, additionalContentExpandedY).animatedSecondStage
@@ -422,29 +407,25 @@ private fun SignInLayout(
                     )
                     Spacer(modifier = Modifier.fillMaxSize().background(color = backgroundColor))
                 }
-            }.first().measure(
-                Constraints.fixed(
-                    width = width, height = (height - additionalContentY).roundToInt().coerceAtLeast(0)
-                )
-            )
+            }.first().measure(Constraints.fixed(width = width, height = additionalContentPlaceable.height))
 
             val additionalContentBackgroundY = AnimationValue(additionalContentY, height).animatedSecondStage
 
             // == Scrollbars ==
-            val mainScrollbarHeight = (safeHeight - mainBottomSpace).roundToInt().coerceAtLeast(0)
+            val mainScrollbarHeight = (height - contentPaddingTop - mainPaddingBottom).roundToInt().coerceAtLeast(0)
 
             val mainScrollbarPlaceable = subcompose("mainScrollBar") {
                 VerticalScrollbar(scrollState = scrollState)
             }.firstOrNull()?.measure(
-                Constraints(
-                    maxWidth = mainWidth, minHeight = mainScrollbarHeight, maxHeight = mainScrollbarHeight
-                )
+                Constraints(maxWidth = mainWidth, minHeight = mainScrollbarHeight, maxHeight = mainScrollbarHeight)
             )
 
             val mainScrollbarX = mainScrollbarPlaceable?.let { mainWidth - mainScrollbarPlaceable.width }
             val mainScrollbarY = contentPaddingTop.roundToInt()
 
-            val additionalContentScrollbarHeight = additionalContentActualHeight.roundToInt().coerceAtLeast(0)
+            val additionalContentScrollbarHeight =
+                (additionalContentPlaceable.height - insetsBottom.animatedSecondStageToZero).roundToInt()
+                    .coerceAtLeast(0)
 
             val additionalContentScrollbarPlaceable = subcompose("additionalContentScrollbar") {
                 VerticalScrollbar(scrollState = additionalContentScrollState)
@@ -457,21 +438,20 @@ private fun SignInLayout(
             )
 
             val additionalContentScrollbarX =
-                additionalContentScrollbarPlaceable?.let { additionalContentX - additionalContentPaddingLeft - contentPaddingLeft + additionalContentActualWidth - additionalContentScrollbarPlaceable.width }
+                additionalContentScrollbarPlaceable?.let { additionalContentX + additionalContentPlaceable.width - additionalContentScrollbarPlaceable.width }
 
             layout(width, height) {
                 mainPlaceable.placeRelative(0, 0)
                 mainScrollbarX?.let { mainScrollbarPlaceable.placeRelative(mainScrollbarX, mainScrollbarY) }
                 additionalContentBackgroundPlaceable.placeRelative(
-                    0, additionalContentBackgroundY.roundToInt() + additionalContentYDelta
+                    0, additionalContentBackgroundY.roundToInt()
                 )
                 additionalContentPlaceable.placeRelative(
-                    additionalContentX.roundToInt(), additionalContentY.roundToInt() + additionalContentYDelta
+                    additionalContentX.roundToInt(), additionalContentY.roundToInt()
                 )
                 additionalContentScrollbarX?.let {
                     additionalContentScrollbarPlaceable.placeRelative(
-                        additionalContentScrollbarX.roundToInt(),
-                        additionalContentY.roundToInt() + additionalContentYDelta
+                        additionalContentScrollbarX.roundToInt(), additionalContentY.roundToInt()
                     )
                 }
             }
@@ -496,16 +476,13 @@ private fun SignInLayoutScope.SignInMainLayout(
     contentPaddingTop: Float,
     contentPaddingRight: Float,
     contentPaddingBottom: Float,
-    bottomSpace: Int,
     header: @Composable (PaddingValues) -> Unit,
     mainContent: @Composable (PaddingValues) -> Unit,
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Green)) {
-        val boxHeight = constraints.maxHeight - bottomSpace
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val boxHeight = constraints.maxHeight
 
-        SubcomposeLayout(
-            modifier = Modifier.fillMaxSize().verticalScroll(state = scrollState).background(Color.Red)
-        ) { layoutConstraints ->
+        SubcomposeLayout(modifier = Modifier.fillMaxSize().verticalScroll(state = scrollState)) { layoutConstraints ->
             // == Layout size ==
             val width = layoutConstraints.maxWidth
 
@@ -541,7 +518,7 @@ private fun SignInLayoutScope.SignInMainLayout(
             val mainContentPaddingLeft = AnimationValue(32.dpAsPx + contentPaddingLeft, 16.dpAsPx).animatedFirstStage
             val mainContentPaddingTop = AnimationValue(8.dpAsPx, 16.dpAsPx + contentPaddingTop).animatedFirstStage
             val mainContentPaddingRight = AnimationValue(32.dpAsPx + contentPaddingRight, 16.dpAsPx).animatedSecondStage
-            val mainContentPaddingBottom = 16.dpAsPx + max(contentPaddingBottom, bottomSpace.toFloat())
+            val mainContentPaddingBottom = 16.dpAsPx + contentPaddingBottom
 
             val mainContentMaxWidth = 512.dpAsPx
             val mainContentCompatWidth = width.toFloat()
@@ -556,20 +533,15 @@ private fun SignInLayoutScope.SignInMainLayout(
             }
 
             val mainContentMeasurable = subcompose("mainContent") {
-                Box(Modifier.background(Color.Yellow)) {
-                    mainContent(
-                        PaddingValues(
-                            start = mainContentPaddingLeft.toDp(),
-                            top = mainContentPaddingTop.toDp(),
-                            end = mainContentPaddingRight.toDp(),
-                            bottom = mainContentPaddingBottom.toDp()
-                        )
+                mainContent(
+                    PaddingValues(
+                        start = mainContentPaddingLeft.toDp(),
+                        top = mainContentPaddingTop.toDp(),
+                        end = mainContentPaddingRight.toDp(),
+                        bottom = mainContentPaddingBottom.toDp()
                     )
-                }
+                )
             }.firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
-
-            // == Intrinsic height ==
-            val mainContentIntrinsicHeight = mainContentMeasurable.minIntrinsicHeight(mainContentWidth.roundToInt())
 
             // == Measure header ==
             val headerHeight = headerMeasurable.minIntrinsicHeight(headerWidth.roundToInt()).coerceAtLeast(0)
@@ -580,14 +552,8 @@ private fun SignInLayoutScope.SignInMainLayout(
             val headerPlaceable = headerMeasurable.measure(headerConstraints)
 
             // == Measure main content ==
-            val mainContentHeight = max(
-                mainContentIntrinsicHeight, boxHeight - headerPlaceable.height
-            )
-
             val mainContentConstraintWidth = mainContentWidth.coerceAtMost(mainContentMaxWidth).roundToInt()
-            val mainContentConstraints = Constraints(
-                maxWidth = mainContentConstraintWidth.coerceAtLeast(0), maxHeight = mainContentHeight.coerceAtLeast(0)
-            )
+            val mainContentConstraints = Constraints(maxWidth = mainContentConstraintWidth.coerceAtLeast(0))
             val mainContentPlaceable = mainContentMeasurable.measure(mainContentConstraints)
 
             val requiredColumnHeight = headerPlaceable.height + mainContentPlaceable.height
