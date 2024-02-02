@@ -189,16 +189,12 @@ fun SignInLayout(
         else -> null
     }
 
-    val imePaddingInsets = WindowInsets.ime
+    val systemBarsInsets = WindowInsets.systemBars
 
     var animatable: Animatable<Float, AnimationVector1D>? by remember { mutableStateOf(null) }
     val animation = animatable?.value
     val firstPrintAnimation by animateFloatAsState(
         targetValue = if (animation == null) 0f else 1f, animationSpec = spring(stiffness = Spring.StiffnessLow)
-    )
-    val additionalContentAnimation by animateFloatAsState(
-        targetValue = if (imePaddingInsets.asPaddingValues().calculateBottomPadding() > 0.dp) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
     )
 
     SubcomposeLayout(
@@ -265,12 +261,13 @@ fun SignInLayout(
             additionalContentPlaceable.width + additionalContentPaddingHorizontal + contentPaddingHorizontal
         val additionalContentActualHeight = additionalContentPlaceable.height + additionalContentPaddingVertical
 
+        val systemBarsInsetsValue = systemBarsInsets.getBottom(this)
         val additionalContentYDelta =
-            (additionalContentActualHeight * additionalContentAnimation * animationSecondStageReversed).roundToInt()
+            ((contentPaddingBottom - systemBarsInsetsValue) * animationSecondStageReversed).roundToInt()
 
         // == Measure main ==
         val mainBottomSpace =
-            ((additionalContentPlaceable.height + additionalContentPaddingVertical) * animationSecondStageReversed) - additionalContentYDelta
+            ((additionalContentPlaceable.height + additionalContentPaddingVertical) * animationSecondStageReversed)
 
         val mainMeasurable = subcompose("main") {
             SignInMainLayout(
@@ -461,7 +458,7 @@ fun SignInMainLayout(
             val mainContentPaddingRight =
                 mainContentCompatMediumPaddingRight + (mainContentExpandedPaddingRight - mainContentCompatMediumPaddingRight) * animationSecondStage
 
-            val mainContentPaddingBottom = 16.dp.toPx() + contentPaddingBottom
+            val mainContentPaddingBottom = 16.dp.toPx() + max(contentPaddingBottom, bottomSpace.toFloat())
 
             val mainContentPaddingHorizontal = mainContentPaddingLeft + mainContentPaddingRight
             val mainContentPaddingVertical = mainContentPaddingTop + mainContentPaddingBottom
@@ -524,8 +521,7 @@ fun SignInMainLayout(
             val mainContentY =
                 mainContentCompatY + (mainContentMediumExpandedY - mainContentCompatY) * animationFirstStage + mainContentPaddingTop
 
-            val requiredContentHeight = requiredBoxHeight.roundToInt() + bottomSpace
-            layout(width, requiredContentHeight) {
+            layout(width, requiredBoxHeight.roundToInt()) {
                 headerPlaceable.placeRelative(headerX.roundToInt(), headerY.roundToInt())
                 mainContentPlaceable.placeRelative(mainContentX.roundToInt(), mainContentY.roundToInt())
             }
