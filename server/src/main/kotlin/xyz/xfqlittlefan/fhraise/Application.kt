@@ -169,8 +169,8 @@ fun Application.module() {
                     val oAuthPrincipal = appClient.getOAuthUserPrincipalFromMicrosoft(principal.accessToken)
                     database.dbQuery {
                         database.getOrCreateUserBy(Users.microsoft, oAuthPrincipal.id).apply {
-                            name = oAuthPrincipal.name
-                            email = oAuthPrincipal.email
+                            name ?: run { name = oAuthPrincipal.name }
+                            email ?: run { email = oAuthPrincipal.email }
                         }
                     }
                     oAuthFlow.emit(requestId to oAuthPrincipal.id)

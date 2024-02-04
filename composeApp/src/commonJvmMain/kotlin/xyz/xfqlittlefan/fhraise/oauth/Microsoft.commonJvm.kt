@@ -37,30 +37,16 @@ import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-import kotlin.reflect.KFunction
-import kotlin.reflect.jvm.javaMethod
 import kotlin.time.Duration.Companion.minutes
-
-fun Function<*>.methodName(): String {
-    val method = (this as? KFunction<*>)?.javaMethod ?: return "${javaClass.name}.invoke"
-
-    val clazz = method.declaringClass
-    val name = method.name
-    return "${clazz.name}.$name"
-}
 
 @OptIn(ExperimentalSerializationApi::class)
 actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): String? = coroutineScope {
     withContext(Dispatchers.IO) {
         var continuation: Continuation<String?>? = null
-        var callbackPort: UShort? = null
-        var requestId: String? = null
 
-        val callbackServer = with(MicrosoftApplicationModule(host, port, { callbackPort!! }, { requestId!! })) {
+        val callbackServer = with(MicrosoftApplicationModule(host, port)) {
             embeddedServer(CIO, port = 0, module = module).start()
         }
-
-        callbackPort = callbackServer.engine.resolvedConnectors().first().port.toUShort()
 
         val client = HttpClient {
             install(ContentNegotiation) { cbor() }
@@ -71,7 +57,11 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): Stri
 
         val webSocketClient: suspend CoroutineScope.() -> Unit = {
             client.webSocket(host = host, port = port, path = Api.Auth.OAuth.Socket.PATH) {
-                sendSerialized(Api.Auth.OAuth.Socket.ClientMessage(callbackPort))
+                sendSerialized(
+                    Api.Auth.OAuth.Socket.ClientMessage(
+                        callbackServer.engine.resolvedConnectors().first().port.toUShort()
+                    )
+                )
                 var error =
                     runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Ready
 
@@ -126,8 +116,6 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): Stri
 private class MicrosoftApplicationModule(
     private val host: String,
     private val port: Int,
-    private val getCallbackPort: () -> UShort,
-    private val getRequestId: () -> String
 ) {
     val module: Application.() -> Unit = {
         routing {

@@ -1,5 +1,7 @@
 -keep class kotlinx.coroutines.swing.** { *; }
--keep class org.slf4j.** { *; }
 -keep class com.arkivanov.decompose.extensions.compose.** { *; }
+-keep class io.ktor.client.engine.cio.CIOEngineContainer
+-keep class xyz.xfqlittlefan.fhraise.routes.** { *; }
+-keep @kotlinx.serialization.Serializable class **
 
 -dontwarn org.slf4j.**

@@ -212,7 +212,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Msi)
-            modules("jdk.unsupported")
+            modules("java.instrument", "java.management", "jdk.unsupported")
             packageName = "Fhraise"
             packageVersion = version
             description = "Fhraise"

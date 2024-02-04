@@ -35,7 +35,6 @@ import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.exposedLogger
 import org.jetbrains.exposed.sql.kotlin.datetime.datetime
 import org.simplejavamail.api.mailer.config.TransportStrategy
 import org.simplejavamail.email.EmailBuilder
@@ -237,18 +236,18 @@ fun TagConsumer<StringBuilder>.emailVerificationCode(code: String) = html {
 
 fun Application.cleanupVerificationCodes() {
     launch(Dispatchers.IO) {
-        exposedLogger.trace("Cleaning up expired verification codes, ttl: $verificationCodeTtl")
+        log.trace("Cleaning up expired verification codes, ttl: $verificationCodeTtl")
         AppDatabase.current.dbQuery {
             VerificationCode.all().forEach {
-                exposedLogger.trace("Checking verification code {} created at {}", it.id, it.createdAt)
+                log.trace("Checking verification code {} created at {}", it.id, it.createdAt)
                 if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verificationCodeTtl.milliseconds < Clock.System.now()) {
-                    exposedLogger.trace("Verification code {} is expired, deleting", it.id)
+                    log.trace("Verification code {} is expired, deleting", it.id)
                     it.delete()
                 } else {
-                    exposedLogger.trace("Verification code {} is still valid", it.id)
+                    log.trace("Verification code {} is still valid", it.id)
                 }
             }
         }
-        exposedLogger.trace("Verification code cleanup done")
+        log.trace("Verification code cleanup done")
     }
 }
