@@ -124,15 +124,15 @@ suspend fun RoutingCall.respondEmailVerificationCode(block: EmailVerificationCod
         return
     }
 
-    val config = EmailVerificationCode().apply(block).verifyContent()
+    val config = EmailVerificationCode().apply(block)
 
     val email = EmailBuilder.startingBlank().apply {
         from("Fhraise", "noreply@auth.fhraise.com")
-        to(config.email!!)
+        to(config.email)
         withSubject("Fhraise 邮件地址验证")
         withHTMLText(buildString {
             appendText("<!DOCTYPE html>")
-            appendHTML().emailVerificationCode(config.code!!)
+            appendHTML().emailVerificationCode(config.code)
             appendLine()
         })
     }.buildEmail()
@@ -144,14 +144,8 @@ suspend fun RoutingCall.respondEmailVerificationCode(block: EmailVerificationCod
 }
 
 class EmailVerificationCode internal constructor() {
-    var email: String? = null
-    var code: String? = null
-
-    internal fun verifyContent(): EmailVerificationCode {
-        requireNotNull(email) { "Email is required" }
-        requireNotNull(code) { "Code is required" }
-        return this
-    }
+    lateinit var email: String
+    lateinit var code: String
 }
 
 fun TagConsumer<StringBuilder>.emailVerificationCode(code: String) = html {

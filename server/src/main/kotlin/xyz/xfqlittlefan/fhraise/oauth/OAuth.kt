@@ -18,7 +18,12 @@
 
 package xyz.xfqlittlefan.fhraise.oauth
 
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.serialization.Serializable
 
 /**
  * OAuth 数据
@@ -28,3 +33,17 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 typealias OAuthData = Pair<String, String?>
 
 val oAuthFlow = MutableSharedFlow<OAuthData>()
+
+data class OAuthUserPrincipal(val id: String, val name: String? = null, val email: String? = null)
+
+suspend fun HttpClient.getOAuthUserPrincipalFromMicrosoft(accessToken: String) = get {
+    url("https://graph.microsoft.com/v1.0/me")
+    headers {
+        append(HttpHeaders.Authorization, "Bearer $accessToken")
+    }
+}.body<MicrosoftUserInfo>().let {
+    OAuthUserPrincipal(it.id, it.displayName, it.mail)
+}
+
+@Serializable
+data class MicrosoftUserInfo(val id: String, val displayName: String?, val mail: String?)

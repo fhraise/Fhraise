@@ -22,24 +22,41 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.sql.Column
+import xyz.xfqlittlefan.fhraise.AppDatabase
 import java.util.*
 
 object Users : UUIDTable() {
     val username = varchar("username", 16).nullable().uniqueIndex()
-    val email = text("email").nullable()
-    val phoneNumber = char("phone_number", 11).nullable()
+    val name = text("name").nullable()
+    val email = text("email").nullable().uniqueIndex()
+    val phoneNumber = char("phone_number", 11).nullable().uniqueIndex()
     val password = varchar("password", 72).nullable()
-    val google = text("google").nullable()
-    val microsoft = text("microsoft").nullable()
+    val google = text("google").nullable().uniqueIndex()
+    val microsoft = text("microsoft").nullable().uniqueIndex()
 }
 
 class User(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<User>(Users)
 
     var username by Users.username
+    var name by Users.name
     var email by Users.email
     var phoneNumber by Users.phoneNumber
     var password by Users.password
     var google by Users.google
     var microsoft by Users.microsoft
+}
+
+suspend fun <T> AppDatabase.getOrCreateUserBy(column: Column<T>, value: T): User = dbQuery {
+    User.find { column eq value }.firstOrNull() ?: User.new {
+        when (column) {
+            Users.username -> username = value as String
+            Users.email -> email = value as String
+            Users.phoneNumber -> phoneNumber = value as String
+            Users.google -> google = value as String
+            Users.microsoft -> microsoft = value as String
+            else -> error("Not a valid column")
+        }
+    }
 }

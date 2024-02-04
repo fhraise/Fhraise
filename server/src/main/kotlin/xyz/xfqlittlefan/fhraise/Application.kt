@@ -18,35 +18,36 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import io.ktor.client.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.serialization.kotlinx.cbor.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.cio.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
-import io.ktor.server.html.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.callid.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.html.body
-import kotlinx.html.p
-import kotlinx.html.title
+import kotlinx.html.html
+import kotlinx.html.stream.appendHTML
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
+import org.slf4j.LoggerFactory
+import xyz.xfqlittlefan.fhraise.html.autoClosePage
+import xyz.xfqlittlefan.fhraise.html.respondAutoClosePage
+import xyz.xfqlittlefan.fhraise.models.Users
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
+import xyz.xfqlittlefan.fhraise.models.getOrCreateUserBy
+import xyz.xfqlittlefan.fhraise.oauth.getOAuthUserPrincipalFromMicrosoft
 import xyz.xfqlittlefan.fhraise.oauth.oAuthFlow
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.apiAuthEmailRequest
@@ -60,7 +61,6 @@ fun main() {
 
 @OptIn(ExperimentalSerializationApi::class)
 fun Application.module() {
-    val client = HttpClient()
     val database = AppDatabase.current
 
     install(CallId) { generate() }
@@ -103,14 +103,11 @@ fun Application.module() {
                     defaultScopes = listOf("https://graph.microsoft.com/.default"),
                 )
             }
-            this.client = client
+            client = appClient
         }
     }
 
-    install(ContentNegotiation) {
-        cbor()
-        json()
-    }
+    install(ContentNegotiation) { cbor() }
 
     install(WebSockets) {
         contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
@@ -169,23 +166,23 @@ fun Application.module() {
             get(Api.Auth.OAuth.Provider.Microsoft.api) {}
 
             get(Api.Auth.OAuth.Provider.Microsoft.callback) {
+                call.respondAutoClosePage()
+                LoggerFactory.getLogger(this::class.java).error(buildString {
+                    appendHTML().html {
+                        autoClosePage()
+                    }
+                })
                 val principal = call.authentication.principal<OAuthAccessTokenResponse.OAuth2>()
-                val requestId = call.queryParameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID]!!
-                if (principal != null) {
-                    oAuthFlow.emit(requestId to principal.accessToken)
-                    call.response.status(HttpStatusCode.OK)
-                    call.respondHtml {
-                        head {
-                            title = "Fhraise"
-                        }
-                        body {
-                            p { +"You have successfully logged in. You can close this page now." }
+                val requestId = call.queryParameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID]
+                if (principal != null && requestId != null) {
+                    val oAuthPrincipal = appClient.getOAuthUserPrincipalFromMicrosoft(principal.accessToken)
+                    database.dbQuery {
+                        database.getOrCreateUserBy(Users.microsoft, oAuthPrincipal.id).apply {
+                            name = oAuthPrincipal.name
+                            email = oAuthPrincipal.email
                         }
                     }
-                } else {
-                    oAuthFlow.emit(requestId to null)
-                    call.response.status(HttpStatusCode.Unauthorized)
-                    call.respond("")
+                    oAuthFlow.emit(requestId to oAuthPrincipal.id)
                 }
             }
         }
