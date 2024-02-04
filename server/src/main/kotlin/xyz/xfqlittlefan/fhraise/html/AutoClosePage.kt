@@ -29,7 +29,7 @@ inline fun HTML.autoClosePage(
 ) {
     head {
         title(title)
-        script { unsafe { raw("window.open('', '_self').close()") } }
+        script { unsafe { raw("window.close()") } }
     }
     body(block = body)
 }

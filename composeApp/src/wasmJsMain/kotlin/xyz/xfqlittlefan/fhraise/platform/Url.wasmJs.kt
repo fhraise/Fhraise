@@ -18,7 +18,5 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
-import io.ktor.http.*
-
-actual fun openUrl(url: String, type: BrowserType, builder: URLBuilder.() -> Unit) {
+actual fun openUrlImpl(url: String, type: BrowserType) {
 }

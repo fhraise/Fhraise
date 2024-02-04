@@ -19,19 +19,17 @@
 package xyz.xfqlittlefan.fhraise.platform
 
 import androidx.browser.customtabs.CustomTabsIntent
-import io.ktor.http.*
 
 object AndroidUrlImpl {
     lateinit var open: (url: String, builder: CustomTabsIntent.Builder.() -> Unit) -> Unit
 }
 
-actual fun openUrl(url: String, type: BrowserType, builder: URLBuilder.() -> Unit) =
-    AndroidUrlImpl.open(URLBuilder(url).apply(builder).buildString()) {
-        when (type) {
-            BrowserType.Restricted -> {
-                setBookmarksButtonEnabled(false)
-                setDownloadButtonEnabled(false)
-                setShareState(CustomTabsIntent.SHARE_STATE_OFF)
-            }
+internal actual fun openUrlImpl(url: String, type: BrowserType) = AndroidUrlImpl.open(url) {
+    when (type) {
+        BrowserType.Restricted -> {
+            setBookmarksButtonEnabled(false)
+            setDownloadButtonEnabled(false)
+            setShareState(CustomTabsIntent.SHARE_STATE_OFF)
         }
     }
+}

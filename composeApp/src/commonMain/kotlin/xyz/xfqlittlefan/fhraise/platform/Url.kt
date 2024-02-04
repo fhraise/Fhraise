@@ -20,7 +20,10 @@ package xyz.xfqlittlefan.fhraise.platform
 
 import io.ktor.http.*
 
-expect fun openUrl(url: String, type: BrowserType = BrowserType.Restricted, builder: URLBuilder.() -> Unit = {})
+fun openUrl(url: String, type: BrowserType = BrowserType.Restricted, builder: URLBuilder.() -> Unit = {}) =
+    openUrlImpl(URLBuilder(url).apply(builder).buildString(), type)
+
+internal expect fun openUrlImpl(url: String, type: BrowserType)
 
 enum class BrowserType {
     Restricted,

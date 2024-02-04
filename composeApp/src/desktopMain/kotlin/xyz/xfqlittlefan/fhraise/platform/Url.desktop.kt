@@ -18,7 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
-import io.ktor.http.*
+import java.awt.Desktop
 
-actual fun openUrl(url: String, type: BrowserType, builder: URLBuilder.() -> Unit) {
-}
+actual fun openUrlImpl(url: String, type: BrowserType) = Desktop.getDesktop().browse(java.net.URI(url))

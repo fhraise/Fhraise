@@ -37,12 +37,8 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.html.html
-import kotlinx.html.stream.appendHTML
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
-import org.slf4j.LoggerFactory
-import xyz.xfqlittlefan.fhraise.html.autoClosePage
 import xyz.xfqlittlefan.fhraise.html.respondAutoClosePage
 import xyz.xfqlittlefan.fhraise.models.Users
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
@@ -167,11 +163,6 @@ fun Application.module() {
 
             get(Api.Auth.OAuth.Provider.Microsoft.callback) {
                 call.respondAutoClosePage()
-                LoggerFactory.getLogger(this::class.java).error(buildString {
-                    appendHTML().html {
-                        autoClosePage()
-                    }
-                })
                 val principal = call.authentication.principal<OAuthAccessTokenResponse.OAuth2>()
                 val requestId = call.queryParameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID]
                 if (principal != null && requestId != null) {
