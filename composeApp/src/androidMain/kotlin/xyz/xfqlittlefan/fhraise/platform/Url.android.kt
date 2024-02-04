@@ -16,14 +16,22 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.platform
 
-object AndroidPermissionImpl {
-    lateinit var checkNotificationPermissionGranted: () -> Boolean?
-    lateinit var requestNotificationPermission: suspend () -> Boolean?
+import androidx.browser.customtabs.CustomTabsIntent
+import io.ktor.http.*
+
+object AndroidUrlImpl {
+    lateinit var open: (url: String, builder: CustomTabsIntent.Builder.() -> Unit) -> Unit
 }
 
-actual val notificationPermissionGranted: Boolean?
-    get() = AndroidPermissionImpl.checkNotificationPermissionGranted()
-
-actual suspend fun requestNotificationPermission(): Boolean? = AndroidPermissionImpl.requestNotificationPermission()
+actual fun openUrl(url: String, type: BrowserType, builder: URLBuilder.() -> Unit) =
+    AndroidUrlImpl.open(URLBuilder(url).apply(builder).buildString()) {
+        when (type) {
+            BrowserType.Restricted -> {
+                setBookmarksButtonEnabled(false)
+                setDownloadButtonEnabled(false)
+                setShareState(CustomTabsIntent.SHARE_STATE_OFF)
+            }
+        }
+    }

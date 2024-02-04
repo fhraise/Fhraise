@@ -16,14 +16,15 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.oauth
 
-object AndroidPermissionImpl {
-    lateinit var checkNotificationPermissionGranted: () -> Boolean?
-    lateinit var requestNotificationPermission: suspend () -> Boolean?
-}
+import kotlinx.coroutines.flow.MutableSharedFlow
 
-actual val notificationPermissionGranted: Boolean?
-    get() = AndroidPermissionImpl.checkNotificationPermissionGranted()
+/**
+ * OAuth 数据
+ *
+ * [Pair] 的第一个元素是请求 OAuth 的 callId，第二个元素是用户 ID，如果认证失败则为 null
+ */
+typealias OAuthData = Pair<String, String?>
 
-actual suspend fun requestNotificationPermission(): Boolean? = AndroidPermissionImpl.requestNotificationPermission()
+val oAuthFlow = MutableSharedFlow<OAuthData>()

@@ -16,14 +16,12 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.platform
 
-object AndroidPermissionImpl {
-    lateinit var checkNotificationPermissionGranted: () -> Boolean?
-    lateinit var requestNotificationPermission: suspend () -> Boolean?
+import io.ktor.http.*
+
+expect fun openUrl(url: String, type: BrowserType = BrowserType.Restricted, builder: URLBuilder.() -> Unit = {})
+
+enum class BrowserType {
+    Restricted,
 }
-
-actual val notificationPermissionGranted: Boolean?
-    get() = AndroidPermissionImpl.checkNotificationPermissionGranted()
-
-actual suspend fun requestNotificationPermission(): Boolean? = AndroidPermissionImpl.requestNotificationPermission()

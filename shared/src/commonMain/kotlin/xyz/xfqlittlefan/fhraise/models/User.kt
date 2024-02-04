@@ -19,3 +19,5 @@
 package xyz.xfqlittlefan.fhraise.models
 
 val usernameRegex = Regex("^[a-zA-Z0-9_-]{4,16}\$")
+val phoneNumberRegex =
+    Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")

@@ -126,7 +126,7 @@ suspend fun RoutingCall.respondEmailVerificationCode(block: EmailVerificationCod
     val config = EmailVerificationCode().apply(block).verifyContent()
 
     val email = EmailBuilder.startingBlank().apply {
-        from("Fhraise", smtpUsername!!)
+        from("Fhraise", "noreply@auth.fhraise.com")
         to(config.email!!)
         withSubject("Fhraise 邮件地址验证")
         withHTMLText(buildString {

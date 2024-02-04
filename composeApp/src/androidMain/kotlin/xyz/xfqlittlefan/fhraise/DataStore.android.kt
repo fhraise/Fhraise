@@ -23,7 +23,6 @@ import kotlinx.coroutines.CoroutineScope
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
 
-
 object PermissionDataStore {
     private val store by preferencesDataStore("permissions")
 

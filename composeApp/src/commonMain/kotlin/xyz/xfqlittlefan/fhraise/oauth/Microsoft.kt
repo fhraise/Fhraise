@@ -16,14 +16,13 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.oauth
 
-object AndroidPermissionImpl {
-    lateinit var checkNotificationPermissionGranted: () -> Boolean?
-    lateinit var requestNotificationPermission: suspend () -> Boolean?
-}
+import kotlinx.coroutines.CoroutineScope
 
-actual val notificationPermissionGranted: Boolean?
-    get() = AndroidPermissionImpl.checkNotificationPermissionGranted()
-
-actual suspend fun requestNotificationPermission(): Boolean? = AndroidPermissionImpl.requestNotificationPermission()
+/**
+ * 微软账户登录
+ *
+ * @return 用户 ID，null 表示登录失败
+ */
+expect suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): String?

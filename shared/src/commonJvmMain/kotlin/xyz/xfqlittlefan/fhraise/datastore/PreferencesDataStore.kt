@@ -26,7 +26,7 @@ import java.io.File
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-internal class PreferenceDataStoreSingletonDelegate<T> internal constructor(
+class PreferenceDataStoreSingletonDelegate<T>(
     private val produceFile: T.() -> File
 ) : ReadOnlyProperty<T, DataStore<Preferences>> {
 

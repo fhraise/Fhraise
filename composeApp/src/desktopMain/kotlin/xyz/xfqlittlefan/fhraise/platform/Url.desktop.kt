@@ -16,26 +16,9 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.models
+package xyz.xfqlittlefan.fhraise.platform
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
-import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
-import java.util.*
+import io.ktor.http.*
 
-object Users : UUIDTable() {
-    val username = varchar("username", 16)
-    val email = text("email")
-    val phoneNumber = char("phone_number", 11)
-    val password = varchar("password", 72)
-}
-
-class User(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<User>(Users)
-
-    var username by Users.username
-    var email by Users.email
-    var phoneNumber by Users.phoneNumber
-    var password by Users.password
+actual fun openUrl(url: String, type: BrowserType, builder: URLBuilder.() -> Unit) {
 }

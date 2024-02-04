@@ -19,3 +19,5 @@
 package xyz.xfqlittlefan.fhraise
 
 const val DefaultServerPort = 8080
+
+const val MicrosoftOAuthClientId = "af9f38ce-17ce-481b-8629-36452244007b"

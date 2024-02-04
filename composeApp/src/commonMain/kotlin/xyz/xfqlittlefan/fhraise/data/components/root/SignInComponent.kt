@@ -44,7 +44,9 @@ import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialT
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
+import xyz.xfqlittlefan.fhraise.models.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.models.usernameRegex
+import xyz.xfqlittlefan.fhraise.oauth.microsoftSignIn
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.js.JsName
 
@@ -91,6 +93,9 @@ interface SignInComponent : AppComponentContext {
     ) {
         class FhraiseToken(onRequest: OnRequest, onVerify: OnVerify) :
             VerificationType("Fhraise令牌", Icons.Default.Key, onRequest, onVerify)
+
+        class QrCode(onRequest: OnRequest, onVerify: OnVerify) :
+            VerificationType("二维码", Icons.Default.QrCode, onRequest, onVerify)
 
         class SmsCode(onRequest: OnRequest, onVerify: OnVerify) :
             VerificationType("短信验证", Icons.Default.Sms, onRequest, onVerify)
@@ -143,6 +148,7 @@ interface SignInComponent : AppComponentContext {
     val defaultVerifications
         get() = listOf(
             FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            QrCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
             SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
             EmailCode(
                 onRequest = { client, credential ->
@@ -164,6 +170,8 @@ interface SignInComponent : AppComponentContext {
         )
 
     suspend fun requestVerification(): Boolean
+
+    fun onMicrosoftSignIn()
 
     fun enter()
 
@@ -209,13 +217,11 @@ class AppSignInComponent(
 
     override val credentialValid
         get() = when (credentialType) {
-            Username -> usernameRegex.matches(credential)
-            PhoneNumber -> phoneNumberRegex.matches(credential)
-            Email -> emailRegex.matches(credential)
+            Username -> credential.matches(usernameRegex)
+            PhoneNumber -> credential.matches(phoneNumberRegex)
+            Email -> credential.matches(emailRegex)
         }
 
-    private val phoneNumberRegex =
-        Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
     private val emailRegex = Regex("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+\$")
 
     override var showMoreSignInOptions by mutableStateOf(false)
@@ -230,6 +236,12 @@ class AppSignInComponent(
             false
         }
     } ?: false
+
+    override fun onMicrosoftSignIn() {
+        componentScope.launch {
+            microsoftSignIn(serverHost.value, serverPort.value)
+        }
+    }
 
     override fun enter() {
         if (!credentialValid) return

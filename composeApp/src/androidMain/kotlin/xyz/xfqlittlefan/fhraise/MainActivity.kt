@@ -20,6 +20,7 @@ package xyz.xfqlittlefan.fhraise
 
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -27,6 +28,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,7 +39,8 @@ import com.arkivanov.decompose.defaultComponentContext
 import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
-import xyz.xfqlittlefan.fhraise.datastore.PreferencesDataStore
+import xyz.xfqlittlefan.fhraise.datastore.AndroidPreferencesDataStoreImpl
+import xyz.xfqlittlefan.fhraise.platform.AndroidUrlImpl
 import xyz.xfqlittlefan.fhraise.ui.pages.Root
 
 class MainActivity : ComponentActivity() {
@@ -58,19 +61,12 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        PreferencesDataStore.applicationContext = applicationContext
+        AndroidPreferencesDataStoreImpl.get = { applicationContext.it() }
 
         val notificationPermission =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission(POST_NOTIFICATIONS) else null
 
-        AndroidPermissionImpl.checkNotificationPermissionGranted =
-            notificationPermission?.run { { granted } } ?: { true }
-
-        AndroidPermissionImpl.requestNotificationPermission = notificationPermission?.run {
-            registerRequestLauncher { it }
-        } ?: { true }
-
-        Notification.send = { channel, title, message, priority ->
+        AndroidNotificationImpl.send = { channel, title, message, priority ->
             val notification = NotificationCompat.Builder(this, channel).apply {
                 setSmallIcon(R.drawable.ic_launcher_foreground)
                 setContentTitle(title)
@@ -85,9 +81,20 @@ class MainActivity : ComponentActivity() {
             notificationManager.notify(id, notification)
         }
 
-        val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
+        AndroidPermissionImpl.checkNotificationPermissionGranted =
+            notificationPermission?.run { { granted } } ?: { true }
+
+        AndroidPermissionImpl.requestNotificationPermission = notificationPermission?.run {
+            registerRequestLauncher { it }
+        } ?: { true }
+
+        AndroidUrlImpl.open = { url, builder ->
+            CustomTabsIntent.Builder().apply(builder).build().launchUrl(this, Uri.parse(url))
+        }
 
         super.onCreate(savedInstanceState)
+
+        val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
 
         setContent {
             val colorMode by rootComponent.settings.colorMode.collectAsState()

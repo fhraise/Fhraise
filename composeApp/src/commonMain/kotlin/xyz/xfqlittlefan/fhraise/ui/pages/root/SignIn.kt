@@ -233,7 +233,7 @@ fun SignInComponent.SignIn() {
                                         Password()
                                     }
 
-                                    is Face -> {}
+                                    is QrCode, is Face -> {}
                                 }
                                 Spacer(modifier = Modifier.height(32.dp))
                                 Box(
@@ -582,6 +582,7 @@ private fun SignInLayoutScope.SignInMainLayout(
     }
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 private fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
@@ -596,6 +597,19 @@ private fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "仅浏览")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        FilledTonalButton(
+            onClick = ::onMicrosoftSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                painter = painterResource(DrawableResource("drawable/microsoft_logo.xml")),
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "使用 Microsoft 登录")
         }
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(

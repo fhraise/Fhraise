@@ -18,26 +18,36 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import com.sanctionco.jmail.JMail
+import io.ktor.client.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.*
 import io.ktor.serialization.kotlinx.cbor.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.*
+import io.ktor.server.plugins.callid.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.ratelimit.*
-import io.ktor.server.request.*
 import io.ktor.server.resources.*
-import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.util.*
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.cbor.Cbor
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
-import xyz.xfqlittlefan.fhraise.models.queryVerificationCode
-import xyz.xfqlittlefan.fhraise.models.respondEmailVerificationCode
-import xyz.xfqlittlefan.fhraise.models.verifyCode
+import xyz.xfqlittlefan.fhraise.oauth.oAuthFlow
 import xyz.xfqlittlefan.fhraise.routes.Api
+import xyz.xfqlittlefan.fhraise.routes.apiAuthEmailRequest
+import xyz.xfqlittlefan.fhraise.routes.apiAuthEmailVerify
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
@@ -46,7 +56,10 @@ fun main() {
 
 @OptIn(ExperimentalSerializationApi::class)
 fun Application.module() {
+    val client = HttpClient()
     val database = AppDatabase.current
+
+    install(CallId) { generate() }
 
     install(Resources)
 
@@ -60,41 +73,100 @@ fun Application.module() {
         digest {
             realm = "fhraise-user"
         }
+
+        oauth("microsoft") {
+            urlProvider = {
+                url {
+                    host = "localhost"
+                    port = request.queryParameters["port"]?.toIntOrNull() ?: DEFAULT_PORT
+                    path(Api.Auth.OAuth.Provider.Microsoft.callback)
+                    parameters.clear()
+                }
+            }
+            providerLookup = {
+                OAuthServerSettings.OAuth2ServerSettings(
+                    name = "microsoft",
+                    authorizeUrl = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
+                    accessTokenUrl = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+                    requestMethod = HttpMethod.Post,
+                    clientId = MicrosoftOAuthClientId,
+                    clientSecret = applicationSecret.propertyOrNull("auth.oauth.microsoft.client-secret")?.getString()
+                        ?: "client-secret",
+                    defaultScopes = listOf("https://graph.microsoft.com/.default"),
+                )
+            }
+            this.client = client
+        }
     }
 
-    install(ContentNegotiation) { cbor() }
+    install(ContentNegotiation) {
+        cbor()
+        json()
+    }
+
+    install(WebSockets) {
+        contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
+    }
 
     cleanupVerificationCodes()
 
     routing {
-        rateLimit(RateLimitName("codeVerification")) {
-            post<Api.Auth.Email.Request> {
-                val req = call.receive<Api.Auth.Email.Request.RequestBody>()
-                if (!JMail.strictValidator().isValid(req.email)) {
-                    call.respond(Api.Auth.Email.Request.ResponseBody.InvalidEmailAddress)
-                    return@post
-                }
+        contentType(ContentType.Application.Cbor) {
+            rateLimit(RateLimitName("codeVerification")) {
+                apiAuthEmailRequest(database)
+                apiAuthEmailVerify(database)
+            }
+        }
 
-                val code = database.queryVerificationCode(this) { emailOwner(req.email) }
+        webSocket(Api.Auth.OAuth.Socket.PATH) {
+            val callId = call.callId
+            if (callId == null) {
+                close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, "No call ID"))
+                return@webSocket
+            }
 
-                if (req.dry) {
-                    call.respond(Api.Auth.Email.Request.ResponseBody.Success)
-                    return@post
-                }
+            val clientMessage = receiveDeserialized<Api.Auth.OAuth.Socket.ClientMessage>()
+            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Ready)
+            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage(url {
+                host = call.request.origin.localAddress
+                port = call.request.origin.localPort
+                path(Api.Auth.OAuth.Provider.Microsoft.api)
+            }, callId))
 
-                call.respondEmailVerificationCode {
-                    email = req.email
-                    this.code = code.code
+            val collect = launch {
+                oAuthFlow.collect {
+                    if (it.first == callId) {
+                        sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Result)
+                        val result = it.second
+                        if (result != null) {
+                            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Success)
+                            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.UserIdMessage(result))
+                        } else {
+                            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Failure)
+                        }
+                        close()
+                    }
                 }
             }
 
-            post<Api.Auth.Email.Verify> {
-                val req = call.receive<Api.Auth.Email.Verify.RequestBody>()
+            delay(5.minutes)
+            collect.cancel()
+            close(CloseReason(CloseReason.Codes.NORMAL, "Timeout"))
+        }
 
-                if (database.verifyCode(req.code) { emailOwner(req.email) }) {
-                    call.respond(Api.Auth.Email.Verify.ResponseBody.Success)
+        authenticate("microsoft") {
+            get(Api.Auth.OAuth.Provider.Microsoft.api) {}
+
+            get(Api.Auth.OAuth.Provider.Microsoft.callback) {
+                val principal = call.authentication.principal<OAuthAccessTokenResponse.OAuth2>()
+                if (principal != null) {
+                    oAuthFlow.emit(call.queryParameters["id"]!! to principal.accessToken)
+                    call.response.status(HttpStatusCode.OK)
+                    call.respond("")
                 } else {
-                    call.respond(Api.Auth.Email.Verify.ResponseBody.Failure)
+                    oAuthFlow.emit(call.queryParameters["id"]!! to null)
+                    call.response.status(HttpStatusCode.Unauthorized)
+                    call.respond("")
                 }
             }
         }

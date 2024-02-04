@@ -26,7 +26,29 @@ class Api {
     @Resource("auth")
     class Auth(val parent: Api = Api()) {
         @Resource("phoneNumber")
-        class PhoneNumber(val parent: Auth = Auth(), val phoneNumber: String)
+        class PhoneNumber(val parent: Auth = Auth()) {
+            @Resource("request")
+            class Request(val parent: PhoneNumber = PhoneNumber()) {
+                @Serializable
+                data class RequestBody(val phoneNumber: String, val dry: Boolean = false)
+
+                @Serializable
+                enum class ResponseBody {
+                    Success, InvalidPhoneNumber, Failure
+                }
+            }
+
+            @Resource("verify")
+            class Verify(val parent: PhoneNumber = PhoneNumber()) {
+                @Serializable
+                data class RequestBody(val phoneNumber: String, val code: String)
+
+                @Serializable
+                enum class ResponseBody {
+                    Success, Failure
+                }
+            }
+        }
 
         @Resource("email")
         class Email(val parent: Auth = Auth()) {
@@ -50,6 +72,37 @@ class Api {
                 enum class ResponseBody {
                     Success, Failure
                 }
+            }
+        }
+
+        @Resource("oauth")
+        class OAuth {
+            object Socket {
+                const val PATH = "/api/auth/oauth/socket"
+
+                @Serializable
+                data class ClientMessage(val port: Int)
+
+                @Serializable
+                enum class ServerMessage(val next: Any) {
+                    Ready(ReadyMessage), Result(ResultMessage);
+
+                    @Serializable
+                    data class ReadyMessage(val url: String, val callId: String)
+
+                    @Serializable
+                    enum class ResultMessage(val next: Any? = null) {
+                        Success(UserIdMessage), Failure;
+
+                        @Serializable
+                        data class UserIdMessage(val id: String)
+                    }
+                }
+            }
+
+            @Serializable
+            enum class Provider(val api: String, val callback: String) {
+                Microsoft("/api/auth/oauth/sign-in/ms", "/api/auth/oauth/callback/ms")
             }
         }
     }

@@ -18,6 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise
 
-object Notification {
-    var send: (channel: String, title: String, message: String, priority: Int) -> Unit = { _, _, _, _ -> }
+object AndroidNotificationImpl {
+    lateinit var send: (channel: String, title: String, message: String, priority: Int) -> Unit
 }
