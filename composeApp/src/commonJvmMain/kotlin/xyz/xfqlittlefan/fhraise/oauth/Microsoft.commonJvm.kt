@@ -21,20 +21,15 @@ package xyz.xfqlittlefan.fhraise.oauth
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.websocket.*
-import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.serialization.kotlinx.cbor.*
+import io.ktor.server.application.*
+import io.ktor.server.cio.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.util.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import xyz.xfqlittlefan.fhraise.platform.openUrl
@@ -42,90 +37,107 @@ import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlin.reflect.KFunction
+import kotlin.reflect.jvm.javaMethod
 import kotlin.time.Duration.Companion.minutes
+
+fun Function<*>.methodName(): String {
+    val method = (this as? KFunction<*>)?.javaMethod ?: return "${javaClass.name}.invoke"
+
+    val clazz = method.declaringClass
+    val name = method.name
+    return "${clazz.name}.$name"
+}
 
 @OptIn(ExperimentalSerializationApi::class)
 actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): String? = coroutineScope {
-    var continuation: Continuation<String?>? = null
-    var callbackPort: String? = null
-    var callId: String? = null
+    withContext(Dispatchers.IO) {
+        var continuation: Continuation<String?>? = null
+        var callbackPort: UShort? = null
+        var requestId: String? = null
 
-    val callbackServer = embeddedServer(Netty, port = 0) {
+        val callbackServer = with(MicrosoftApplicationModule(host, port, { callbackPort!! }, { requestId!! })) {
+            embeddedServer(CIO, port = 0, module = module).start()
+        }
+
+        callbackPort = callbackServer.engine.resolvedConnectors().first().port.toUShort()
+
+        val client = HttpClient {
+            install(ContentNegotiation) { cbor() }
+            install(WebSockets) {
+                contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
+            }
+        }
+
+        val webSocketClient: suspend CoroutineScope.() -> Unit = {
+            client.webSocket(host = host, port = port, path = Api.Auth.OAuth.Socket.PATH) {
+                sendSerialized(Api.Auth.OAuth.Socket.ClientMessage(callbackPort))
+                var error =
+                    runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Ready
+
+                var readyMessage: Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage? = null
+
+                if (!error) {
+                    readyMessage =
+                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage>() }.getOrNull()
+                    error = readyMessage == null
+                }
+
+                if (!error) {
+                    openUrl(readyMessage!!.url)
+                    error =
+                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Result
+                }
+
+                var result: Api.Auth.OAuth.Socket.ServerMessage.ResultMessage? = null
+
+                if (!error) {
+                    result =
+                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ResultMessage>() }.getOrNull()
+                    error = result == null
+                }
+
+                if (!error && result == Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Success) {
+                    val userId =
+                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.UserIdMessage>() }.getOrNull()?.id
+                    runCatching { continuation?.resume(userId) }
+                }
+
+                close(CloseReason(CloseReason.Codes.NORMAL, "End of authentication"))
+                runCatching { continuation?.resume(null) }
+            }
+        }
+
+        suspendCoroutine {
+            continuation = it
+            launch(block = webSocketClient)
+            launch {
+                delay(5.minutes)
+                client.close()
+                runCatching { continuation?.resume(null) }
+            }
+        }
+    }
+}
+
+/**
+ * 用于更精准地应用 ProGuard 规则
+ */
+private class MicrosoftApplicationModule(
+    private val host: String,
+    private val port: Int,
+    private val getCallbackPort: () -> UShort,
+    private val getRequestId: () -> String
+) {
+    val module: Application.() -> Unit = {
         routing {
             get(Api.Auth.OAuth.Provider.Microsoft.callback) {
-                println(call.request.uri)
-                call.respondRedirect(url {
-                    this.host = host
-                    this.port = port
-                    this.encodedPath = call.request.path()
-                    parameters.appendAll(call.request.queryParameters)
-                    parameters.append("port", callbackPort!!)
-                    parameters.append("id", callId!!)
-                })
+                call.respondRedirect {
+                    this.host = this@MicrosoftApplicationModule.host
+                    this.port = this@MicrosoftApplicationModule.port
+                }
                 engine.stop()
             }
-        }
-    }.start()
-
-    callbackPort = callbackServer.engine.resolvedConnectors().first().port.toString()
-
-    val client = HttpClient {
-        install(ContentNegotiation) { cbor() }
-        install(WebSockets) {
-            contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
-        }
-    }
-
-    val webSocketClient: suspend CoroutineScope.() -> Unit = {
-        client.webSocket(host = host, port = port, path = Api.Auth.OAuth.Socket.PATH) {
-            sendSerialized(Api.Auth.OAuth.Socket.ClientMessage(callbackPort.toInt()))
-            var error =
-                runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Ready
-
-            var readyMessage: Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage? = null
-
-            if (!error) {
-                readyMessage =
-                    runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage>() }.getOrNull()
-                error = readyMessage == null
-            }
-
-            if (!error) {
-                openUrl(URLBuilder(readyMessage!!.url).apply {
-                    parameters.append("port", callbackPort)
-                    parameters.append("id", readyMessage.callId)
-                }.buildString())
-                callId = readyMessage.callId
-                error =
-                    runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Result
-            }
-
-            var result: Api.Auth.OAuth.Socket.ServerMessage.ResultMessage? = null
-
-            if (!error) {
-                result =
-                    runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ResultMessage>() }.getOrNull()
-                error = result == null
-            }
-
-            if (!error && result == Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Success) {
-                val userId =
-                    runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.UserIdMessage>() }.getOrNull()?.id
-                runCatching { continuation?.resume(userId) }
-            }
-
-            close(CloseReason(CloseReason.Codes.NORMAL, "End of authentication"))
-            runCatching { continuation?.resume(null) }
-        }
-    }
-
-    suspendCoroutine {
-        continuation = it
-        launch(block = webSocketClient)
-        launch {
-            delay(5.minutes)
-            client.close()
-            runCatching { continuation?.resume(null) }
         }
     }
 }

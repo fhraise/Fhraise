@@ -37,14 +37,15 @@ decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decom
 decompose-extensions-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
 ktor-resources = { module = "io.ktor:ktor-resources", version.ref = "ktor-client" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor-client" }
-ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor-client" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor-client" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor-client" }
 ktor-client-resources = { module = "io.ktor:ktor-client-resources", version.ref = "ktor-client" }
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor-client" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor-client" }
 ktor-client-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor-client" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
-ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
+ktor-server-sessions = { module = "io.ktor:ktor-server-sessions", version.ref = "ktor" }
 ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.ref = "ktor" }
 ktor-server-call-id = { module = "io.ktor:ktor-server-call-id", version.ref = "ktor" }
 ktor-server-resources = { module = "io.ktor:ktor-server-resources", version.ref = "ktor" }

@@ -22,6 +22,7 @@ import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -241,19 +242,19 @@ fun TagConsumer<StringBuilder>.emailVerificationCode(code: String) = html {
 }
 
 fun Application.cleanupVerificationCodes() {
-    launch {
-        exposedLogger.trace("Cleaning up expired verify codes, ttl: $verificationCodeTtl")
+    launch(Dispatchers.IO) {
+        exposedLogger.trace("Cleaning up expired verification codes, ttl: $verificationCodeTtl")
         AppDatabase.current.dbQuery {
             VerificationCode.all().forEach {
-                exposedLogger.trace("Checking verify code {} created at {}", it.id, it.createdAt)
+                exposedLogger.trace("Checking verification code {} created at {}", it.id, it.createdAt)
                 if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verificationCodeTtl.milliseconds < Clock.System.now()) {
-                    exposedLogger.trace("Verify code {} is expired, deleting", it.id)
+                    exposedLogger.trace("Verification code {} is expired, deleting", it.id)
                     it.delete()
                 } else {
-                    exposedLogger.trace("Verify code {} is still valid", it.id)
+                    exposedLogger.trace("Verification code {} is still valid", it.id)
                 }
             }
         }
-        exposedLogger.trace("Verify code cleanup done")
+        exposedLogger.trace("Verification code cleanup done")
     }
 }

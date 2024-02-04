@@ -110,8 +110,8 @@ kotlin {
                 implementation(libs.androidx.datastore.preferences.core)
                 implementation(compose.preview)
                 implementation(libs.ktor.server.core)
-                implementation(libs.ktor.server.netty)
-                implementation(libs.ktor.client.okhttp)
+                implementation(libs.ktor.server.cio)
+                implementation(libs.ktor.client.cio)
             }
         }
 
@@ -161,8 +161,6 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "META-INF/INDEX.LIST"
-            excludes += "META-INF/io.netty.versions.properties"
         }
     }
     signingConfigs {
@@ -205,11 +203,6 @@ android {
     }
     dependencies {
         debugImplementation(compose.uiTooling)
-    }
-    configurations.all {
-        resolutionStrategy {
-            force("org.jetbrains.kotlinx:atomicfu:0.23.2")
-        }
     }
 }
 

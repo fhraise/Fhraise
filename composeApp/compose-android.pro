@@ -1,8 +1,5 @@
--dontwarn org.slf4j.impl.StaticLoggerBinder
--dontwarn io.netty.internal.**
 -dontwarn java.lang.management.ManagementFactory
 -dontwarn java.lang.management.RuntimeMXBean
--dontwarn org.apache.log4j.**
--dontwarn org.apache.logging.log4j.**
--dontwarn org.eclipse.jetty.npn.**
--dontwarn reactor.blockhound.integration.BlockHoundIntegration
+-dontwarn org.slf4j.impl.StaticLoggerBinder
+
+-keepclassmembers class xyz.xfqlittlefan.fhraise.oauth.MicrosoftApplicationModule$module$1

@@ -18,6 +18,7 @@
 
 package xyz.xfqlittlefan.fhraise.routes
 
+import io.ktor.http.*
 import io.ktor.resources.*
 import kotlinx.serialization.Serializable
 
@@ -80,15 +81,22 @@ class Api {
             object Socket {
                 const val PATH = "/api/auth/oauth/socket"
 
+                object Query {
+                    const val REQUEST_ID = "rid"
+                    const val CALLBACK_PORT = "prt"
+                }
+
                 @Serializable
-                data class ClientMessage(val port: Int)
+                data class ClientMessage(val port: UShort)
 
                 @Serializable
                 enum class ServerMessage(val next: Any) {
                     Ready(ReadyMessage), Result(ResultMessage);
 
                     @Serializable
-                    data class ReadyMessage(val url: String, val callId: String)
+                    data class ReadyMessage(val url: String) {
+                        constructor(builder: URLBuilder.() -> Unit) : this(URLBuilder().apply(builder).buildString())
+                    }
 
                     @Serializable
                     enum class ResultMessage(val next: Any? = null) {

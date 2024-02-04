@@ -25,9 +25,10 @@ import io.ktor.serialization.kotlinx.cbor.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.cio.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
+import io.ktor.server.html.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.callid.*
 import io.ktor.server.plugins.contentnegotiation.*
@@ -40,6 +41,9 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.html.body
+import kotlinx.html.p
+import kotlinx.html.title
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
@@ -51,7 +55,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
-    embeddedServer(Netty, port = DefaultServerPort, host = "0.0.0.0", module = Application::module).start(wait = true)
+    embeddedServer(CIO, port = DefaultServerPort, host = "0.0.0.0", module = Application::module).start(wait = true)
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -77,10 +81,14 @@ fun Application.module() {
         oauth("microsoft") {
             urlProvider = {
                 url {
+                    val requestId = request.queryParameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID] ?: ""
                     host = "localhost"
-                    port = request.queryParameters["port"]?.toIntOrNull() ?: DEFAULT_PORT
+                    port = request.queryParameters[Api.Auth.OAuth.Socket.Query.CALLBACK_PORT]?.toIntOrNull()
+                        ?: DEFAULT_PORT
                     path(Api.Auth.OAuth.Provider.Microsoft.callback)
                     parameters.clear()
+                    parameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID] = requestId
+                    parameters[Api.Auth.OAuth.Socket.Query.CALLBACK_PORT] = port.toString()
                 }
             }
             providerLookup = {
@@ -119,23 +127,26 @@ fun Application.module() {
         }
 
         webSocket(Api.Auth.OAuth.Socket.PATH) {
-            val callId = call.callId
-            if (callId == null) {
+            val requestId = call.callId
+            if (requestId == null) {
                 close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, "No call ID"))
                 return@webSocket
             }
 
             val clientMessage = receiveDeserialized<Api.Auth.OAuth.Socket.ClientMessage>()
+
             sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Ready)
-            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage(url {
+            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage {
                 host = call.request.origin.localAddress
                 port = call.request.origin.localPort
                 path(Api.Auth.OAuth.Provider.Microsoft.api)
-            }, callId))
+                parameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID] = requestId
+                parameters[Api.Auth.OAuth.Socket.Query.CALLBACK_PORT] = clientMessage.port.toString()
+            })
 
             val collect = launch {
                 oAuthFlow.collect {
-                    if (it.first == callId) {
+                    if (it.first == requestId) {
                         sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Result)
                         val result = it.second
                         if (result != null) {
@@ -159,12 +170,20 @@ fun Application.module() {
 
             get(Api.Auth.OAuth.Provider.Microsoft.callback) {
                 val principal = call.authentication.principal<OAuthAccessTokenResponse.OAuth2>()
+                val requestId = call.queryParameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID]!!
                 if (principal != null) {
-                    oAuthFlow.emit(call.queryParameters["id"]!! to principal.accessToken)
+                    oAuthFlow.emit(requestId to principal.accessToken)
                     call.response.status(HttpStatusCode.OK)
-                    call.respond("")
+                    call.respondHtml {
+                        head {
+                            title = "Fhraise"
+                        }
+                        body {
+                            p { +"You have successfully logged in. You can close this page now." }
+                        }
+                    }
                 } else {
-                    oAuthFlow.emit(call.queryParameters["id"]!! to null)
+                    oAuthFlow.emit(requestId to null)
                     call.response.status(HttpStatusCode.Unauthorized)
                     call.respond("")
                 }

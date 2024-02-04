@@ -167,7 +167,6 @@ tasks.register("releaseAndroidApp") {
         val apkDir = file(project(":composeApp").layout.buildDirectory.dir("outputs/apk/release"))
         val outputDir = file("android".outputDirectory)
         apkDir.copyRecursively(outputDir, overwrite = true)
-        apkDir.deleteRecursively()
         logger.lifecycle("output directory: ${outputDir.absolutePath}")
     }
 }
