@@ -87,7 +87,7 @@ class Api {
                 }
 
                 @Serializable
-                data class ClientMessage(val port: UShort)
+                data class ClientMessage(val port: UShort, val sendDeepLink: Boolean = false)
 
                 @Serializable
                 enum class ServerMessage(val next: Any? = null) {

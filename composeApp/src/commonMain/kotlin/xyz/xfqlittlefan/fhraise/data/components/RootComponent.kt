@@ -38,8 +38,8 @@ import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.AppSignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
-import xyz.xfqlittlefan.fhraise.notificationPermissionGranted
-import xyz.xfqlittlefan.fhraise.requestNotificationPermission
+import xyz.xfqlittlefan.fhraise.platform.notificationPermissionGranted
+import xyz.xfqlittlefan.fhraise.platform.requestNotificationPermission
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.suspendCoroutine
 

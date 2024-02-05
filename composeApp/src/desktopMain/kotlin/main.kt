@@ -33,10 +33,12 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import xyz.xfqlittlefan.fhraise.Notification
 import xyz.xfqlittlefan.fhraise.compositionLocals.LocalWindowSize
 import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
 import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
+import xyz.xfqlittlefan.fhraise.platform.Notification
+import xyz.xfqlittlefan.fhraise.platform.WindowEvent
+import xyz.xfqlittlefan.fhraise.platform.windowFlow
 import xyz.xfqlittlefan.fhraise.ui.pages.Root
 import javax.swing.SwingUtilities
 
@@ -89,6 +91,14 @@ fun main() {
         ) {
             CompositionLocalProvider(LocalWindowSize provides windowState.size) {
                 rootComponent.Root()
+            }
+
+            LaunchedEffect(Unit) {
+                windowFlow.collect {
+                    when (it) {
+                        WindowEvent.BRING_TO_FRONT -> window.toFront()
+                    }
+                }
             }
         }
 

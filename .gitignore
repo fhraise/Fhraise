@@ -21,3 +21,4 @@ version.properties
 *.db
 server/docs
 *secret*
+datastore

@@ -30,21 +30,24 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
+import xyz.xfqlittlefan.fhraise.platform.bringWindowToFront
 import xyz.xfqlittlefan.fhraise.platform.openUrl
 import xyz.xfqlittlefan.fhraise.routes.Api
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import kotlin.time.Duration.Companion.minutes
 
-@OptIn(ExperimentalSerializationApi::class)
+internal expect val sendDeepLink: Boolean
+
+@OptIn(ExperimentalSerializationApi::class, ExperimentalCoroutinesApi::class)
 actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): String? = coroutineScope {
     withContext(Dispatchers.IO) {
-        var continuation: Continuation<String?>? = null
+        val channel = Channel<String?>()
 
-        val callbackServer = with(MicrosoftApplicationModule(host, port)) {
+        val server = with(MicrosoftApplicationModule(host, port)) {
             embeddedServer(CIO, port = 0, module = module).start()
         }
 
@@ -55,11 +58,11 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): Stri
             }
         }
 
-        val webSocketClient: suspend CoroutineScope.() -> Unit = {
+        launch(start = CoroutineStart.UNDISPATCHED) {
             client.webSocket(host = host, port = port, path = Api.Auth.OAuth.Socket.PATH) {
                 sendSerialized(
                     Api.Auth.OAuth.Socket.ClientMessage(
-                        callbackServer.engine.resolvedConnectors().first().port.toUShort()
+                        server.engine.resolvedConnectors().first().port.toUShort(), sendDeepLink
                     )
                 )
                 var error =
@@ -74,10 +77,10 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): Stri
                 }
 
                 if (!error) {
-                    val browserActions = openUrl(readyMessage!!.url)
+                    openUrl(readyMessage!!.url)
                     error =
                         runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Received
-                    browserActions.close()
+                    bringWindowToFront()
                 }
 
                 if (!error) {
@@ -96,21 +99,27 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): Stri
                 if (!error && result == Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Success) {
                     val userId =
                         runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.UserIdMessage>() }.getOrNull()?.id
-                    runCatching { continuation?.resume(userId) }
+                    runCatching { channel.send(userId) }
                 }
 
                 close(CloseReason(CloseReason.Codes.NORMAL, "End of authentication"))
-                runCatching { continuation?.resume(null) }
+                runCatching { channel.send(null) }
             }
         }
 
-        suspendCoroutine {
-            continuation = it
-            launch(block = webSocketClient)
-            launch {
-                delay(5.minutes)
-                client.close()
-                runCatching { continuation?.resume(null) }
+        val clean = {
+            server.stop()
+            client.close()
+        }
+
+        select {
+            channel.onReceiveCatching {
+                clean()
+                it.getOrNull()
+            }
+            onTimeout(5.minutes) {
+                clean()
+                null
             }
         }
     }
@@ -130,7 +139,6 @@ private class MicrosoftApplicationModule(
                     this.host = this@MicrosoftApplicationModule.host
                     this.port = this@MicrosoftApplicationModule.port
                 }
-                engine.stop()
             }
         }
     }

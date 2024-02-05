@@ -16,8 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.platform
 
-object AndroidNotificationImpl {
-    lateinit var send: (channel: String, title: String, message: String, priority: Int) -> Unit
-}
+actual fun bringWindowToFront() {}

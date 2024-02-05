@@ -16,7 +16,10 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.platform
 
-actual val notificationPermissionGranted: Boolean? = true
-actual suspend fun requestNotificationPermission(): Boolean? = true
+import androidx.compose.ui.window.Notification.Type
+
+object Notification {
+    var send: (title: String, message: String, type: Type) -> Unit = { _, _, _ -> }
+}

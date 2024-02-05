@@ -38,6 +38,7 @@ import xyz.xfqlittlefan.fhraise.activity.FhraiseActivity
 class BrowserActivity : FhraiseActivity() {
     companion object {
         const val EXTRA_ID = "id"
+        const val EXTRA_INTERFACE = "interface"
     }
 
     private var shouldClose = false
@@ -67,6 +68,8 @@ class BrowserActivity : FhraiseActivity() {
         }
 
         browserFlow.tryEmit(requiredId to BrowserMessage.Ready)
+
+        if (!intent?.extras?.getBoolean(EXTRA_INTERFACE, false)!!) return
 
         setContent {
             Scaffold(

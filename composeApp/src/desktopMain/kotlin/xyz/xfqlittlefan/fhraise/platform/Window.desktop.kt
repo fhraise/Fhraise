@@ -16,7 +16,16 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.platform
 
-expect val notificationPermissionGranted: Boolean?
-expect suspend fun requestNotificationPermission(): Boolean?
+import kotlinx.coroutines.flow.MutableSharedFlow
+
+val windowFlow = MutableSharedFlow<WindowEvent>(extraBufferCapacity = 1)
+
+enum class WindowEvent {
+    BRING_TO_FRONT,
+}
+
+actual fun bringWindowToFront() {
+    windowFlow.tryEmit(WindowEvent.BRING_TO_FRONT)
+}

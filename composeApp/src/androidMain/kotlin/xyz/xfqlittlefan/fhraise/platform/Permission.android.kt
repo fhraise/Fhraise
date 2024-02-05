@@ -16,25 +16,14 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.platform
 
-import org.w3c.notifications.DENIED
-import org.w3c.notifications.GRANTED
-import org.w3c.notifications.Notification
-import org.w3c.notifications.NotificationPermission
-import xyz.xfqlittlefan.fhraise.js.await
-
-actual val notificationPermissionGranted: Boolean?
-    get() = Notification.permission.status
-
-actual suspend fun requestNotificationPermission(): Boolean? {
-    return notificationPermissionGranted ?: Notification.requestPermission().then { it.status?.toJsBoolean() }.await()
-        ?.toBoolean()
+object AndroidPermissionImpl {
+    lateinit var checkNotificationPermissionGranted: () -> Boolean?
+    lateinit var requestNotificationPermission: suspend () -> Boolean?
 }
 
-val NotificationPermission.status: Boolean?
-    get() = when (this) {
-        NotificationPermission.GRANTED -> true
-        NotificationPermission.DENIED -> false
-        else -> null
-    }
+actual val notificationPermissionGranted: Boolean?
+    get() = AndroidPermissionImpl.checkNotificationPermissionGranted()
+
+actual suspend fun requestNotificationPermission(): Boolean? = AndroidPermissionImpl.requestNotificationPermission()

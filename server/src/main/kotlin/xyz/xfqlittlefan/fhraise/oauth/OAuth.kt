@@ -22,14 +22,26 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import kotlinx.coroutines.flow.MutableSharedFlow
+import io.ktor.server.routing.*
+import kotlinx.coroutines.flow.*
 import kotlinx.serialization.Serializable
 
-val oAuthFlow = MutableSharedFlow<Pair<String, OAuthMessage>>()
+val oAuthFlow = OAuthFlow()
+
+class OAuthFlow : MutableSharedFlow<Pair<String, OAuthMessage>> by MutableSharedFlow(replay = 3) {
+    suspend inline fun collect(id: String, block: FlowCollector<OAuthMessage>) =
+        block.emitAll(filter { it.first == id }.map { it.second })
+
+    suspend inline fun take(crossinline predicate: suspend (Pair<String, OAuthMessage>) -> Boolean): Pair<String, OAuthMessage> =
+        filter(predicate).first()
+}
 
 sealed class OAuthMessage {
     data object Received : OAuthMessage()
+
     data class Finished(val id: String?) : OAuthMessage()
+
+    data class Response(val block: suspend RoutingContext.(userId: String?) -> Unit) : OAuthMessage()
 }
 
 data class OAuthUserPrincipal(val id: String, val name: String? = null, val email: String? = null)
