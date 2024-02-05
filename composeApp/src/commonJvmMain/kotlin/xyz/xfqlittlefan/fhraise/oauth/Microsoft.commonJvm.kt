@@ -74,7 +74,13 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): Stri
                 }
 
                 if (!error) {
-                    openUrl(readyMessage!!.url)
+                    val browserActions = openUrl(readyMessage!!.url)
+                    error =
+                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Received
+                    browserActions.close()
+                }
+
+                if (!error) {
                     error =
                         runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Result
                 }

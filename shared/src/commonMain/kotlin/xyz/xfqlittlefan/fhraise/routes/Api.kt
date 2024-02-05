@@ -90,8 +90,8 @@ class Api {
                 data class ClientMessage(val port: UShort)
 
                 @Serializable
-                enum class ServerMessage(val next: Any) {
-                    Ready(ReadyMessage), Result(ResultMessage);
+                enum class ServerMessage(val next: Any? = null) {
+                    Ready(ReadyMessage), Received, Result(ResultMessage);
 
                     @Serializable
                     data class ReadyMessage(val url: String) {

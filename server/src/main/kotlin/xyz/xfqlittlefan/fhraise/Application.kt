@@ -36,6 +36,7 @@ import io.ktor.server.util.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
@@ -43,6 +44,7 @@ import xyz.xfqlittlefan.fhraise.html.respondAutoClosePage
 import xyz.xfqlittlefan.fhraise.models.Users
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
 import xyz.xfqlittlefan.fhraise.models.getOrCreateUserBy
+import xyz.xfqlittlefan.fhraise.oauth.OAuthMessage
 import xyz.xfqlittlefan.fhraise.oauth.getOAuthUserPrincipalFromMicrosoft
 import xyz.xfqlittlefan.fhraise.oauth.oAuthFlow
 import xyz.xfqlittlefan.fhraise.routes.Api
@@ -128,6 +130,24 @@ fun Application.module() {
 
             val clientMessage = receiveDeserialized<Api.Auth.OAuth.Socket.ClientMessage>()
 
+            val collect = launch {
+                oAuthFlow.filter { (id, _) -> id == requestId }.collect { (_, message) ->
+                    when (message) {
+                        OAuthMessage.Received -> sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Received)
+                        is OAuthMessage.Finished -> {
+                            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Result)
+                            if (message.id != null) {
+                                sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Success)
+                                sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.UserIdMessage(message.id))
+                            } else {
+                                sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Failure)
+                            }
+                            close()
+                        }
+                    }
+                }
+            }
+
             sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Ready)
             sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage {
                 host = call.request.origin.localAddress
@@ -136,22 +156,6 @@ fun Application.module() {
                 parameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID] = requestId
                 parameters[Api.Auth.OAuth.Socket.Query.CALLBACK_PORT] = clientMessage.port.toString()
             })
-
-            val collect = launch {
-                oAuthFlow.collect {
-                    if (it.first == requestId) {
-                        sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.Result)
-                        val result = it.second
-                        if (result != null) {
-                            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Success)
-                            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.UserIdMessage(result))
-                        } else {
-                            sendSerialized(Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Failure)
-                        }
-                        close()
-                    }
-                }
-            }
 
             delay(5.minutes)
             collect.cancel()
@@ -166,6 +170,7 @@ fun Application.module() {
                 val principal = call.authentication.principal<OAuthAccessTokenResponse.OAuth2>()
                 val requestId = call.queryParameters[Api.Auth.OAuth.Socket.Query.REQUEST_ID]
                 if (principal != null && requestId != null) {
+                    oAuthFlow.emit(requestId to OAuthMessage.Received)
                     val oAuthPrincipal = appClient.getOAuthUserPrincipalFromMicrosoft(principal.accessToken)
                     database.dbQuery {
                         database.getOrCreateUserBy(Users.microsoft, oAuthPrincipal.id).apply {
@@ -173,7 +178,7 @@ fun Application.module() {
                             email ?: run { email = oAuthPrincipal.email }
                         }
                     }
-                    oAuthFlow.emit(requestId to oAuthPrincipal.id)
+                    oAuthFlow.emit(requestId to OAuthMessage.Finished(oAuthPrincipal.id))
                 }
             }
         }

@@ -18,105 +18,16 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import android.Manifest.permission.POST_NOTIFICATIONS
-import android.graphics.Color
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
-import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.core.app.NotificationCompat
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.arkivanov.decompose.defaultComponentContext
-import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
-import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
-import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
-import xyz.xfqlittlefan.fhraise.datastore.AndroidPreferencesDataStoreImpl
-import xyz.xfqlittlefan.fhraise.platform.AndroidUrlImpl
+import xyz.xfqlittlefan.fhraise.activity.FhraiseActivity
 import xyz.xfqlittlefan.fhraise.ui.pages.Root
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FhraiseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
-
-        enableEdgeToEdge(
-            navigationBarStyle = SystemBarStyle.auto(lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT)
-        )
-
-        @Suppress("DEPRECATION") if (isMiui) {
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS, WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
-            )
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION,
-                WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
-            )
-        }
-
-        AndroidPreferencesDataStoreImpl.get = { applicationContext.it() }
-
-        val notificationPermission =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission(POST_NOTIFICATIONS) else null
-
-        AndroidNotificationImpl.send = { channel, title, message, priority ->
-            val notification = NotificationCompat.Builder(this, channel).apply {
-                setSmallIcon(R.drawable.ic_launcher_foreground)
-                setContentTitle(title)
-                setContentText(message)
-                setPriority(priority)
-                setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
-            }.build()
-            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
-            val id =
-                (channel.hashCode() shl 48) or (title.hashCode() shl 32) or (message.hashCode() shl 16) or priority.hashCode()
-            notificationManager.notify(id, notification)
-        }
-
-        AndroidPermissionImpl.checkNotificationPermissionGranted =
-            notificationPermission?.run { { granted } } ?: { true }
-
-        AndroidPermissionImpl.requestNotificationPermission = notificationPermission?.run {
-            registerRequestLauncher { it }
-        } ?: { true }
-
-        AndroidUrlImpl.open = { url, builder ->
-            CustomTabsIntent.Builder().apply(builder).build().launchUrl(this, Uri.parse(url))
-        }
+        initialize()
 
         super.onCreate(savedInstanceState)
 
-        val rootComponent = AppRootComponent(componentContext = defaultComponentContext())
-
-        setContent {
-            val colorMode by rootComponent.settings.colorMode.collectAsState()
-
-            LaunchedEffect(colorMode) {
-                val systemBarStyle = when (colorMode) {
-                    LIGHT -> SystemBarStyle.light(scrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT)
-                    DARK -> SystemBarStyle.dark(scrim = Color.TRANSPARENT)
-                    SYSTEM -> SystemBarStyle.auto(
-                        lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT
-                    )
-                }
-
-                enableEdgeToEdge(
-                    statusBarStyle = systemBarStyle,
-                    navigationBarStyle = systemBarStyle,
-                )
-            }
-
-            CompositionLocalProvider(LocalActivity provides this@MainActivity) {
-                rootComponent.Root()
-            }
-        }
+        setContent { Root() }
     }
 }

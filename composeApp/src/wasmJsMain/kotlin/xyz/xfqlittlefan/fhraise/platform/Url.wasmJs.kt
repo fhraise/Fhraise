@@ -18,5 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
-actual fun openUrlImpl(url: String, type: BrowserType) {
+actual fun openUrlImpl(url: String, options: BrowserOptions): BrowserActions {
+    TODO()
 }

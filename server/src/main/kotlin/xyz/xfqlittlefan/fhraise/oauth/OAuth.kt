@@ -25,14 +25,12 @@ import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.Serializable
 
-/**
- * OAuth 数据
- *
- * [Pair] 的第一个元素是请求 OAuth 的 callId，第二个元素是用户 ID，如果认证失败则为 null
- */
-typealias OAuthData = Pair<String, String?>
+val oAuthFlow = MutableSharedFlow<Pair<String, OAuthMessage>>()
 
-val oAuthFlow = MutableSharedFlow<OAuthData>()
+sealed class OAuthMessage {
+    data object Received : OAuthMessage()
+    data class Finished(val id: String?) : OAuthMessage()
+}
 
 data class OAuthUserPrincipal(val id: String, val name: String? = null, val email: String? = null)
 

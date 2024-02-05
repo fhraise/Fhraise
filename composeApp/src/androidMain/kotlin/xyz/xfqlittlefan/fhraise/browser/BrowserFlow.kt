@@ -16,11 +16,19 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.platform
+package xyz.xfqlittlefan.fhraise.browser
 
-import java.awt.Desktop
+import android.content.Context
+import kotlinx.coroutines.flow.MutableSharedFlow
+import java.util.*
 
-actual fun openUrlImpl(url: String, options: BrowserOptions): BrowserActions {
-    Desktop.getDesktop().browse(java.net.URI(url))
-    return BrowserActions()
+val browserFlowId get() = UUID.randomUUID().toString()
+val browserFlow = MutableSharedFlow<Pair<String, BrowserMessage>>(replay = 1, extraBufferCapacity = 1)
+
+sealed class BrowserMessage {
+    data object Ready : BrowserMessage()
+
+    data class Launch(val launch: Context.() -> Unit) : BrowserMessage()
+
+    data object Close : BrowserMessage()
 }
