@@ -28,8 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import xyz.xfqlittlefan.fhraise.R
@@ -45,12 +45,12 @@ class BrowserActivity : FhraiseActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
-        val requiredId = intent.getStringExtra(EXTRA_ID) ?: run { finish(); return }
-
         super.onCreate(savedInstanceState)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            browserFlow.filter { (id, _) -> id == requiredId }.collect { (_, message) ->
+        val requiredId = intent.getStringExtra(EXTRA_ID) ?: run { finish(); return }
+
+        lifecycleScope.launch(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) {
+            browserFlow.collect(requiredId) { message ->
                 withContext(Dispatchers.Main) {
                     when (message) {
                         is BrowserMessage.Launch -> message.run { launch() }
@@ -69,7 +69,7 @@ class BrowserActivity : FhraiseActivity() {
 
         browserFlow.tryEmit(requiredId to BrowserMessage.Ready)
 
-        if (!intent?.extras?.getBoolean(EXTRA_INTERFACE, false)!!) return
+        if (!intent?.extras?.getBoolean(EXTRA_INTERFACE, true)!!) return
 
         setContent {
             Scaffold(

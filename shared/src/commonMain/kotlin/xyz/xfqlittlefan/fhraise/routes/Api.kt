@@ -41,7 +41,7 @@ class Api {
             @Resource("verify")
             class Verify(val parent: Type) {
                 @Serializable
-                data class RequestBody(val credential: String, val code: String)
+                data class RequestBody(val credential: String, val verification: String)
 
                 @Serializable
                 enum class ResponseBody { Success, Failure }
@@ -90,6 +90,7 @@ class Api {
             val callback: String,
             val clientId: String,
             val authorizeUrl: String,
+            val authorizeUrlInterceptor: URLBuilder.() -> Unit,
             val accessTokenUrl: String,
             val defaultScopes: List<String>
         ) {
@@ -98,17 +99,26 @@ class Api {
                 "/api/auth/oauth/callback/gg",
                 "64440822162-pd97va9v49vvj07vvhdd02au6li129s1.apps.googleusercontent.com",
                 "https://accounts.google.com/o/oauth2/v2/auth",
+                {},
                 "https://www.googleapis.com/oauth2/v4/token",
-                listOf(".../auth/userinfo.email", ".../auth/userinfo.profile", "openid")
+                listOf(
+                    "https://www.googleapis.com/auth/userinfo.email",
+                    "https://www.googleapis.com/auth/userinfo.profile",
+                    "openid"
+                )
             ),
             Microsoft(
                 "/api/auth/oauth/sign-in/ms",
                 "/api/auth/oauth/callback/ms",
                 "af9f38ce-17ce-481b-8629-36452244007b",
                 "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
+                {
+                    parameters["response_type"] = "code id_token"
+                    parameters["response_mode"] = "form_post"
+                },
                 "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
-                listOf("https://graph.microsoft.com/.default")
-            )
+                listOf("https://graph.microsoft.com/.default", "openid")
+            );
         }
     }
 }

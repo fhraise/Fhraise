@@ -16,20 +16,16 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.browser
+package xyz.xfqlittlefan.fhraise.flow
 
-import android.content.Context
-import kotlinx.coroutines.flow.MutableSharedFlow
-import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
-import java.util.*
+import kotlinx.coroutines.flow.*
 
-val browserFlowId get() = UUID.randomUUID().toString()
-val browserFlow = IdMessageFlow<BrowserMessage>(MutableSharedFlow(replay = 1, extraBufferCapacity = 1))
+open class IdMessageFlow<T>(
+    mutableSharedFlow: MutableSharedFlow<Pair<String, T>> = MutableSharedFlow()
+) : MutableSharedFlow<Pair<String, T>> by mutableSharedFlow {
+    suspend inline fun collect(id: String, block: FlowCollector<T>) =
+        block.emitAll(filter { it.first == id }.map { it.second })
 
-sealed class BrowserMessage {
-    data object Ready : BrowserMessage()
-
-    data class Launch(val launch: Context.() -> Unit) : BrowserMessage()
-
-    data object Close : BrowserMessage()
+    suspend inline fun take(crossinline predicate: suspend (Pair<String, T>) -> Boolean): Pair<String, T> =
+        filter(predicate).first()
 }

@@ -33,7 +33,7 @@ import kotlinx.html.stream.appendHTML
 import org.simplejavamail.api.mailer.config.TransportStrategy
 import org.simplejavamail.email.EmailBuilder
 import org.simplejavamail.mailer.MailerBuilder
-import xyz.xfqlittlefan.fhraise.AppDatabase
+import xyz.xfqlittlefan.fhraise.appDatabase
 import xyz.xfqlittlefan.fhraise.auth.jwtAudience
 import xyz.xfqlittlefan.fhraise.auth.jwtIssuer
 import xyz.xfqlittlefan.fhraise.auth.jwtRealm
@@ -45,7 +45,9 @@ import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.time.Duration.Companion.seconds
 
 private const val authName = "app"
-private val rateLimitName = RateLimitName("app-code-verification")
+private val rateLimitName = RateLimitName("app-code-authentication")
+
+private val verifier = JWT.require(Algorithm.HMAC256(jwtSecret)).withIssuer(jwtIssuer).withAudience(jwtAudience).build()
 
 fun RateLimitConfig.registerAppCodeVerification() {
     register(rateLimitName) {
@@ -56,7 +58,7 @@ fun RateLimitConfig.registerAppCodeVerification() {
 fun AuthenticationConfig.appAuth() {
     jwt(authName) {
         realm = jwtRealm
-        verifier(JWT.require(Algorithm.HMAC256(jwtSecret)).withIssuer(jwtIssuer).withAudience(jwtAudience).build())
+        verifier(verifier)
         validate { credential ->
             if (credential.payload.getClaim("id").asString() != "") {
                 JWTPrincipal(credential.payload)
@@ -80,12 +82,12 @@ fun Route.apiAuth() {
 private fun Route.apiAuthRequest() = post<Api.Auth.Type.Request> {
     val req = call.receive<Api.Auth.Type.Request.RequestBody>()
 
-    if (!it.validate(req.credential)) {
+    if (!it.parent.validate(req.credential)) {
         call.respond(Api.Auth.Type.Request.ResponseBody.InvalidCredential)
         return@post
     }
 
-    val code = AppDatabase.current.queryOrGenerateVerificationCode(this, it.parent, req.credential)
+    val code = appDatabase.queryOrGenerateVerificationCode(this, it.parent, req.credential)
 
     if (req.dry) {
         call.respond(Api.Auth.Type.Request.ResponseBody.Success)
@@ -98,14 +100,14 @@ private fun Route.apiAuthRequest() = post<Api.Auth.Type.Request> {
 private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> {
     val req = call.receive<Api.Auth.Type.Verify.RequestBody>()
 
-    if (AppDatabase.current.verifyCode(req.code, it.parent, req.credential)) {
+    if (it.parent.validate(req.credential) && appDatabase.verifyCode(req.verification, it.parent, req.credential)) {
         call.respond(Api.Auth.Type.Verify.ResponseBody.Success)
     } else {
         call.respond(Api.Auth.Type.Verify.ResponseBody.Failure)
     }
 }
 
-private fun Api.Auth.Type.Request.validate(credential: String) = when (parent.type) {
+private fun Api.Auth.Type.validate(credential: String) = when (type) {
     Api.Auth.Type.Enum.Username -> credential.matches(usernameRegex)
     Api.Auth.Type.Enum.PhoneNumber -> credential.matches(phoneNumberRegex)
     Api.Auth.Type.Enum.Email -> JMail.strictValidator().isValid(credential)

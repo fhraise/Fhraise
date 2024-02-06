@@ -24,16 +24,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.html.*
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.kotlin.datetime.datetime
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import xyz.xfqlittlefan.fhraise.AppDatabase
+import xyz.xfqlittlefan.fhraise.appDatabase
 import xyz.xfqlittlefan.fhraise.applicationConfig
 import xyz.xfqlittlefan.fhraise.applicationSecret
 import xyz.xfqlittlefan.fhraise.routes.Api
@@ -52,7 +50,7 @@ val smtpReady = smtpPassword != null
 object VerificationCodes : IdTable<String>() {
     val owner = text("owner")
     val code = char("code", 6)
-    val createdAt = datetime("created_at")
+    val createdAt = timestamp("created_at")
     override val id = owner.entityId()
     override val primaryKey = PrimaryKey(owner)
 }
@@ -80,7 +78,7 @@ suspend fun AppDatabase.queryOrGenerateVerificationCode(
             VerificationCode.new {
                 owner = it
                 code = (0 until 6).map { (0..9).random() }.joinToString("")
-                createdAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                createdAt = Clock.System.now()
             }
         }
 
@@ -197,17 +195,13 @@ fun TagConsumer<StringBuilder>.emailVerificationCode(code: String) = html {
 fun Application.cleanupVerificationCodes() {
     launch(Dispatchers.IO) {
         log.trace("Cleaning up expired verification codes, ttl: $verificationCodeTtl")
-        AppDatabase.current.dbQuery {
-            VerificationCode.all().forEach {
-                log.trace("Checking verification code {} created at {}", it.id, it.createdAt)
-                if (it.createdAt.toInstant(TimeZone.currentSystemDefault()) + verificationCodeTtl.milliseconds < Clock.System.now()) {
-                    log.trace("Verification code {} is expired, deleting", it.id)
+        appDatabase.dbQuery {
+            VerificationCode.find { VerificationCodes.createdAt less (Clock.System.now() - verificationCodeTtl.milliseconds) }
+                .forEach {
+                    log.trace("Deleting expired verification code for owner {}", it.owner)
                     it.delete()
-                } else {
-                    log.trace("Verification code {} is still valid", it.id)
                 }
-            }
         }
-        log.trace("Verification code cleanup done")
+        log.trace("Finished cleaning up expired verification codes")
     }
 }

@@ -39,9 +39,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.arkivanov.decompose.defaultComponentContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import xyz.xfqlittlefan.fhraise.R
 import xyz.xfqlittlefan.fhraise.browser.BrowserActivity
@@ -120,11 +119,9 @@ open class FhraiseActivity : ComponentActivity() {
             val usedId = browserFlowId
 
             val startActivity: (onReady: suspend CoroutineScope.() -> Unit) -> Unit = { onReady ->
-                lifecycleScope.launch(Dispatchers.IO) {
-                    browserFlow.filter { (id, message) -> id == usedId && message == BrowserMessage.Ready }.collect {
-                        onReady()
-                        cancel()
-                    }
+                lifecycleScope.launch(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) {
+                    browserFlow.take { (id, message) -> id == usedId && message == BrowserMessage.Ready }
+                    onReady()
                 }
                 startActivity(Intent(this, BrowserActivity::class.java).apply {
                     putExtra(BrowserActivity.EXTRA_ID, usedId)

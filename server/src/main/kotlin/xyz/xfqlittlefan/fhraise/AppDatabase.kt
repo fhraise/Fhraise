@@ -28,10 +28,12 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import xyz.xfqlittlefan.fhraise.models.Users
 import xyz.xfqlittlefan.fhraise.models.VerificationCodes
 
+val appDatabase = AppDatabase.current
+
 class AppDatabase private constructor(private val database: Database) {
     companion object {
         private var _instance: AppDatabase? = null
-        val current
+        internal val current
             get() = _instance ?: run {
                 val db = AppDatabase(Database.connect(createHikariDataSource()))
                 _instance = db

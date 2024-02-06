@@ -29,17 +29,21 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.server.websocket.*
+import io.ktor.util.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import xyz.xfqlittlefan.fhraise.AppDatabase
 import xyz.xfqlittlefan.fhraise.appClient
+import xyz.xfqlittlefan.fhraise.appDatabase
 import xyz.xfqlittlefan.fhraise.applicationSecret
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.auth.generateTokenPair
+import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
 import xyz.xfqlittlefan.fhraise.html.respondAutoClosePage
 import xyz.xfqlittlefan.fhraise.link.AppUri
 import xyz.xfqlittlefan.fhraise.models.Users
@@ -49,15 +53,7 @@ import java.util.*
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-val oAuthFlow = OAuthFlow()
-
-class OAuthFlow : MutableSharedFlow<Pair<String, OAuthMessage>> by MutableSharedFlow(replay = 3) {
-    suspend inline fun collect(id: String, block: FlowCollector<OAuthMessage>) =
-        block.emitAll(filter { it.first == id }.map { it.second })
-
-    suspend inline fun take(crossinline predicate: suspend (Pair<String, OAuthMessage>) -> Boolean): Pair<String, OAuthMessage> =
-        filter(predicate).first()
-}
+val oAuthFlow = IdMessageFlow<OAuthMessage>(MutableSharedFlow(replay = 3))
 
 sealed class OAuthMessage {
     data object Received : OAuthMessage()
@@ -92,6 +88,11 @@ fun AuthenticationConfig.appOAuth() {
                     clientId = provider.clientId,
                     clientSecret = applicationSecret.propertyOrNull("auth.oauth.${provider.name.lowercase(Locale.US)}.client-secret")
                         ?.getString() ?: "client-secret",
+                    nonceManager = StatelessHmacNonceManager(
+                        applicationSecret.propertyOrNull("auth.oauth.${provider.name.lowercase(Locale.US)}.nonce-secret")
+                            ?.getString()?.toByteArray() ?: "nonce-secret".toByteArray()
+                    ),
+                    authorizeUrlInterceptor = provider.authorizeUrlInterceptor,
                     defaultScopes = provider.defaultScopes
                 )
             }
@@ -126,9 +127,8 @@ fun Route.apiOAuth() {
                 }
                 if (principal != null && requestId != null) {
                     oAuthFlow.emit(requestId to OAuthMessage.Received)
-                    val oAuthPrincipal = appClient.getOAuthUserPrincipal(principal.accessToken, provider)
-                    val tokenPair =
-                        AppDatabase.current.getOrCreateOAuthUser(oAuthPrincipal, provider).generateTokenPair()
+                    val oAuthPrincipal = appClient.getOAuthUserPrincipal(principal, provider)
+                    val tokenPair = appDatabase.getOrCreateOAuthUser(oAuthPrincipal, provider).generateTokenPair()
                     tokenPair.let {
                         oAuthFlow.emit(requestId to OAuthMessage.Finished(it))
                         response.await()(it)
@@ -202,37 +202,46 @@ private fun Route.apiOAuthWebsocket() {
 private fun AppUri.OAuthCallback.Companion.fromTokenPair(tokenPair: JwtTokenPair?, requestId: String) =
     AppUri.OAuthCallback(tokenPair?.accessToken, tokenPair?.refreshToken, requestId)
 
-private suspend fun HttpClient.getOAuthUserPrincipal(accessToken: String, provider: Api.OAuth.Provider) =
-    when (provider) {
-        Api.OAuth.Provider.Google -> getOAuthUserPrincipalFromGoogle(accessToken)
-        Api.OAuth.Provider.Microsoft -> getOAuthUserPrincipalFromMicrosoft(accessToken)
-    }
+private suspend fun HttpClient.getOAuthUserPrincipal(
+    principal: OAuthAccessTokenResponse.OAuth2, provider: Api.OAuth.Provider
+) = when (provider) {
+    Api.OAuth.Provider.Google -> getOAuthUserPrincipalFromGoogle(principal.extraParameters["id_token"] as String)
+    Api.OAuth.Provider.Microsoft -> getOAuthUserPrincipalFromMicrosoft(principal.accessToken)
+}
 
 private suspend fun AppDatabase.getOrCreateOAuthUser(oAuthPrincipal: OAuthUserPrincipal, provider: Api.OAuth.Provider) =
     dbQuery {
-        getOrCreateUser(provider.usersColumn, oAuthPrincipal.id).apply {
+        getOrCreateUser(provider.oAuthColumn, oAuthPrincipal.id).apply {
             name ?: run { name = oAuthPrincipal.name }
             email ?: run { email = oAuthPrincipal.email }
         }
     }
 
-private val Api.OAuth.Provider.usersColumn
+private val Api.OAuth.Provider.oAuthColumn
     get() = when (this) {
         Api.OAuth.Provider.Google -> Users.google
         Api.OAuth.Provider.Microsoft -> Users.microsoft
     }
 
 suspend fun HttpClient.getOAuthUserPrincipalFromGoogle(accessToken: String) = get {
-    url("https://www.googleapis.com/oauth2/v3/userinfo")
+    url("https://www.googleapis.com/userinfo/v2/me")
     headers {
         append(HttpHeaders.Authorization, "Bearer $accessToken")
     }
 }.body<GoogleUserInfo>().let {
-    OAuthUserPrincipal(it.sub, it.name, it.email)
+    OAuthUserPrincipal(it.id, it.name, it.verifiedEmail?.let { verified -> if (verified) it.email else null })
 }
 
 @Serializable
-data class GoogleUserInfo(val sub: String, val name: String?, val email: String?)
+data class GoogleUserInfo(
+    val id: String, val name: String?, val email: String?, @SerialName("verified_email") val verifiedEmail: Boolean?
+)
+
+@Serializable
+data class GoogleCerts(val keys: List<GoogleCert>) {
+    @Serializable
+    data class GoogleCert(val kid: String, val n: String, val e: String)
+}
 
 suspend fun HttpClient.getOAuthUserPrincipalFromMicrosoft(accessToken: String) = get {
     url("https://graph.microsoft.com/v1.0/me")
