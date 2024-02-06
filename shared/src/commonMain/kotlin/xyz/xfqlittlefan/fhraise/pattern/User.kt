@@ -16,7 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.models
+package xyz.xfqlittlefan.fhraise.pattern
 
 val usernameRegex = Regex("^[a-zA-Z0-9_-]{4,16}\$")
 val phoneNumberRegex =

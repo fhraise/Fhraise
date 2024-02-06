@@ -16,9 +16,9 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.oauth
+package xyz.xfqlittlefan.fhraise.auth
 
-import kotlinx.coroutines.CoroutineScope
-import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import kotlinx.serialization.Serializable
 
-expect suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): JwtTokenPair?
+@Serializable
+data class JwtTokenPair(val accessToken: String, val refreshToken: String)

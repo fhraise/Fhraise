@@ -19,14 +19,12 @@
 package xyz.xfqlittlefan.fhraise.link
 
 object AppUri {
-    const val OAUTH_FINISH = "fhraise://oauth/finish"
-
-    data class OAuthCallback(val token: String, val refreshToken: String, val state: String) {
+    data class OAuthCallback(val token: String?, val refreshToken: String?, val requestId: String) {
         companion object {
             const val PREFIX = "fhraise://oauth/callback?"
             const val TOKEN_PARAM = "t="
             const val REFRESH_TOKEN_PARAM = "r="
-            const val STATE_PARAM = "s="
+            const val REQUEST_ID_PARAM = "i="
 
             fun fromUriOrNull(uri: String): OAuthCallback? {
                 if (!uri.startsWith(PREFIX)) return null
@@ -37,6 +35,6 @@ object AppUri {
             }
         }
 
-        val uri = "$PREFIX$TOKEN_PARAM$token&$REFRESH_TOKEN_PARAM$refreshToken&$STATE_PARAM$state"
+        val uri = "$PREFIX$TOKEN_PARAM$token&$REFRESH_TOKEN_PARAM$refreshToken&$REQUEST_ID_PARAM$requestId"
     }
 }

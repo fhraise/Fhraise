@@ -16,9 +16,11 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.oauth
+package xyz.xfqlittlefan.fhraise
 
-import kotlinx.coroutines.CoroutineScope
-import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import io.ktor.http.*
+import io.ktor.server.routing.*
+import io.ktor.utils.io.*
 
-expect suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): JwtTokenPair?
+@KtorDsl
+fun Route.cborContentType(build: Route.() -> Unit) = contentType(ContentType.Application.Cbor, build)

@@ -48,7 +48,7 @@ class User(id: EntityID<UUID>) : UUIDEntity(id) {
     var microsoft by Users.microsoft
 }
 
-suspend fun <T> AppDatabase.getOrCreateUserBy(column: Column<T>, value: T): User = dbQuery {
+suspend fun <T> AppDatabase.getOrCreateUser(column: Column<T>, value: T): User = dbQuery {
     User.find { column eq value }.firstOrNull() ?: User.new {
         when (column) {
             Users.username -> username = value as String

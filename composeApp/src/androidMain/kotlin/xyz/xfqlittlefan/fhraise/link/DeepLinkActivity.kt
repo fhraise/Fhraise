@@ -41,13 +41,14 @@ class DeepLinkActivity : FhraiseActivity() {
             return
         }
 
-        when (data.toString()) {
-            AppUri.OAUTH_FINISH -> launchMain {
+        AppUri.OAuthCallback.fromUriOrNull(data.toString())?.let {
+            launchMain {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
-
-            else -> launchMain()
+            return
         }
+
+        launchMain()
     }
 
     private fun launchMain(builder: Intent.() -> Unit = {}) {

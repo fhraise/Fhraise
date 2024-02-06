@@ -44,9 +44,9 @@ import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialT
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
-import xyz.xfqlittlefan.fhraise.models.phoneNumberRegex
-import xyz.xfqlittlefan.fhraise.models.usernameRegex
 import xyz.xfqlittlefan.fhraise.oauth.microsoftSignIn
+import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
+import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.js.JsName
 

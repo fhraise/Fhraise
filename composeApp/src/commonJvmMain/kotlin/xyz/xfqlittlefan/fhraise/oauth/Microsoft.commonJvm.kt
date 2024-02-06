@@ -35,6 +35,7 @@ import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
+import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.platform.bringWindowToFront
 import xyz.xfqlittlefan.fhraise.platform.openUrl
 import xyz.xfqlittlefan.fhraise.routes.Api
@@ -43,9 +44,9 @@ import kotlin.time.Duration.Companion.minutes
 internal expect val sendDeepLink: Boolean
 
 @OptIn(ExperimentalSerializationApi::class, ExperimentalCoroutinesApi::class)
-actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): String? = coroutineScope {
+actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int) = coroutineScope {
     withContext(Dispatchers.IO) {
-        val channel = Channel<String?>()
+        val channel = Channel<JwtTokenPair?>()
 
         val server = with(MicrosoftApplicationModule(host, port)) {
             embeddedServer(CIO, port = 0, module = module).start()
@@ -59,47 +60,47 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): Stri
         }
 
         launch(start = CoroutineStart.UNDISPATCHED) {
-            client.webSocket(host = host, port = port, path = Api.Auth.OAuth.Socket.PATH) {
+            client.webSocket(host = host, port = port, path = Api.OAuth.Socket.PATH) {
                 sendSerialized(
-                    Api.Auth.OAuth.Socket.ClientMessage(
-                        server.engine.resolvedConnectors().first().port.toUShort(), sendDeepLink
+                    Api.OAuth.Socket.ClientMessage(
+                        Api.OAuth.Provider.Microsoft,
+                        server.engine.resolvedConnectors().first().port.toUShort(),
+                        sendDeepLink
                     )
                 )
                 var error =
-                    runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Ready
+                    runCatching { receiveDeserialized<Api.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.OAuth.Socket.ServerMessage.Ready
 
-                var readyMessage: Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage? = null
+                var readyMessage: Api.OAuth.Socket.ServerMessage.ReadyMessage? = null
 
                 if (!error) {
                     readyMessage =
-                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ReadyMessage>() }.getOrNull()
+                        runCatching { receiveDeserialized<Api.OAuth.Socket.ServerMessage.ReadyMessage>() }.getOrNull()
                     error = readyMessage == null
                 }
 
                 if (!error) {
                     openUrl(readyMessage!!.url)
                     error =
-                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Received
+                        runCatching { receiveDeserialized<Api.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.OAuth.Socket.ServerMessage.Received
                     bringWindowToFront()
                 }
 
                 if (!error) {
                     error =
-                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.Auth.OAuth.Socket.ServerMessage.Result
+                        runCatching { receiveDeserialized<Api.OAuth.Socket.ServerMessage>() }.getOrNull() != Api.OAuth.Socket.ServerMessage.Result
                 }
 
-                var result: Api.Auth.OAuth.Socket.ServerMessage.ResultMessage? = null
+                var result: Api.OAuth.Socket.ServerMessage.ResultMessage? = null
 
                 if (!error) {
                     result =
-                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ResultMessage>() }.getOrNull()
+                        runCatching { receiveDeserialized<Api.OAuth.Socket.ServerMessage.ResultMessage>() }.getOrNull()
                     error = result == null
                 }
 
-                if (!error && result == Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.Success) {
-                    val userId =
-                        runCatching { receiveDeserialized<Api.Auth.OAuth.Socket.ServerMessage.ResultMessage.UserIdMessage>() }.getOrNull()?.id
-                    runCatching { channel.send(userId) }
+                if (!error && result == Api.OAuth.Socket.ServerMessage.ResultMessage.Success) {
+                    runCatching { channel.send(receiveDeserialized<Api.OAuth.Socket.ServerMessage.ResultMessage.TokenPairMessage>().tokenPair) }
                 }
 
                 close(CloseReason(CloseReason.Codes.NORMAL, "End of authentication"))
@@ -134,7 +135,7 @@ private class MicrosoftApplicationModule(
 ) {
     val module: Application.() -> Unit = {
         routing {
-            get(Api.Auth.OAuth.Provider.Microsoft.callback) {
+            get(Api.OAuth.Provider.Microsoft.callback) {
                 call.respondRedirect {
                     this.host = this@MicrosoftApplicationModule.host
                     this.port = this@MicrosoftApplicationModule.port

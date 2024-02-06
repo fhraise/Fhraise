@@ -20,9 +20,6 @@ package xyz.xfqlittlefan.fhraise.auth
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
-import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.toJavaInstant
 import xyz.xfqlittlefan.fhraise.applicationSecret
@@ -30,45 +27,26 @@ import xyz.xfqlittlefan.fhraise.models.User
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 
-internal val jwtSecret = applicationSecret.propertyOrNull("auth.jwt.secret")?.getString() ?: "secret"
-internal val jwtIssuer = applicationSecret.propertyOrNull("auth.jwt.issuer")?.getString() ?: "fhraise"
-internal val jwtAudience = applicationSecret.propertyOrNull("auth.jwt.audience")?.getString() ?: "fhraise-user"
-internal val jwtRealm = applicationSecret.propertyOrNull("auth.jwt.realm")?.getString() ?: "fhraise"
+val jwtSecret = applicationSecret.propertyOrNull("auth.jwt.secret")?.getString() ?: "secret"
+val jwtIssuer = applicationSecret.propertyOrNull("auth.jwt.issuer")?.getString() ?: "fhraise"
+val jwtAudience = applicationSecret.propertyOrNull("auth.jwt.audience")?.getString() ?: "fhraise-user"
+val jwtRealm = applicationSecret.propertyOrNull("auth.jwt.realm")?.getString() ?: "fhraise"
 
-fun AuthenticationConfig.appJwt() {
-    jwt("app") {
-        realm = jwtRealm
-        verifier(JWT.require(Algorithm.HMAC256(jwtSecret)).withIssuer(jwtIssuer).withAudience(jwtAudience).build())
-        validate { credential ->
-            if (credential.payload.getClaim("id").asString() != "") {
-                JWTPrincipal(credential.payload)
-            } else {
-                null
-            }
-        }
-    }
-}
-
-interface JwtTokenPair {
-    val accessToken: String
-    val refreshToken: String
-}
-
-suspend fun RoutingContext.generateTokenPair(user: User) = object : JwtTokenPair {
-    override val accessToken = JWT.create().run {
+fun User.generateTokenPair() = JwtTokenPair(
+    accessToken = JWT.create().run {
         withIssuer(jwtIssuer)
         withAudience(jwtAudience)
-        withClaim("id", user.id.toString())
-        withClaim("username", user.username)
-        withClaim("email", user.email)
+        withClaim("id", id.toString())
+        withClaim("username", username)
+        withClaim("email", email)
         withExpiresAt((Clock.System.now() + 15.minutes).toJavaInstant())
         sign(Algorithm.HMAC256(jwtSecret))
-    }
-    override val refreshToken = JWT.create().run {
+    },
+    refreshToken = JWT.create().run {
         withIssuer(jwtIssuer)
         withAudience(jwtAudience)
-        withClaim("id", user.id.toString())
+        withClaim("id", id.toString())
         withExpiresAt((Clock.System.now() + 30.days).toJavaInstant())
         sign(Algorithm.HMAC256(jwtSecret))
-    }
-}
+    },
+)

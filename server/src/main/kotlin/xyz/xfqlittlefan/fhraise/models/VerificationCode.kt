@@ -19,8 +19,6 @@
 package xyz.xfqlittlefan.fhraise.models
 
 import io.ktor.server.application.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -30,20 +28,15 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.html.*
-import kotlinx.html.stream.appendHTML
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.kotlin.datetime.datetime
-import org.simplejavamail.api.mailer.config.TransportStrategy
-import org.simplejavamail.email.EmailBuilder
-import org.simplejavamail.mailer.MailerBuilder
 import xyz.xfqlittlefan.fhraise.AppDatabase
 import xyz.xfqlittlefan.fhraise.applicationConfig
 import xyz.xfqlittlefan.fhraise.applicationSecret
 import xyz.xfqlittlefan.fhraise.routes.Api
-import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
@@ -75,39 +68,36 @@ class VerificationCode(id: EntityID<String>) : Entity<String>(id) {
         internal set
 }
 
-object VerificationCodeOwnerBuilder {
-    fun userOwner(uuid: UUID) = "user:$uuid"
-    fun phoneNumberOwner(phoneNumber: String) = "phone:$phoneNumber"
-    fun emailOwner(email: String) = "email:$email"
+private fun Api.Auth.Type.getOwner(credential: String) = "${type.name}:$credential"
+
+suspend fun AppDatabase.queryOrGenerateVerificationCode(
+    scope: CoroutineScope, authType: Api.Auth.Type, credential: String
+) = authType.getOwner(credential).let {
+    dbQuery {
+        VerificationCode.find { VerificationCodes.owner eq it }.firstOrNull()
+    } ?: run {
+        val newCode = dbQuery {
+            VerificationCode.new {
+                owner = it
+                code = (0 until 6).map { (0..9).random() }.joinToString("")
+                createdAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            }
+        }
+
+        scope.launch {
+            delay(verificationCodeTtl)
+
+            dbQuery {
+                newCode.delete()
+            }
+        }
+
+        newCode
+    }
 }
 
-suspend fun AppDatabase.queryVerificationCode(scope: CoroutineScope, build: VerificationCodeOwnerBuilder.() -> String) =
-    VerificationCodeOwnerBuilder.build().let {
-        dbQuery {
-            VerificationCode.find { VerificationCodes.owner eq it }.firstOrNull()
-        } ?: run {
-            val newCode = dbQuery {
-                VerificationCode.new {
-                    owner = it
-                    code = (0 until 6).map { (0..9).random() }.joinToString("")
-                    createdAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                }
-            }
-
-            scope.launch {
-                delay(verificationCodeTtl)
-
-                dbQuery {
-                    newCode.delete()
-                }
-            }
-
-            newCode
-        }
-    }
-
-suspend fun AppDatabase.verifyCode(code: String, build: VerificationCodeOwnerBuilder.() -> String) = dbQuery {
-    VerificationCode.find { VerificationCodes.owner eq VerificationCodeOwnerBuilder.build() }.firstOrNull()?.let {
+suspend fun AppDatabase.verifyCode(code: String, authType: Api.Auth.Type, credential: String) = dbQuery {
+    VerificationCode.find { VerificationCodes.owner eq authType.getOwner(credential) }.firstOrNull()?.let {
         if (it.code == code) {
             it.delete()
             true
@@ -115,36 +105,6 @@ suspend fun AppDatabase.verifyCode(code: String, build: VerificationCodeOwnerBui
             false
         }
     } ?: false
-}
-
-suspend fun RoutingCall.respondEmailVerificationCode(block: EmailVerificationCode.() -> Unit) {
-    if (!smtpReady) {
-        respond(Api.Auth.Email.Request.ResponseBody.Failure)
-        return
-    }
-
-    val config = EmailVerificationCode().apply(block)
-
-    val email = EmailBuilder.startingBlank().apply {
-        from("Fhraise", "noreply@auth.fhraise.com")
-        to(config.email)
-        withSubject("Fhraise 邮件地址验证")
-        withHTMLText(buildString {
-            appendText("<!DOCTYPE html>")
-            appendHTML().emailVerificationCode(config.code)
-            appendLine()
-        })
-    }.buildEmail()
-
-    MailerBuilder.withTransportStrategy(TransportStrategy.SMTPS)
-        .withSMTPServer(smtpServer!!, smtpPort!!, smtpUsername!!, smtpPassword!!).buildMailer().sendMail(email, true)
-
-    respond(Api.Auth.Email.Request.ResponseBody.Success)
-}
-
-class EmailVerificationCode internal constructor() {
-    lateinit var email: String
-    lateinit var code: String
 }
 
 fun TagConsumer<StringBuilder>.emailVerificationCode(code: String) = html {
