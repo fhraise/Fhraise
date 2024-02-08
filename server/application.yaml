@@ -1,0 +1,8 @@
+app:
+  database:
+    file: ./databases/app
+  verify-code:
+    ttl: 300000
+keycloak:
+  host: localhost
+  port: 11452

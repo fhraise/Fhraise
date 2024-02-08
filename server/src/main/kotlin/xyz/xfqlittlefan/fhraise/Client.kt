@@ -20,7 +20,9 @@ package xyz.xfqlittlefan.fhraise
 
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.*
 import kotlinx.serialization.json.Json
 
 val appClient = HttpClient {
@@ -30,3 +32,14 @@ val appClient = HttpClient {
         })
     }
 }
+
+val Headers.safeExplicitness
+    get() = filter { key, _ ->
+        !key.equals(
+            HttpHeaders.TransferEncoding, ignoreCase = true
+        ) && !key.equals(
+            HttpHeaders.ContentType, ignoreCase = true
+        ) && !key.equals(
+            HttpHeaders.ContentLength, ignoreCase = true
+        )
+    }

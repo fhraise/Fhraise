@@ -40,7 +40,7 @@ import kotlinx.serialization.Serializable
 import xyz.xfqlittlefan.fhraise.AppDatabase
 import xyz.xfqlittlefan.fhraise.appClient
 import xyz.xfqlittlefan.fhraise.appDatabase
-import xyz.xfqlittlefan.fhraise.applicationSecret
+import xyz.xfqlittlefan.fhraise.appSecret
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.auth.generateTokenPair
 import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
@@ -86,10 +86,10 @@ fun AuthenticationConfig.appOAuth() {
                     accessTokenUrl = provider.accessTokenUrl,
                     requestMethod = HttpMethod.Post,
                     clientId = provider.clientId,
-                    clientSecret = applicationSecret.propertyOrNull("auth.oauth.${provider.name.lowercase(Locale.US)}.client-secret")
+                    clientSecret = appSecret.propertyOrNull("auth.oauth.${provider.name.lowercase(Locale.US)}.client-secret")
                         ?.getString() ?: "client-secret",
                     nonceManager = StatelessHmacNonceManager(
-                        applicationSecret.propertyOrNull("auth.oauth.${provider.name.lowercase(Locale.US)}.nonce-secret")
+                        appSecret.propertyOrNull("auth.oauth.${provider.name.lowercase(Locale.US)}.nonce-secret")
                             ?.getString()?.toByteArray() ?: "nonce-secret".toByteArray()
                     ),
                     authorizeUrlInterceptor = provider.authorizeUrlInterceptor,

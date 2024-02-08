@@ -1,3 +1,0 @@
-app:
-  verify-code:
-    ttl: 300000

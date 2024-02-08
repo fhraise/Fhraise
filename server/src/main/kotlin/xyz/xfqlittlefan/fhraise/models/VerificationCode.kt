@@ -31,20 +31,20 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import xyz.xfqlittlefan.fhraise.AppDatabase
+import xyz.xfqlittlefan.fhraise.appConfig
 import xyz.xfqlittlefan.fhraise.appDatabase
-import xyz.xfqlittlefan.fhraise.applicationConfig
-import xyz.xfqlittlefan.fhraise.applicationSecret
+import xyz.xfqlittlefan.fhraise.appSecret
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
-val verificationCodeTtl = applicationConfig.propertyOrNull("app.verify-code.ttl")?.getString()?.toLongOrNull()
-    ?: 5.minutes.inWholeMilliseconds
+val verificationCodeTtl =
+    appConfig.propertyOrNull("app.verify-code.ttl")?.getString()?.toLongOrNull() ?: 5.minutes.inWholeMilliseconds
 
-val smtpServer = applicationSecret.propertyOrNull("auth.email.smtp.server")?.getString()
-val smtpPort = smtpServer?.let { applicationSecret.propertyOrNull("auth.email.smtp.port")?.getString()?.toIntOrNull() }
-val smtpUsername = smtpPort?.let { applicationSecret.propertyOrNull("auth.email.smtp.username")?.getString() }
-val smtpPassword = smtpUsername?.let { applicationSecret.propertyOrNull("auth.email.smtp.password")?.getString() }
+val smtpServer = appSecret.propertyOrNull("auth.email.smtp.server")?.getString()
+val smtpPort = smtpServer?.let { appSecret.propertyOrNull("auth.email.smtp.port")?.getString()?.toIntOrNull() }
+val smtpUsername = smtpPort?.let { appSecret.propertyOrNull("auth.email.smtp.username")?.getString() }
+val smtpPassword = smtpUsername?.let { appSecret.propertyOrNull("auth.email.smtp.password")?.getString() }
 val smtpReady = smtpPassword != null
 
 object VerificationCodes : IdTable<String>() {

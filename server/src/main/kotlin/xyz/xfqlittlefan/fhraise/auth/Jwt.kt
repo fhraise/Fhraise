@@ -22,15 +22,15 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import kotlinx.datetime.Clock
 import kotlinx.datetime.toJavaInstant
-import xyz.xfqlittlefan.fhraise.applicationSecret
+import xyz.xfqlittlefan.fhraise.appSecret
 import xyz.xfqlittlefan.fhraise.models.User
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 
-val jwtSecret = applicationSecret.propertyOrNull("auth.jwt.secret")?.getString() ?: "secret"
-val jwtIssuer = applicationSecret.propertyOrNull("auth.jwt.issuer")?.getString() ?: "fhraise"
-val jwtAudience = applicationSecret.propertyOrNull("auth.jwt.audience")?.getString() ?: "fhraise-user"
-val jwtRealm = applicationSecret.propertyOrNull("auth.jwt.realm")?.getString() ?: "fhraise"
+val jwtSecret = appSecret.propertyOrNull("auth.jwt.secret")?.getString() ?: "secret"
+val jwtIssuer = appSecret.propertyOrNull("auth.jwt.issuer")?.getString() ?: "fhraise"
+val jwtAudience = appSecret.propertyOrNull("auth.jwt.audience")?.getString() ?: "fhraise-user"
+val jwtRealm = appSecret.propertyOrNull("auth.jwt.realm")?.getString() ?: "fhraise"
 
 fun User.generateTokenPair() = JwtTokenPair(
     accessToken = JWT.create().run {

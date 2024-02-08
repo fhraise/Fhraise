@@ -35,6 +35,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import xyz.xfqlittlefan.fhraise.api.*
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
+import xyz.xfqlittlefan.fhraise.proxy.proxyKeycloak
 
 fun main() {
     embeddedServer(CIO, port = DefaultServerPort, host = "0.0.0.0", module = Application::module).start(wait = true)
@@ -64,13 +65,13 @@ fun Application.module() {
     cleanupVerificationCodes()
 
     routing {
+        proxyKeycloak()
         cborContentType {
             apiAuth()
         }
-
         apiOAuth()
     }
 }
 
-val applicationConfig = ApplicationConfig("application.yaml")
-val applicationSecret = ApplicationConfig("secret.yaml")
+val appConfig = ApplicationConfig("application.yaml")
+val appSecret = ApplicationConfig("secret.yaml")

@@ -43,7 +43,8 @@ class AppDatabase private constructor(private val database: Database) {
 
         private fun createHikariDataSource() = HikariDataSource(HikariConfig().apply {
             driverClassName = "org.h2.Driver"
-            jdbcUrl = "jdbc:h2:file:./db"
+            jdbcUrl =
+                "jdbc:h2:file:" + (appConfig.propertyOrNull("app.database.file")?.getString() ?: "./databases/app")
             maximumPoolSize = 3
             isAutoCommit = false
             transactionIsolation = "TRANSACTION_REPEATABLE_READ"
