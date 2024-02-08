@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import xyz.xfqlittlefan.fhraise.DefaultServerPort
 import xyz.xfqlittlefan.fhraise.asMutableState
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.componentScope
@@ -172,6 +173,7 @@ fun SignInComponent.SignIn() {
                                             selected = credentialType == it,
                                             onClick = it.use,
                                             label = { Text(text = "使用${it.displayName}") },
+                                            enabled = step == EnteringCredential,
                                         )
                                     }
                                 }
@@ -279,7 +281,7 @@ fun SignInComponent.SignIn() {
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = port.toString(),
-                        onValueChange = { port = it.toIntOrNull() ?: 8080 },
+                        onValueChange = { port = it.toIntOrNull() ?: DefaultServerPort },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
                         ),
