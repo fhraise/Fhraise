@@ -27,19 +27,33 @@ import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 class Api {
     @Resource("auth")
     class Auth(val parent: Api = Api()) {
-        @Resource("{type}")
-        class Type(val parent: Auth = Auth(), val type: Enum) {
+        @Resource("{credentialType}")
+        class Type(
+            val parent: Auth = Auth(), val credentialType: CredentialType
+        ) {
             @Resource("request")
-            class Request(val parent: Type) {
+            class Request(val parent: Type, val type: VerificationType) {
                 @Serializable
                 data class RequestBody(val credential: String, val dry: Boolean = false)
 
                 @Serializable
-                enum class ResponseBody { Success, InvalidCredential, Failure }
+                sealed class ResponseBody {
+                    @Serializable
+                    data class Success(val token: String)
+
+                    @Serializable
+                    data object InvalidCredential
+
+                    @Serializable
+                    data object Failure
+                }
+
+                @Serializable
+                enum class VerificationType { VerificationCode, Password }
             }
 
             @Resource("verify")
-            class Verify(val parent: Type) {
+            class Verify(val parent: Type, val token: String) {
                 @Serializable
                 data class RequestBody(val credential: String, val verification: String)
 
@@ -48,7 +62,16 @@ class Api {
             }
 
             @Serializable
-            enum class Enum { Username, PhoneNumber, Email }
+            enum class CredentialType { Username, PhoneNumber, Email }
+        }
+
+        companion object {
+            const val CALLBACK = "/api/auth/callback"
+        }
+
+        object Query {
+            const val REQUEST_ID = "rid"
+            const val CALLBACK_PORT = "prt"
         }
     }
 
@@ -56,11 +79,6 @@ class Api {
     class OAuth {
         object Socket {
             const val PATH = "/api/oauth/socket"
-
-            object Query {
-                const val REQUEST_ID = "rid"
-                const val CALLBACK_PORT = "prt"
-            }
 
             @Serializable
             data class ClientMessage(val provider: Provider, val port: UShort, val sendDeepLink: Boolean = false)

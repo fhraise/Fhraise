@@ -31,15 +31,10 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import xyz.xfqlittlefan.fhraise.AppDatabase
-import xyz.xfqlittlefan.fhraise.appConfig
+import xyz.xfqlittlefan.fhraise.api.appAuthTimeout
 import xyz.xfqlittlefan.fhraise.appDatabase
 import xyz.xfqlittlefan.fhraise.appSecret
 import xyz.xfqlittlefan.fhraise.routes.Api
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
-
-val verificationCodeTtl =
-    appConfig.propertyOrNull("app.verify-code.ttl")?.getString()?.toLongOrNull() ?: 5.minutes.inWholeMilliseconds
 
 val smtpServer = appSecret.propertyOrNull("auth.email.smtp.server")?.getString()
 val smtpPort = smtpServer?.let { appSecret.propertyOrNull("auth.email.smtp.port")?.getString()?.toIntOrNull() }
@@ -47,18 +42,18 @@ val smtpUsername = smtpPort?.let { appSecret.propertyOrNull("auth.email.smtp.use
 val smtpPassword = smtpUsername?.let { appSecret.propertyOrNull("auth.email.smtp.password")?.getString() }
 val smtpReady = smtpPassword != null
 
-object VerificationCodes : IdTable<String>() {
-    val owner = text("owner")
+object VerificationCodes : IdTable<Int>() {
+    val tokenHash = integer("token_hash")
     val code = char("code", 6)
     val createdAt = timestamp("created_at")
-    override val id = owner.entityId()
-    override val primaryKey = PrimaryKey(owner)
+    override val id = tokenHash.entityId()
+    override val primaryKey = PrimaryKey(tokenHash)
 }
 
-class VerificationCode(id: EntityID<String>) : Entity<String>(id) {
-    companion object : EntityClass<String, VerificationCode>(VerificationCodes)
+class VerificationCode(id: EntityID<Int>) : Entity<Int>(id) {
+    companion object : EntityClass<Int, VerificationCode>(VerificationCodes)
 
-    var owner by VerificationCodes.owner
+    var tokenHash by VerificationCodes.tokenHash
         internal set
     var code by VerificationCodes.code
         internal set
@@ -66,36 +61,25 @@ class VerificationCode(id: EntityID<String>) : Entity<String>(id) {
         internal set
 }
 
-private fun Api.Auth.Type.getOwner(credential: String) = "${type.name}:$credential"
+private fun Api.Auth.Type.getOwner(credential: String) = "${credentialType.name}:$credential"
 
-suspend fun AppDatabase.queryOrGenerateVerificationCode(
-    scope: CoroutineScope, authType: Api.Auth.Type, credential: String
-) = authType.getOwner(credential).let {
-    dbQuery {
-        VerificationCode.find { VerificationCodes.owner eq it }.firstOrNull()
-    } ?: run {
-        val newCode = dbQuery {
-            VerificationCode.new {
-                owner = it
-                code = (0 until 6).map { (0..9).random() }.joinToString("")
-                createdAt = Clock.System.now()
-            }
-        }
-
-        scope.launch {
-            delay(verificationCodeTtl)
-
-            dbQuery {
-                newCode.delete()
-            }
-        }
-
-        newCode
+suspend fun AppDatabase.queryOrGenerateVerificationCode(scope: CoroutineScope, tokenHash: Int) = dbQuery {
+    VerificationCode.find { VerificationCodes.tokenHash eq tokenHash }.firstOrNull()
+} ?: dbQuery {
+    VerificationCode.new {
+        this.tokenHash = tokenHash
+        code = (0 until 6).map { (0..9).random() }.joinToString("")
+        createdAt = Clock.System.now()
+    }
+}.also {
+    scope.launch {
+        delay(appAuthTimeout)
+        dbQuery { it.delete() }
     }
 }
 
-suspend fun AppDatabase.verifyCode(code: String, authType: Api.Auth.Type, credential: String) = dbQuery {
-    VerificationCode.find { VerificationCodes.owner eq authType.getOwner(credential) }.firstOrNull()?.let {
+suspend fun AppDatabase.verifyCode(tokenHash: Int, code: String) = dbQuery {
+    VerificationCode.find { VerificationCodes.tokenHash eq tokenHash }.firstOrNull()?.let {
         if (it.code == code) {
             it.delete()
             true
@@ -194,13 +178,12 @@ fun TagConsumer<StringBuilder>.emailVerificationCode(code: String) = html {
 
 fun Application.cleanupVerificationCodes() {
     launch(Dispatchers.IO) {
-        log.trace("Cleaning up expired verification codes, ttl: $verificationCodeTtl")
+        log.trace("Cleaning up expired verification codes, ttl: $appAuthTimeout")
         appDatabase.dbQuery {
-            VerificationCode.find { VerificationCodes.createdAt less (Clock.System.now() - verificationCodeTtl.milliseconds) }
-                .forEach {
-                    log.trace("Deleting expired verification code for owner {}", it.owner)
-                    it.delete()
-                }
+            VerificationCode.find { VerificationCodes.createdAt less (Clock.System.now() - appAuthTimeout) }.forEach {
+                log.trace("Deleting expired verification code for token {}", it.tokenHash)
+                it.delete()
+            }
         }
         log.trace("Finished cleaning up expired verification codes")
     }

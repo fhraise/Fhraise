@@ -53,12 +53,12 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import xyz.xfqlittlefan.fhraise.DefaultServerPort
-import xyz.xfqlittlefan.fhraise.asMutableState
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
+import xyz.xfqlittlefan.fhraise.rememberMutableState
 import xyz.xfqlittlefan.fhraise.ui.AnimationValue
 import xyz.xfqlittlefan.fhraise.ui.DensityScope
 import xyz.xfqlittlefan.fhraise.ui.WindowSizeClass
@@ -259,8 +259,8 @@ fun SignInComponent.SignIn() {
     }
 
     if (showServerSettings) {
-        var host by serverHost.asMutableState()
-        var port by serverPort.asMutableState()
+        var host by serverHost.rememberMutableState()
+        var port by serverPort.rememberMutableState()
 
         AlertDialog(
             onDismissRequest = ::hideServerSettings,

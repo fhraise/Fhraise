@@ -43,20 +43,22 @@ application {
 
 dependencies {
     implementation(projects.shared)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
-    implementation(libs.ktor.server.sessions)
     implementation(libs.ktor.server.config.yaml)
+    implementation(libs.ktor.server.sessions)
     implementation(libs.ktor.server.call.id)
     implementation(libs.ktor.server.resources)
     implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.auth)
-    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.ktor.server.auth.jwt) // TODO: Remove
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.server.html.builder)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.auth)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.cbor)
     implementation(libs.ktor.serialization.kotlinx.json)
@@ -67,8 +69,8 @@ dependencies {
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.kotlin.datetime)
     implementation(libs.h2)
-    implementation(libs.bcrypt)
-    implementation(libs.mail)
+    implementation(libs.bcrypt) // TODO: Remove
+    implementation(libs.mail) // TODO: Remove
     implementation(libs.logback)
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.ktor.server.tests)

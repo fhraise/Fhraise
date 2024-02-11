@@ -36,8 +36,8 @@ open class PreferenceStateFlow<K, V>(
     private val scope: CoroutineScope,
     private val store: DataStore<Preferences>,
     private val key: Preferences.Key<K>,
-    @Suppress("UNCHECKED_CAST") transform: (K) -> V = { it as V },
-    @Suppress("UNCHECKED_CAST") private val restore: (V) -> K = { it as K },
+    transform: (K) -> V,
+    private val restore: (V) -> K,
     defaultValue: V
 ) : PreferenceStateFlowBase<V>(MutableStateFlow(defaultValue)), ReadWriteProperty<Any?, V> {
     init {
@@ -62,6 +62,10 @@ open class PreferenceStateFlow<K, V>(
         this.value = value
     }
 }
+
+fun <T> PreferenceStateFlow(
+    scope: CoroutineScope, store: DataStore<Preferences>, key: Preferences.Key<T>, defaultValue: T
+) = PreferenceStateFlow(scope, store, key, { it }, { it }, defaultValue)
 
 private operator fun <T> Flow<Preferences>.get(key: Preferences.Key<T>) = map { it[key] }
 private operator fun <T, R> Flow<T?>.invoke(transform: (T) -> R?) = this.transform(transform)

@@ -70,13 +70,13 @@ fun AuthenticationConfig.appOAuth() {
         oauth(provider.name) {
             urlProvider = {
                 url {
-                    val requestId = request.queryParameters[Api.OAuth.Socket.Query.REQUEST_ID] ?: ""
+                    val requestId = request.queryParameters[Api.Auth.Query.REQUEST_ID] ?: ""
                     host = "localhost"
-                    port = request.queryParameters[Api.OAuth.Socket.Query.CALLBACK_PORT]?.toIntOrNull() ?: DEFAULT_PORT
+                    port = request.queryParameters[Api.Auth.Query.CALLBACK_PORT]?.toIntOrNull() ?: DEFAULT_PORT
                     path(provider.callback)
                     parameters.clear()
-                    parameters[Api.OAuth.Socket.Query.REQUEST_ID] = requestId
-                    parameters[Api.OAuth.Socket.Query.CALLBACK_PORT] = port.toString()
+                    parameters[Api.Auth.Query.REQUEST_ID] = requestId
+                    parameters[Api.Auth.Query.CALLBACK_PORT] = port.toString()
                 }
             }
             providerLookup = {
@@ -112,7 +112,7 @@ fun Route.apiOAuth() {
         authenticate(provider.name, optional = true) {
             get(provider.callback) {
                 val principal = call.authentication.principal<OAuthAccessTokenResponse.OAuth2>()
-                val requestId = call.queryParameters[Api.OAuth.Socket.Query.REQUEST_ID]
+                val requestId = call.queryParameters[Api.Auth.Query.REQUEST_ID]
                 val response = async(start = CoroutineStart.UNDISPATCHED) {
                     select<suspend RoutingContext.(JwtTokenPair?) -> Unit> {
                         async {
@@ -189,8 +189,8 @@ private fun Route.apiOAuthWebsocket() {
             host = call.request.origin.localAddress
             port = call.request.origin.localPort
             path(Api.OAuth.Provider.Microsoft.api)
-            parameters[Api.OAuth.Socket.Query.REQUEST_ID] = requestId
-            parameters[Api.OAuth.Socket.Query.CALLBACK_PORT] = clientMessage.port.toString()
+            parameters[Api.Auth.Query.REQUEST_ID] = requestId
+            parameters[Api.Auth.Query.CALLBACK_PORT] = clientMessage.port.toString()
         })
 
         delay(5.minutes)

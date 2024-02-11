@@ -33,7 +33,9 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
-import xyz.xfqlittlefan.fhraise.api.*
+import xyz.xfqlittlefan.fhraise.api.apiAuth
+import xyz.xfqlittlefan.fhraise.api.appAuth
+import xyz.xfqlittlefan.fhraise.api.registerAppCodeVerification
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
 import xyz.xfqlittlefan.fhraise.proxy.proxyKeycloak
 
@@ -53,7 +55,7 @@ fun Application.module() {
 
     authentication {
         appAuth()
-        appOAuth()
+//        appOAuth()
     }
 
     install(ContentNegotiation) { cbor() }
@@ -69,7 +71,7 @@ fun Application.module() {
         cborContentType {
             apiAuth()
         }
-        apiOAuth()
+//        apiOAuth()
     }
 }
 

@@ -47,8 +47,10 @@ fun Route.proxyKeycloak() {
                 headers.appendAll(call.request.headers)
                 headers.remove(HttpHeaders.TransferEncoding)
                 headers[HttpHeaders.Host] = "$keycloakHost:$keycloakPort"
-                headers[HttpHeaders.Forwarded] =
+                headers.append(
+                    HttpHeaders.Forwarded,
                     "for=${call.request.local.remoteHost};host=${call.request.headers[HttpHeaders.Host] ?: ""};proto=${call.request.local.scheme}"
+                )
                 application.log.trace("Headers: {}", headers.entries())
                 body = call.receive()
             }.let { response ->

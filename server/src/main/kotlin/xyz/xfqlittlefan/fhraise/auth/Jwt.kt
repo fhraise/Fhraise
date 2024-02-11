@@ -19,34 +19,57 @@
 package xyz.xfqlittlefan.fhraise.auth
 
 import com.auth0.jwt.JWT
+import com.auth0.jwt.JWTCreator
 import com.auth0.jwt.algorithms.Algorithm
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.toJavaInstant
 import xyz.xfqlittlefan.fhraise.appSecret
 import xyz.xfqlittlefan.fhraise.models.User
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 
-val jwtSecret = appSecret.propertyOrNull("auth.jwt.secret")?.getString() ?: "secret"
+private val jwtSecret = appSecret.propertyOrNull("auth.jwt.secret")?.getString() ?: "secret"
 val jwtIssuer = appSecret.propertyOrNull("auth.jwt.issuer")?.getString() ?: "fhraise"
 val jwtAudience = appSecret.propertyOrNull("auth.jwt.audience")?.getString() ?: "fhraise-user"
 val jwtRealm = appSecret.propertyOrNull("auth.jwt.realm")?.getString() ?: "fhraise"
 
+/**
+ * 创建一个包含默认签发者和受众的 JWT token。
+ *
+ * @param builder 配置这个 JWT token 的构造器。
+ * @return 生成的 JWT token。
+ *
+ * @throws com.auth0.jwt.exceptions.JWTCreationException 如果构造 JWT token 时发生错误。
+ *
+ * @see JWTCreator.Builder
+ * @see JWTCreator.Builder.sign
+ */
+fun jwt(builder: JWTCreator.Builder.() -> Unit): String = JWT.create().apply {
+    withIssuer(jwtIssuer)
+    withAudience(jwtAudience)
+    builder()
+}.sign(Algorithm.HMAC256(jwtSecret))
+
 fun User.generateTokenPair() = JwtTokenPair(
-    accessToken = JWT.create().run {
-        withIssuer(jwtIssuer)
-        withAudience(jwtAudience)
+    accessToken = jwt {
+        withIssuedAtNow()
+        withExpiresIn(15.minutes)
         withClaim("id", id.toString())
         withClaim("username", username)
         withClaim("email", email)
-        withExpiresAt((Clock.System.now() + 15.minutes).toJavaInstant())
-        sign(Algorithm.HMAC256(jwtSecret))
     },
-    refreshToken = JWT.create().run {
-        withIssuer(jwtIssuer)
-        withAudience(jwtAudience)
+    refreshToken = jwt {
+        withIssuedAtNow()
+        withExpiresIn(30.days)
         withClaim("id", id.toString())
-        withExpiresAt((Clock.System.now() + 30.days).toJavaInstant())
-        sign(Algorithm.HMAC256(jwtSecret))
     },
 )
+
+fun JWTCreator.Builder.withIssuedAtNow(): JWTCreator.Builder = withIssuedAt(Clock.System.now().toJavaInstant())
+
+fun JWTCreator.Builder.withExpiresAt(instant: Instant): JWTCreator.Builder = withExpiresAt(instant.toJavaInstant())
+
+fun JWTCreator.Builder.withExpiresIn(duration: Duration): JWTCreator.Builder =
+    withExpiresAt(Clock.System.now() + duration)

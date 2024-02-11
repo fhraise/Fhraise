@@ -18,36 +18,46 @@
 
 package xyz.xfqlittlefan.fhraise.api
 
-import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
 import com.sanctionco.jmail.JMail
+import io.ktor.client.*
+import io.ktor.http.*
 import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
+import io.ktor.server.plugins.callid.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.util.*
+import io.ktor.util.*
 import io.ktor.utils.io.*
+import kotlinx.coroutines.future.await
 import kotlinx.html.stream.appendHTML
 import org.simplejavamail.api.mailer.config.TransportStrategy
 import org.simplejavamail.email.EmailBuilder
 import org.simplejavamail.mailer.MailerBuilder
+import xyz.xfqlittlefan.fhraise.appConfig
 import xyz.xfqlittlefan.fhraise.appDatabase
-import xyz.xfqlittlefan.fhraise.auth.jwtAudience
-import xyz.xfqlittlefan.fhraise.auth.jwtIssuer
-import xyz.xfqlittlefan.fhraise.auth.jwtRealm
-import xyz.xfqlittlefan.fhraise.auth.jwtSecret
+import xyz.xfqlittlefan.fhraise.appSecret
+import xyz.xfqlittlefan.fhraise.auth.jwt
+import xyz.xfqlittlefan.fhraise.auth.withExpiresIn
 import xyz.xfqlittlefan.fhraise.models.*
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
+import xyz.xfqlittlefan.fhraise.proxy.keycloakHost
+import xyz.xfqlittlefan.fhraise.proxy.keycloakPort
 import xyz.xfqlittlefan.fhraise.routes.Api
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 private const val authName = "app"
 private val rateLimitName = RateLimitName("app-code-authentication")
 
-private val verifier = JWT.require(Algorithm.HMAC256(jwtSecret)).withIssuer(jwtIssuer).withAudience(jwtAudience).build()
+val appAuthTimeout =
+    appConfig.propertyOrNull("app.auth.timeout")?.getString()?.toLongOrNull()?.milliseconds ?: 5.minutes
+
+val oAuthApiClient = HttpClient()
 
 fun RateLimitConfig.registerAppCodeVerification() {
     register(rateLimitName) {
@@ -56,16 +66,35 @@ fun RateLimitConfig.registerAppCodeVerification() {
 }
 
 fun AuthenticationConfig.appAuth() {
-    jwt(authName) {
-        realm = jwtRealm
-        verifier(verifier)
-        validate { credential ->
-            if (credential.payload.getClaim("id").asString() != "") {
-                JWTPrincipal(credential.payload)
-            } else {
-                null
+    oauth(authName) {
+        urlProvider = {
+            url {
+                val requestId = request.queryParameters[Api.Auth.Query.REQUEST_ID] ?: ""
+                host = "localhost"
+                port = request.queryParameters[Api.Auth.Query.CALLBACK_PORT]?.toIntOrNull() ?: DEFAULT_PORT
+                path(Api.Auth.CALLBACK)
+                parameters.clear()
+                parameters[Api.Auth.Query.REQUEST_ID] = requestId
+                parameters[Api.Auth.Query.CALLBACK_PORT] = port.toString()
             }
         }
+        providerLookup = {
+            OAuthServerSettings.OAuth2ServerSettings(
+                name = "fhraise",
+                authorizeUrl = "http://$keycloakHost:$keycloakPort/auth/realms/fhraise/protocol/openid-connect/auth",
+                accessTokenUrl = "http://$keycloakHost:$keycloakPort/auth/realms/fhraise/protocol/openid-connect/token",
+                requestMethod = HttpMethod.Post,
+                clientId = "fhraise",
+                clientSecret = appSecret.propertyOrNull("auth.keycloak.app.client-secret")?.getString()
+                    ?: "client-secret",
+                nonceManager = StatelessHmacNonceManager(
+                    key = (appSecret.propertyOrNull("auth.keycloak.app.nonce-secret")?.getString()
+                        ?: "nonce-secret").toByteArray(),
+                    timeoutMillis = appAuthTimeout.inWholeMilliseconds,
+                ),
+            )
+        }
+        client = oAuthApiClient
     }
 }
 
@@ -79,67 +108,99 @@ fun Route.apiAuth() {
     apiAuthVerify()
 }
 
-private fun Route.apiAuthRequest() = post<Api.Auth.Type.Request> {
-    val req = call.receive<Api.Auth.Type.Request.RequestBody>()
+private fun Route.apiAuthRequest() = post<Api.Auth.Type.Request> { req ->
+    val body = call.receive<Api.Auth.Type.Request.RequestBody>()
 
-    if (!it.parent.validate(req.credential)) {
+    val requestId = call.callId
+
+    if (requestId == null) {
+        call.respond(Api.Auth.Type.Request.ResponseBody.Failure)
+        return@post
+    }
+
+    if (!req.parent.validate(body.credential)) {
         call.respond(Api.Auth.Type.Request.ResponseBody.InvalidCredential)
         return@post
     }
 
-    val code = appDatabase.queryOrGenerateVerificationCode(this, it.parent, req.credential)
-
-    if (req.dry) {
-        call.respond(Api.Auth.Type.Request.ResponseBody.Success)
-        return@post
+    val token = jwt {
+        withExpiresIn(appAuthTimeout)
+        withClaim(jwtClaimRequestId, requestId)
+        withClaim(jwtClaimType, "${req.parent.credentialType}:${req.type}".hashCode())
+        withClaim(jwtClaimCredential, body.credential.hashCode())
     }
 
-    call.respondVerificationCode(it, req.credential, code.code)
+    when (req.type) {
+        Api.Auth.Type.Request.VerificationType.VerificationCode -> {
+
+            val code = appDatabase.queryOrGenerateVerificationCode(this, token.hashCode())
+
+            if (body.dry) {
+                call.respondSuccess(token)
+                return@post
+            }
+
+            if (sendVerificationCode(req, body.credential, code.code)) {
+                call.respondSuccess(token)
+            } else {
+                call.respond(Api.Auth.Type.Request.ResponseBody.Failure)
+            }
+        }
+
+        Api.Auth.Type.Request.VerificationType.Password -> call.respondSuccess(token)
+    }
 }
 
-private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> {
-    val req = call.receive<Api.Auth.Type.Verify.RequestBody>()
+private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
+    val body = call.receive<Api.Auth.Type.Verify.RequestBody>()
 
-    if (it.parent.validate(req.credential) && appDatabase.verifyCode(req.verification, it.parent, req.credential)) {
+    if (req.parent.validate(body.credential) && appDatabase.verifyCode(req.token.hashCode(), body.credential)) {
         call.respond(Api.Auth.Type.Verify.ResponseBody.Success)
     } else {
         call.respond(Api.Auth.Type.Verify.ResponseBody.Failure)
     }
 }
 
-private fun Api.Auth.Type.validate(credential: String) = when (type) {
-    Api.Auth.Type.Enum.Username -> credential.matches(usernameRegex)
-    Api.Auth.Type.Enum.PhoneNumber -> credential.matches(phoneNumberRegex)
-    Api.Auth.Type.Enum.Email -> JMail.strictValidator().isValid(credential)
+private fun Api.Auth.Type.validate(credential: String) = when (credentialType) {
+    Api.Auth.Type.CredentialType.Username -> credential.matches(usernameRegex)
+    Api.Auth.Type.CredentialType.PhoneNumber -> credential.matches(phoneNumberRegex)
+    Api.Auth.Type.CredentialType.Email -> JMail.strictValidator().isValid(credential)
 }
 
-private suspend fun RoutingCall.respondVerificationCode(
-    request: Api.Auth.Type.Request, credential: String, code: String
-) = when (request.parent.type) {
-    Api.Auth.Type.Enum.Username -> respond(Api.Auth.Type.Request.ResponseBody.Failure)
-    Api.Auth.Type.Enum.PhoneNumber -> respond(Api.Auth.Type.Request.ResponseBody.Failure)
-    Api.Auth.Type.Enum.Email -> respondEmailVerificationCode(credential, code)
-}
+private suspend fun sendVerificationCode(request: Api.Auth.Type.Request, credential: String, code: String) =
+    when (request.parent.credentialType) {
+        Api.Auth.Type.CredentialType.Username -> false
+        Api.Auth.Type.CredentialType.PhoneNumber -> false
+        Api.Auth.Type.CredentialType.Email -> sendEmailVerificationCode(credential, code)
+    }
 
-suspend fun RoutingCall.respondEmailVerificationCode(emailAddress: String, code: String) {
+private suspend fun sendEmailVerificationCode(emailAddress: String, code: String): Boolean {
     if (!smtpReady) {
-        respond(Api.Auth.Type.Request.ResponseBody.Failure)
-        return
+        return false
     }
 
     val email = EmailBuilder.startingBlank().apply {
-        from("Fhraise", "noreply@auth.fhraise.com")
+        from("Fhraise", smtpUsername!!)
         to(emailAddress)
         withSubject("Fhraise 邮件地址验证")
         withHTMLText(buildString {
-            appendText("<!DOCTYPE html>")
+            append("<!DOCTYPE html>")
             appendHTML().emailVerificationCode(code)
-            appendLine()
         })
     }.buildEmail()
 
-    MailerBuilder.withTransportStrategy(TransportStrategy.SMTPS)
-        .withSMTPServer(smtpServer!!, smtpPort!!, smtpUsername!!, smtpPassword!!).buildMailer().sendMail(email, true)
+    runCatching {
+        MailerBuilder.withTransportStrategy(TransportStrategy.SMTPS)
+            .withSMTPServer(smtpServer!!, smtpPort!!, smtpUsername!!, smtpPassword!!).buildMailer()
+            .sendMail(email, true).await()
+    }.onFailure { return false }
 
-    respond(Api.Auth.Type.Request.ResponseBody.Success)
+    return true
 }
+
+private const val jwtClaimRequestId = "rid"
+private const val jwtClaimType = "typ"
+private const val jwtClaimCredential = "crd"
+
+private suspend fun RoutingCall.respondSuccess(token: String) =
+    respond(Api.Auth.Type.Request.ResponseBody.Success(token))
