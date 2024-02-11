@@ -18,45 +18,66 @@
 
 package xyz.xfqlittlefan.fhraise.models
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
-import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
-import org.jetbrains.exposed.sql.Column
-import xyz.xfqlittlefan.fhraise.AppDatabase
-import java.util.*
+import kotlinx.serialization.Serializable
 
-object Users : UUIDTable() {
-    val username = varchar("username", 16).nullable().uniqueIndex()
-    val name = text("name").nullable()
-    val email = text("email").nullable().uniqueIndex()
-    val phoneNumber = char("phone_number", 11).nullable().uniqueIndex()
-    val password = varchar("password", 72).nullable()
-    val google = text("google").nullable().uniqueIndex()
-    val microsoft = text("microsoft").nullable().uniqueIndex()
+data class UserQuery(var username: String? = null, var phoneNumber: String? = null, var email: String? = null) {
+    val generatedUsername
+        get() = username ?: email ?: phoneNumber ?: error("No username, phone number, or email provided")
 }
 
-class User(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<User>(Users)
+@Serializable
+data class UserRepresentation(
+    var access: Map<String, Boolean>? = null,
+    var attributes: Map<String, List<String>>? = null,
+    var clientConsents: List<UserConsentRepresentation>? = null,
+    var clientRoles: Map<String, List<String>>? = null,
+    var createdTimestamp: Long? = null,
+    var credentials: List<CredentialRepresentation>? = null,
+    var disableableCredentialTypes: List<String>? = null,
+    var email: String? = null,
+    var emailVerified: Boolean? = null,
+    var enabled: Boolean? = null,
+    var federatedIdentities: List<FederatedIdentityRepresentation>? = null,
+    var federationLink: String? = null,
+    var firstName: String? = null,
+    var groups: List<String>? = null,
+    var id: String? = null,
+    var lastName: String? = null,
+    var notBefore: Int? = null,
+    var origin: String? = null,
+    var realmRoles: List<String>? = null,
+    var requiredActions: List<String>? = null,
+    var self: String? = null,
+    var serviceAccountClientId: String? = null,
+    var username: String? = null
+)
 
-    var username by Users.username
-    var name by Users.name
-    var email by Users.email
-    var phoneNumber by Users.phoneNumber
-    var password by Users.password
-    var google by Users.google
-    var microsoft by Users.microsoft
-}
+@Serializable
+data class UserConsentRepresentation(
+    var clientId: String? = null,
+    var createDate: Long? = null,
+    var grantedClientScopes: List<String>? = null,
+    var lastUpdatedDate: Long? = null
+)
 
-suspend fun <T> AppDatabase.getOrCreateUser(column: Column<T>, value: T): User = dbQuery {
-    User.find { column eq value }.firstOrNull() ?: User.new {
-        when (column) {
-            Users.username -> username = value as String
-            Users.email -> email = value as String
-            Users.phoneNumber -> phoneNumber = value as String
-            Users.google -> google = value as String
-            Users.microsoft -> microsoft = value as String
-            else -> error("Not a valid column")
-        }
-    }
-}
+@Serializable
+data class CredentialRepresentation(
+    var algorithm: String? = null,
+    var config: Map<String, String>? = null,
+    var counter: Int? = null,
+    var createdDate: Long? = null,
+    var device: String? = null,
+    var digits: Int? = null,
+    var hashIterations: Int? = null,
+    var hashedSaltedvarue: String? = null,
+    var period: Int? = null,
+    var salt: String? = null,
+    var temporary: Boolean? = null,
+    var type: String? = null,
+    var varue: String? = null
+)
+
+@Serializable
+data class FederatedIdentityRepresentation(
+    var identityProvider: String? = null, var userId: String? = null, var userName: String? = null
+)

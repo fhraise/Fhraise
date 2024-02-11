@@ -28,12 +28,13 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.utils.io.*
 import xyz.xfqlittlefan.fhraise.appConfig
-import xyz.xfqlittlefan.fhraise.safeExplicitness
+import xyz.xfqlittlefan.fhraise.http.safeExplicitness
 
 private val keycloakProxyClient = HttpClient {
     followRedirects = false
 }
 
+val keycloakScheme = appConfig.propertyOrNull("keycloak.scheme")?.getString() ?: "http"
 val keycloakHost = appConfig.propertyOrNull("keycloak.host")?.getString() ?: "localhost"
 val keycloakPort = appConfig.propertyOrNull("keycloak.port")?.getString()?.toInt() ?: 8080
 

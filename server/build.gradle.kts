@@ -36,6 +36,7 @@ val version: String = versionProperties.getProperty("version", "0.1.0")
 
 group = "xyz.xfqlittlefan.fhraise"
 project.version = version
+
 application {
     mainClass.set("xyz.xfqlittlefan.fhraise.ApplicationKt")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=${extra["development"] ?: "false"}")

@@ -21,19 +21,25 @@ package xyz.xfqlittlefan.fhraise.auth
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTCreator
 import com.auth0.jwt.algorithms.Algorithm
+import com.auth0.jwt.interfaces.DecodedJWT
+import com.auth0.jwt.interfaces.Verification
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.toJavaInstant
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import xyz.xfqlittlefan.fhraise.appSecret
-import xyz.xfqlittlefan.fhraise.models.User
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.minutes
 
 private val jwtSecret = appSecret.propertyOrNull("auth.jwt.secret")?.getString() ?: "secret"
 val jwtIssuer = appSecret.propertyOrNull("auth.jwt.issuer")?.getString() ?: "fhraise"
 val jwtAudience = appSecret.propertyOrNull("auth.jwt.audience")?.getString() ?: "fhraise-user"
 val jwtRealm = appSecret.propertyOrNull("auth.jwt.realm")?.getString() ?: "fhraise"
+
+private val jwtAlgorithm: Algorithm = Algorithm.HMAC256(jwtSecret)
 
 /**
  * 创建一个包含默认签发者和受众的 JWT token。
@@ -46,26 +52,57 @@ val jwtRealm = appSecret.propertyOrNull("auth.jwt.realm")?.getString() ?: "fhrai
  * @see JWTCreator.Builder
  * @see JWTCreator.Builder.sign
  */
-fun jwt(builder: JWTCreator.Builder.() -> Unit): String = JWT.create().apply {
+fun jwt(builder: JWTCreator.Builder.() -> Unit = {}): String = JWT.create().apply {
     withIssuer(jwtIssuer)
     withAudience(jwtAudience)
     builder()
-}.sign(Algorithm.HMAC256(jwtSecret))
+}.sign(jwtAlgorithm)
 
-fun User.generateTokenPair() = JwtTokenPair(
-    accessToken = jwt {
-        withIssuedAtNow()
-        withExpiresIn(15.minutes)
-        withClaim("id", id.toString())
-        withClaim("username", username)
-        withClaim("email", email)
-    },
-    refreshToken = jwt {
-        withIssuedAtNow()
-        withExpiresIn(30.days)
-        withClaim("id", id.toString())
-    },
-)
+/**
+ * 验证并解码一个 JWT token。
+ *
+ * @param jwt 要验证的 JWT token。
+ * @param builder 配置这个 JWT token 的验证器。
+ * @return 验证通过的已解码的 JWT token。
+ *
+ * @throws com.auth0.jwt.exceptions.SignatureVerificationException 如果签名无效。
+ * @throws com.auth0.jwt.exceptions.TokenExpiredException 如果 token 已经过期。
+ * @throws com.auth0.jwt.exceptions.MissingClaimException 如果缺少要验证的声明。
+ * @throws com.auth0.jwt.exceptions.IncorrectClaimException 如果声明的值与预期值不同。
+ * @throws com.auth0.jwt.exceptions.JWTVerificationException
+ *
+ * @see Verification
+ * @see com.auth0.jwt.JWTVerifier
+ * @see com.auth0.jwt.JWTVerifier.verify
+ */
+fun verifiedJwt(jwt: String, builder: Verification.() -> Unit = {}): DecodedJWT = JWT.require(jwtAlgorithm).apply {
+    withIssuer(jwtIssuer)
+    withAudience(jwtAudience)
+    builder()
+}.build().verify(jwt)
+
+/**
+ * 验证并解码一个 JWT token，如果验证失败则返回 null。
+ *
+ * @param jwt 要验证的 JWT token。
+ * @param builder 配置这个 JWT token 的验证器。
+ * @return 验证通过的已解码的 JWT token，或者 null。
+ *
+ * @see verifiedJwt
+ */
+fun verifiedJwtOrNull(jwt: String, builder: Verification.() -> Unit = {}) =
+    runCatching { verifiedJwt(jwt, builder) }.getOrNull()
+
+/**
+ * 验证一个 JWT token。
+ *
+ * @param jwt 要验证的 JWT token。
+ * @param builder 配置这个 JWT token 的验证器。
+ * @return 是否验证通过。
+ *
+ * @see verifiedJwtOrNull
+ */
+fun verifyJwt(jwt: String, builder: Verification.() -> Unit = {}) = verifiedJwtOrNull(jwt, builder) != null
 
 fun JWTCreator.Builder.withIssuedAtNow(): JWTCreator.Builder = withIssuedAt(Clock.System.now().toJavaInstant())
 
@@ -73,3 +110,11 @@ fun JWTCreator.Builder.withExpiresAt(instant: Instant): JWTCreator.Builder = wit
 
 fun JWTCreator.Builder.withExpiresIn(duration: Duration): JWTCreator.Builder =
     withExpiresAt(Clock.System.now() + duration)
+
+inline fun <reified T> JWTCreator.Builder.withPayload(payload: T) = Json.encodeToJsonElement(payload).let {
+    if (it !is JsonObject) error("Payload must be a JsonObject")
+    it.entries.forEach { (key, value) -> withClaim(key, value.toString()) }
+}
+
+@OptIn(ExperimentalEncodingApi::class)
+inline fun <reified T> DecodedJWT.decodedPayload(): T = Json.decodeFromString(Base64.decode(payload).decodeToString())

@@ -12,6 +12,7 @@ compose = "1.6.0-beta02"
 decompose = "3.0.0-alpha05"
 ktor-client = "3.0.0-wasm2"
 ktor = "3.0.0-beta-1"
+keycloak = "23.0.6"
 hikaricp = "5.1.0"
 exposed = "0.46.0"
 h2 = "2.2.224"
@@ -58,6 +59,9 @@ ktor-server-html-builder = { module = "io.ktor:ktor-server-html-builder", versio
 ktor-server-tests = { module = "io.ktor:ktor-server-tests", version.ref = "ktor" }
 ktor-serialization-kotlinx-cbor = { module = "io.ktor:ktor-serialization-kotlinx-cbor", version.ref = "ktor-client" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor-client" }
+keycloak-core = { module = "org.keycloak:keycloak-core", version.ref = "keycloak" }
+keycloak-server-spi = { module = "org.keycloak:keycloak-server-spi", version.ref = "keycloak" }
+keycloak-server-spi-private = { module = "org.keycloak:keycloak-server-spi-private", version.ref = "keycloak" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposed-crypt = { module = "org.jetbrains.exposed:exposed-crypt", version.ref = "exposed" }

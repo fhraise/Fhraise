@@ -28,9 +28,7 @@ class Api {
     @Resource("auth")
     class Auth(val parent: Api = Api()) {
         @Resource("{credentialType}")
-        class Type(
-            val parent: Auth = Auth(), val credentialType: CredentialType
-        ) {
+        class Type(val parent: Auth = Auth(), val credentialType: CredentialType) {
             @Resource("request")
             class Request(val parent: Type, val type: VerificationType) {
                 @Serializable
@@ -55,14 +53,20 @@ class Api {
             @Resource("verify")
             class Verify(val parent: Type, val token: String) {
                 @Serializable
-                data class RequestBody(val credential: String, val verification: String)
+                data class RequestBody(val verification: String)
 
                 @Serializable
-                enum class ResponseBody { Success, Failure }
+                sealed class ResponseBody {
+                    @Serializable
+                    data class Success(val tokenPair: JwtTokenPair)
+
+                    @Serializable
+                    data object Failure
+                }
             }
 
             @Serializable
-            enum class CredentialType { Username, PhoneNumber, Email }
+            enum class CredentialType { Username, Email, PhoneNumber }
         }
 
         companion object {

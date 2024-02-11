@@ -55,7 +55,6 @@ fun Application.module() {
 
     authentication {
         appAuth()
-//        appOAuth()
     }
 
     install(ContentNegotiation) { cbor() }
@@ -68,10 +67,7 @@ fun Application.module() {
 
     routing {
         proxyKeycloak()
-        cborContentType {
-            apiAuth()
-        }
-//        apiOAuth()
+        apiAuth()
     }
 }
 

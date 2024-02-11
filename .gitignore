@@ -41,7 +41,7 @@ server/docs/
 datastore/
 
 # Keycloak
-keycloak*/
+server/keycloak*/
 
 # Environment files
 environment.yaml

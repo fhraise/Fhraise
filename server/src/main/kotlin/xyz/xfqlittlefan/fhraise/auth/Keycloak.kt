@@ -23,17 +23,21 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import io.ktor.server.util.*
 import kotlinx.serialization.json.Json
 import xyz.xfqlittlefan.fhraise.appSecret
+import xyz.xfqlittlefan.fhraise.models.UserQuery
+import xyz.xfqlittlefan.fhraise.models.UserRepresentation
 import xyz.xfqlittlefan.fhraise.proxy.keycloakHost
 import xyz.xfqlittlefan.fhraise.proxy.keycloakPort
+import xyz.xfqlittlefan.fhraise.proxy.keycloakScheme
 
-private val keycloakAuthClient = HttpClient {
+private val adminClient = HttpClient {
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
@@ -49,37 +53,88 @@ private val keycloakAuthClient = HttpClient {
     }
 }
 
-private suspend fun loadTokens(): BearerTokens? = runCatching {
-    keycloakAuthClient.submitForm(
-        url = "http://$keycloakHost:$keycloakPort/auth/realms/master/protocol/openid-connect/token",
-        formParameters = parameters {
-            append("grant_type", "password")
-            append("client_id", "admin-cli")
-            append("client_secret", adminClientSecret)
-            append("username", adminUsername)
-            append("password", adminPassword)
-        },
-    ).body<KeycloakTokens>()
-}.getOrNull()?.let { BearerTokens(it.accessToken, it.refreshToken) }
-
-private suspend fun RefreshTokensParams.refreshTokens(): BearerTokens? = runCatching {
-    keycloakAuthClient.submitForm(
-        url = "http://$keycloakHost:$keycloakPort/auth/realms/master/protocol/openid-connect/token",
-        formParameters = parameters {
-            append("grant_type", "refresh_token")
-            append("client_id", "admin-cli")
-            append("refresh_token", oldTokens?.refreshToken ?: "")
-        },
-    ).body<KeycloakTokens>()
-}.getOrNull()?.let { BearerTokens(it.accessToken, it.refreshToken) }
-
-@Serializable
-private data class KeycloakTokens(
-    @SerialName("access_token") val accessToken: String,
-    @SerialName("refresh_token") val refreshToken: String,
-    @SerialName("refresh_expires_in") val refreshExpiresIn: Int,
-)
-
+private const val adminClientId = "admin-cli"
 private val adminUsername = appSecret.propertyOrNull("auth.keycloak.admin.username")?.getString() ?: "admin"
 private val adminPassword = appSecret.propertyOrNull("auth.keycloak.admin.password")?.getString() ?: "admin"
 private val adminClientSecret = appSecret.propertyOrNull("auth.keycloak.admin.clientSecret")?.getString() ?: "admin"
+
+val appAuthUrl = url {
+    protocol = URLProtocol.createOrDefault(keycloakScheme)
+    host = keycloakHost
+    port = keycloakPort
+    path("/auth/realms/fhraise/protocol/openid-connect/auth")
+}
+
+val appTokenUrl = url {
+    protocol = URLProtocol.createOrDefault(keycloakScheme)
+    host = keycloakHost
+    port = keycloakPort
+    path("/auth/realms/fhraise/protocol/openid-connect/token")
+}
+
+private var currentTokens = BearerTokens("", "")
+
+private const val phoneNumberAttribute = "phoneNumber"
+
+private suspend fun loadTokens(): BearerTokens? =
+    adminClient.getTokensByPassword(adminClientId, adminClientSecret, adminUsername, adminPassword)
+        ?.let { BearerTokens(it.accessToken, it.refreshToken) }?.also { currentTokens = it }
+
+private suspend fun RefreshTokensParams.refreshTokens(): BearerTokens? =
+    adminClient.refreshTokens(adminClientId, adminClientSecret, oldTokens?.refreshToken ?: currentTokens.refreshToken)
+        ?.let { BearerTokens(it.accessToken, it.refreshToken) }?.also { currentTokens = it }
+
+suspend fun exchangeToken(userId: String) = runCatching {
+    adminClient.submitForm(
+        url = appTokenUrl,
+        formParameters = parameters {
+            append("client_id", adminClientId)
+            append("client_secret", adminClientSecret)
+            append("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+            append("subject_token", currentTokens.accessToken)
+            append("requested_token_type", "urn:ietf:params:oauth:token-type:refresh_token")
+            append("audience", "fhraise")
+            append("requested_subject", userId)
+        },
+    ).body<KeycloakTokens>()
+}.getOrNull()?.let { JwtTokenPair(it.accessToken, it.refreshToken) }
+
+suspend fun getOrCreateUser(block: UserQuery.() -> Unit) = getUser(block)?.let { Result.success(it) } ?: run {
+    createUser(UserQuery().apply(block)).fold(
+        onSuccess = { getUser(block)?.let { Result.success(it) } ?: Result.failure(IllegalStateException()) },
+        onFailure = { Result.failure(it) },
+    )
+}
+
+suspend fun getUser(block: UserQuery.() -> Unit) = adminClient.get(adminUrl {
+    appendPathSegments("users")
+    val query = UserQuery().apply(block)
+    parameters.apply {
+        query.username?.let { append("username", it) }
+        query.email?.let { append("email", it) }
+        query.phoneNumber?.let { append("q", "$phoneNumberAttribute:$it") }
+        append("max", "1")
+    }
+}).let {
+    when {
+        it.status.isSuccess() -> it.body<List<UserRepresentation>>().first()
+        else -> null
+    }
+}
+
+private suspend fun createUser(query: UserQuery) = adminClient.post {
+    url(adminUrl { appendPathSegments("users") })
+    setBody(UserRepresentation().apply {
+        username = query.generatedUsername
+        email = query.email
+        query.phoneNumber?.let { attributes = mapOf(phoneNumberAttribute to listOf(it)) }
+    })
+}.let { if (it.status.isSuccess()) Result.success(Unit) else Result.failure(Exception(it.bodyAsText())) }
+
+fun adminUrl(builder: URLBuilder.() -> Unit) = URLBuilder().apply {
+    protocol = URLProtocol.createOrDefault(keycloakScheme)
+    host = keycloakHost
+    port = keycloakPort
+    path("/auth/admin/realms/fhraise")
+    builder()
+}.buildString()

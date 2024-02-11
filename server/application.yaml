@@ -4,5 +4,6 @@ app:
   auth:
     timeout: 300000
 keycloak:
+  scheme: http
   host: localhost
   port: 11452

@@ -16,22 +16,10 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.http
 
-import io.ktor.client.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
-import kotlinx.serialization.json.Json
-
-val appClient = HttpClient {
-    install(ContentNegotiation) {
-        json(Json {
-            ignoreUnknownKeys = true
-        })
-    }
-}
 
 val Headers.safeExplicitness
     get() = filter { key, _ ->
