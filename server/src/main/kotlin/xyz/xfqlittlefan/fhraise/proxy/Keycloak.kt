@@ -23,6 +23,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -50,7 +51,7 @@ fun Route.proxyKeycloak() {
                 headers[HttpHeaders.Host] = "$keycloakHost:$keycloakPort"
                 headers.append(
                     HttpHeaders.Forwarded,
-                    "for=${call.request.local.remoteHost};host=${call.request.headers[HttpHeaders.Host] ?: ""};proto=${call.request.local.scheme}"
+                    "for=${call.request.origin.remoteHost};host=${call.request.headers[HttpHeaders.Host] ?: ""};proto=${call.request.origin.scheme}"
                 )
                 application.log.trace("Headers: {}", headers.entries())
                 body = call.receive()

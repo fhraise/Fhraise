@@ -34,13 +34,14 @@ import io.ktor.server.websocket.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import xyz.xfqlittlefan.fhraise.api.apiAuth
+import xyz.xfqlittlefan.fhraise.api.apiOAuth
 import xyz.xfqlittlefan.fhraise.api.appAuth
 import xyz.xfqlittlefan.fhraise.api.registerAppCodeVerification
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
 import xyz.xfqlittlefan.fhraise.proxy.proxyKeycloak
 
 fun main() {
-    embeddedServer(CIO, port = DefaultServerPort, host = "0.0.0.0", module = Application::module).start(wait = true)
+    embeddedServer(CIO, port = defaultServerPort, host = "0.0.0.0", module = Application::module).start(wait = true)
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -68,6 +69,7 @@ fun Application.module() {
     routing {
         proxyKeycloak()
         apiAuth()
+        apiOAuth()
     }
 }
 

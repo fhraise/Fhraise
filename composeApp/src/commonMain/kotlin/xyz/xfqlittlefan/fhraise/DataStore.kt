@@ -70,7 +70,7 @@ object ServerDataStore {
         val serverHost =
             PreferenceStateFlow(scope, store, stringPreferencesKey("serverHost"), defaultValue = "localhost")
         val serverPort =
-            PreferenceStateFlow(scope, store, intPreferencesKey("serverPort"), defaultValue = DefaultServerPort)
+            PreferenceStateFlow(scope, store, intPreferencesKey("serverPort"), defaultValue = defaultServerPort)
     }
 }
 

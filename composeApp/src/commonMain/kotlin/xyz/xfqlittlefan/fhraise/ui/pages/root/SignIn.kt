@@ -52,12 +52,12 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import xyz.xfqlittlefan.fhraise.DefaultServerPort
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
+import xyz.xfqlittlefan.fhraise.defaultServerPort
 import xyz.xfqlittlefan.fhraise.rememberMutableState
 import xyz.xfqlittlefan.fhraise.ui.AnimationValue
 import xyz.xfqlittlefan.fhraise.ui.DensityScope
@@ -281,7 +281,7 @@ fun SignInComponent.SignIn() {
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = port.toString(),
-                        onValueChange = { port = it.toIntOrNull() ?: DefaultServerPort },
+                        onValueChange = { port = it.toIntOrNull() ?: defaultServerPort },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
                         ),

@@ -38,6 +38,7 @@ import io.ktor.serialization.kotlinx.cbor.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import xyz.xfqlittlefan.fhraise.ServerDataStore
+import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialType.*
@@ -145,6 +146,8 @@ interface SignInComponent : AppComponentContext {
             forward()
         }
 
+    var verifyingToken: String?
+
     val defaultVerifications
         get() = listOf(
             FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
@@ -152,17 +155,44 @@ interface SignInComponent : AppComponentContext {
             SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
             EmailCode(
                 onRequest = { client, credential ->
-                    client.post(Api.Auth.Email.Request()) {
-                        contentType(ContentType.Application.Cbor)
-                        setBody(Api.Auth.Email.Request.RequestBody(credential))
-                    }.body<Api.Auth.Email.Request.ResponseBody>()
-                    true
+                    runCatching {
+                        client.post(
+                            Api.Auth.Type.Request(
+                                Api.Auth.Type.CredentialType.Email,
+                                Api.Auth.Type.Request.VerificationType.VerificationCode
+                            )
+                        ) {
+                            contentType(ContentType.Application.Cbor)
+                            setBody(Api.Auth.Type.Request.RequestBody(credential))
+                        }.body<Api.Auth.Type.Request.ResponseBody>()
+                    }.getOrNull()?.let {
+                        when (it) {
+                            is Api.Auth.Type.Request.ResponseBody.Success -> {
+                                verifyingToken = it.token
+                                true
+                            }
+
+                            else -> false
+                        }
+                    } ?: false
                 },
                 onVerify = { client, credential, verification ->
-                    client.post(Api.Auth.Email.Verify()) {
-                        contentType(ContentType.Application.Cbor)
-                        setBody(Api.Auth.Email.Verify.RequestBody(credential, verification))
-                    }.body<Api.Auth.Email.Verify.ResponseBody>() == Api.Auth.Email.Verify.ResponseBody.Success
+                    runCatching {
+                        client.post(Api.Auth.Type.Verify(Api.Auth.Type.CredentialType.Email, verifyingToken!!)) {
+                            contentType(ContentType.Application.Cbor)
+                            setBody(Api.Auth.Type.Verify.RequestBody(verification))
+                        }.body<Api.Auth.Type.Verify.ResponseBody>()
+                    }.getOrNull()?.let {
+                        when (it) {
+                            is Api.Auth.Type.Verify.ResponseBody.Success -> {
+                                verifyingToken = null
+                                enter(it.tokenPair)
+                                true
+                            }
+
+                            else -> false
+                        }
+                    } ?: false
                 },
             ),
             Password(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
@@ -173,7 +203,7 @@ interface SignInComponent : AppComponentContext {
 
     fun onMicrosoftSignIn()
 
-    fun enter()
+    fun enter(tokenPair: JwtTokenPair? = null)
 
     val enterAction: KeyboardActionScope.() -> Unit
         get() = {
@@ -228,6 +258,8 @@ class AppSignInComponent(
 
     override var showServerSettings by mutableStateOf(false)
 
+    override var verifyingToken: String? by mutableStateOf(null)
+
     override suspend fun requestVerification() = verificationType?.run {
         try {
             onRequest(client, credential)
@@ -243,7 +275,7 @@ class AppSignInComponent(
         }
     }
 
-    override fun enter() {
+    override fun enter(tokenPair: JwtTokenPair?) {
         if (!credentialValid) return
         val verification = verificationType
         if (verification == null) {
@@ -252,14 +284,10 @@ class AppSignInComponent(
         } else {
             componentScope.launch {
                 if (verification.onVerify(client, credential, this@AppSignInComponent.verification)) {
-                    snackbarHostState.showSnackbar(
-                        message = "验证成功", withDismissAction = true
-                    )
+                    snackbarHostState.showSnackbar(message = "验证成功", withDismissAction = true)
                     onEnter()
                 } else {
-                    snackbarHostState.showSnackbar(
-                        message = "验证失败", withDismissAction = true
-                    )
+                    snackbarHostState.showSnackbar(message = "验证失败", withDismissAction = true)
                 }
             }
         }
@@ -279,9 +307,7 @@ class AppSignInComponent(
             if (requestVerification()) {
                 step = Verification
             } else {
-                snackbarHostState.showSnackbar(
-                    message = "请求验证失败", withDismissAction = true
-                )
+                snackbarHostState.showSnackbar(message = "请求验证失败", withDismissAction = true)
             }
         }
     }

@@ -18,7 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise.routes
 
-import io.ktor.http.*
 import io.ktor.resources.*
 import kotlinx.serialization.Serializable
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
@@ -31,19 +30,23 @@ class Api {
         class Type(val parent: Auth = Auth(), val credentialType: CredentialType) {
             @Resource("request")
             class Request(val parent: Type, val type: VerificationType) {
+                constructor(credentialType: CredentialType, verificationType: VerificationType) : this(
+                    Type(credentialType = credentialType), verificationType
+                )
+
                 @Serializable
                 data class RequestBody(val credential: String, val dry: Boolean = false)
 
                 @Serializable
                 sealed class ResponseBody {
                     @Serializable
-                    data class Success(val token: String)
+                    data class Success(val token: String) : ResponseBody()
 
                     @Serializable
-                    data object InvalidCredential
+                    data object InvalidCredential : ResponseBody()
 
                     @Serializable
-                    data object Failure
+                    data object Failure : ResponseBody()
                 }
 
                 @Serializable
@@ -52,95 +55,57 @@ class Api {
 
             @Resource("verify")
             class Verify(val parent: Type, val token: String) {
+                constructor(credentialType: CredentialType, token: String) : this(
+                    Type(credentialType = credentialType), token
+                )
+
                 @Serializable
                 data class RequestBody(val verification: String)
 
                 @Serializable
                 sealed class ResponseBody {
                     @Serializable
-                    data class Success(val tokenPair: JwtTokenPair)
+                    data class Success(val tokenPair: JwtTokenPair) : ResponseBody()
 
                     @Serializable
-                    data object Failure
+                    data object Failure : ResponseBody()
                 }
             }
 
             @Serializable
             enum class CredentialType { Username, Email, PhoneNumber }
         }
-
-        companion object {
-            const val CALLBACK = "/api/auth/callback"
-        }
-
-        object Query {
-            const val REQUEST_ID = "rid"
-            const val CALLBACK_PORT = "prt"
-        }
     }
 
     @Resource("oauth")
-    class OAuth {
-        object Socket {
-            const val PATH = "/api/oauth/socket"
-
+    class OAuth(val parent: Api = Api()) {
+        @Resource("request")
+        class Request(
+            val parent: OAuth = OAuth(), val provider: Provider, val callbackPort: Int, val sendDeepLink: Boolean
+        ) {
             @Serializable
-            data class ClientMessage(val provider: Provider, val port: UShort, val sendDeepLink: Boolean = false)
-
-            @Serializable
-            enum class ServerMessage(val next: Any? = null) {
-                Ready(ReadyMessage), Received, Result(ResultMessage);
-
-                @Serializable
-                data class ReadyMessage(val url: String) {
-                    constructor(builder: URLBuilder.() -> Unit) : this(URLBuilder().apply(builder).buildString())
-                }
-
-                @Serializable
-                enum class ResultMessage(val next: Any? = null) {
-                    Success(TokenPairMessage), Failure;
-
-                    @Serializable
-                    data class TokenPairMessage(val tokenPair: JwtTokenPair)
-                }
-            }
+            data class ResponseBody(val requestId: String, val signInUrl: String)
         }
 
         @Serializable
-        enum class Provider(
-            val api: String,
-            val callback: String,
-            val clientId: String,
-            val authorizeUrl: String,
-            val authorizeUrlInterceptor: URLBuilder.() -> Unit,
-            val accessTokenUrl: String,
-            val defaultScopes: List<String>
-        ) {
-            Google(
-                "/api/auth/oauth/sign-in/gg",
-                "/api/auth/oauth/callback/gg",
-                "64440822162-pd97va9v49vvj07vvhdd02au6li129s1.apps.googleusercontent.com",
-                "https://accounts.google.com/o/oauth2/v2/auth",
-                {},
-                "https://www.googleapis.com/oauth2/v4/token",
-                listOf(
-                    "https://www.googleapis.com/auth/userinfo.email",
-                    "https://www.googleapis.com/auth/userinfo.profile",
-                    "openid"
-                )
-            ),
-            Microsoft(
-                "/api/auth/oauth/sign-in/ms",
-                "/api/auth/oauth/callback/ms",
-                "af9f38ce-17ce-481b-8629-36452244007b",
-                "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
-                {
-                    parameters["response_type"] = "code id_token"
-                    parameters["response_mode"] = "form_post"
-                },
-                "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
-                listOf("https://graph.microsoft.com/.default", "openid")
-            );
+        enum class Provider(val brokerName: String) { Google("google"), GitHub("github"), Microsoft("microsoft") }
+
+        companion object {
+            const val PATH = "/api/oauth"
+        }
+
+        object Callback {
+            const val PATH = "/api/oauth/callback"
+
+            @Serializable
+            data class RequestBody(val requestId: String, val tokenPair: JwtTokenPair)
+        }
+
+        object Query {
+            const val PROVIDER = "p"
+            const val REQUEST_ID = "rid"
+            const val CALLBACK_PORT = "prt"
+            const val SEND_DEEP_LINK = "deep"
         }
     }
 }

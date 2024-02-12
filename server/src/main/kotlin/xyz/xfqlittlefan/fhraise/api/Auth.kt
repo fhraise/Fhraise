@@ -61,7 +61,7 @@ private val rateLimitName = RateLimitName("app-code-authentication")
 val appAuthTimeout =
     appConfig.propertyOrNull("app.auth.timeout")?.getString()?.toLongOrNull()?.milliseconds ?: 5.minutes
 
-val oAuthApiClient = HttpClient {
+private val keycloakClient = HttpClient {
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
@@ -85,12 +85,9 @@ fun AuthenticationConfig.appAuth() {
     oauth(authName) {
         urlProvider = {
             url {
-                host = "localhost"
-                port = request.queryParameters[Api.Auth.Query.CALLBACK_PORT]?.toIntOrNull() ?: DEFAULT_PORT
-                path(Api.Auth.CALLBACK)
+                path(Api.OAuth.PATH)
                 parameters.clear()
-                parameters[Api.Auth.Query.REQUEST_ID] = request.queryParameters[Api.Auth.Query.REQUEST_ID] ?: ""
-                parameters[Api.Auth.Query.CALLBACK_PORT] = port.toString()
+                parameters.appendAll(request.queryParameters.filter { k, _ -> Api.OAuth.Query.run { k == PROVIDER || k == REQUEST_ID || k == CALLBACK_PORT || k == SEND_DEEP_LINK } })
             }
         }
         providerLookup = {
@@ -104,9 +101,14 @@ fun AuthenticationConfig.appAuth() {
                 nonceManager = StatelessHmacNonceManager(
                     key = authNonceSecret, timeoutMillis = appAuthTimeout.inWholeMilliseconds
                 ),
+                authorizeUrlInterceptor = {
+                    host = request.host()
+                    port = request.port()
+                    request.queryParameters[Api.OAuth.Query.PROVIDER]?.let { parameters.append("kc_idp_hint", it) }
+                },
             )
         }
-        client = oAuthApiClient
+        client = keycloakClient
     }
 }
 
@@ -217,7 +219,7 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
         return
     }
 
-    oAuthApiClient.getTokensByPassword(authClientId, authClientSecret, user.username!!, body.verification)?.let {
+    keycloakClient.getTokensByPassword(authClientId, authClientSecret, user.username!!, body.verification)?.let {
         respond(Api.Auth.Type.Verify.ResponseBody.Success(JwtTokenPair(it.accessToken, it.refreshToken)))
     } ?: respond(Api.Auth.Type.Verify.ResponseBody.Failure)
 }

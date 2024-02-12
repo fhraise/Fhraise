@@ -31,6 +31,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.util.*
 import kotlinx.serialization.json.Json
 import xyz.xfqlittlefan.fhraise.appSecret
+import xyz.xfqlittlefan.fhraise.defaultServerPort
 import xyz.xfqlittlefan.fhraise.models.UserQuery
 import xyz.xfqlittlefan.fhraise.models.UserRepresentation
 import xyz.xfqlittlefan.fhraise.proxy.keycloakHost
@@ -48,7 +49,7 @@ private val adminClient = HttpClient {
         bearer {
             loadTokens(::loadTokens)
             refreshTokens(RefreshTokensParams::refreshTokens)
-            sendWithoutRequest { it.url.host == keycloakHost && it.url.port == keycloakPort }
+            sendWithoutRequest { it.url.host == "localhost" && it.url.port == defaultServerPort }
         }
     }
 }
@@ -60,15 +61,15 @@ private val adminClientSecret = appSecret.propertyOrNull("auth.keycloak.admin.cl
 
 val appAuthUrl = url {
     protocol = URLProtocol.createOrDefault(keycloakScheme)
-    host = keycloakHost
-    port = keycloakPort
+    host = "localhost"
+    port = defaultServerPort
     path("/auth/realms/fhraise/protocol/openid-connect/auth")
 }
 
 val appTokenUrl = url {
     protocol = URLProtocol.createOrDefault(keycloakScheme)
-    host = keycloakHost
-    port = keycloakPort
+    host = "localhost"
+    port = defaultServerPort
     path("/auth/realms/fhraise/protocol/openid-connect/token")
 }
 
