@@ -22,7 +22,6 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.server.application.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -44,7 +43,12 @@ fun Route.proxyKeycloak() {
     route(Regex("/auth/((js|realms|resources)/.*|robots.txt|favicon.ico)")) {
         handle {
             keycloakProxyClient.request {
-                url("http://$keycloakHost:$keycloakPort${call.request.uri}")
+                url {
+                    protocol = URLProtocol.createOrDefault(keycloakScheme)
+                    host = keycloakHost
+                    port = keycloakPort
+                    encodedPath = call.request.uri
+                }
                 method = call.request.httpMethod
                 headers.appendAll(call.request.headers)
                 headers.remove(HttpHeaders.TransferEncoding)
@@ -53,7 +57,6 @@ fun Route.proxyKeycloak() {
                     HttpHeaders.Forwarded,
                     "for=${call.request.origin.remoteHost};host=${call.request.headers[HttpHeaders.Host] ?: ""};proto=${call.request.origin.scheme}"
                 )
-                application.log.trace("Headers: {}", headers.entries())
                 body = call.receive()
             }.let { response ->
                 call.respond(object : OutgoingContent.WriteChannelContent() {
