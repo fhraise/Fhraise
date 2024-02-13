@@ -18,7 +18,9 @@ exposed = "0.46.0"
 h2 = "2.2.224"
 bcrypt = "0.10.2"
 mail = "8.6.2"
+slf4j = "2.0.9"
 logback = "1.4.14"
+logback-android = "3.0.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
@@ -71,7 +73,9 @@ exposed-kotlin-datetime = { module = "org.jetbrains.exposed:exposed-kotlin-datet
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
 mail = { module = "org.simplejavamail:simple-java-mail", version.ref = "mail" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logback-android = { module = "com.github.tony19:logback-android", version.ref = "logback-android" }
 
 [plugins]
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

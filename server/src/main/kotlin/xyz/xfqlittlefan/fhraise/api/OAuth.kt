@@ -19,9 +19,14 @@
 package xyz.xfqlittlefan.fhraise.api
 
 import io.ktor.client.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.resources.*
+import io.ktor.client.plugins.resources.Resources
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.cbor.*
+import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.callid.*
@@ -36,11 +41,14 @@ import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.defaultServerPort
 import xyz.xfqlittlefan.fhraise.html.respondAutoClosePage
 import xyz.xfqlittlefan.fhraise.link.AppUri
+import xyz.xfqlittlefan.fhraise.proxy.keycloakHost
+import xyz.xfqlittlefan.fhraise.proxy.keycloakPort
 import xyz.xfqlittlefan.fhraise.routes.Api
 
 @OptIn(ExperimentalSerializationApi::class)
 private val oAuthApiClient = HttpClient {
-//    install(ContentNegotiation) { cbor() }
+    install(Resources)
+    install(ContentNegotiation) { cbor() }
 //    install(HttpCookies)
     followRedirects = false
 }
@@ -73,17 +81,24 @@ private suspend fun RoutingContext.parseResponse(
     response.headers[HttpHeaders.Location]?.let { location ->
         val redirection = URLBuilder(location)
         if (redirection.host.endsWith(provider.domain)) {
+            application.log.info("Received redirection to $redirection")
             setCookie?.let { call.response.headers.append(HttpHeaders.SetCookie, it) }
             response.headers[HttpHeaders.SetCookie]?.let { call.response.headers.append(HttpHeaders.SetCookie, it) }
+            oAuthApiClient.post(Api.OAuth.Message()) {
+                host = call.request.origin.remoteAddress
+                port = callbackPort
+                contentType(ContentType.Application.Cbor)
+                call.response.headers.values(HttpHeaders.SetCookie)
+                    .first { parseServerSetCookieHeader(it).name == Api.OAuth.AUTH_SESSION_ID }.let {
+                        setBody(Api.OAuth.Message.RequestBody(parseServerSetCookieHeader(it).value))
+                    }
+            }.let { application.log.info("Sent message to ${call.request.origin.remoteAddress}, status: ${it.status}") }
             call.respondRedirect(redirection.apply {
-                parameters["redirect_uri"] = url {
-                    this@apply.parameters["redirect_uri"]?.let { takeFrom(it) }
-                    port = callbackPort
-                    call.response.headers.values(HttpHeaders.SetCookie).map { parseServerSetCookieHeader(it) }
-                        .distinct().forEach {
-                            val (name, value) = it
-                            parameters["Cookie$name"] = value
-                        }
+                parameters["redirect_uri"]?.let {
+                    parameters["redirect_uri"] = url {
+                        takeFrom(it)
+                        port = callbackPort
+                    }
                 }
             }.buildString())
         } else parseResponse(
@@ -96,23 +111,23 @@ private suspend fun RoutingContext.parseResponse(
 }
 
 private fun Route.apiOAuthEndpoint() = get(Api.OAuth.Endpoint.PATH) {
-    val brokerName = call.parameters[Api.OAuth.Endpoint.Query.BROKER_NAME]
+    val sessionId = call.queryParameters[Api.OAuth.AUTH_SESSION_ID]
+    val brokerName = call.queryParameters[Api.OAuth.Endpoint.Query.BROKER_NAME]
+    val callbackPort = call.queryParameters[Api.OAuth.Query.CALLBACK_PORT]?.toIntOrNull()
 
-    if (brokerName == null) {
+    if (sessionId == null || brokerName == null || callbackPort == null) {
         call.respond(HttpStatusCode.BadRequest)
         return@get
     }
 
     oAuthApiClient.get {
-        call.request.queryParameters.filter { k, _ -> k.startsWith("Cookie") }.forEach { k, v ->
-            cookie(k.removePrefix("Cookie"), v.first())
-        }
-
+        cookie(Api.OAuth.AUTH_SESSION_ID, sessionId)
+        header(HttpHeaders.Host, "localhost:$callbackPort")
         url {
-            host = "localhost"
-            port = defaultServerPort
+            host = keycloakHost
+            port = keycloakPort
             path("/auth/realms/fhraise/broker/$brokerName/endpoint")
-            parameters.appendAll(call.request.queryParameters)
+            parameters.appendAll(call.queryParameters)
         }
     }.let { call.respondBytes(it.bodyAsChannel().toByteArray(), it.contentType(), it.status) }
 }

@@ -108,6 +108,7 @@ class Api {
 
         companion object {
             const val PATH = "/api/oauth"
+            const val AUTH_SESSION_ID = "AUTH_SESSION_ID"
         }
 
         object Endpoint {

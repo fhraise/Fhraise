@@ -83,6 +83,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                implementation(projects.shared)
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.animation)
@@ -99,7 +100,6 @@ kotlin {
                 implementation(libs.ktor.client.websockets)
                 implementation(libs.ktor.serialization.kotlinx.cbor)
                 implementation(libs.bcrypt)
-                implementation(projects.shared)
             }
         }
 
@@ -111,7 +111,10 @@ kotlin {
                 implementation(compose.preview)
                 implementation(libs.ktor.server.core)
                 implementation(libs.ktor.server.cio)
+                implementation(libs.ktor.server.resources)
+                implementation(libs.ktor.server.content.negotiation)
                 implementation(libs.ktor.client.cio)
+                implementation(libs.slf4j.api)
             }
         }
 
@@ -124,6 +127,7 @@ kotlin {
                 implementation(libs.androidx.window)
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.browser)
+                implementation(libs.logback.android)
             }
         }
 
@@ -132,6 +136,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(compose.desktop.currentOs)
+                implementation(libs.logback)
             }
         }
 
