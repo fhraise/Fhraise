@@ -29,7 +29,7 @@ object AppUri {
             fun fromUriOrNull(uri: String): OAuthCallback? {
                 if (!uri.startsWith(PREFIX)) return null
                 val token = uri.substringAfter(TOKEN_PARAM).substringBefore("&")
-                val refreshToken = uri.substringAfter(TOKEN_PARAM).substringBefore("&")
+                val refreshToken = uri.substringAfter(REFRESH_TOKEN_PARAM).substringBefore("&")
                 val state = uri.substringAfter(TOKEN_PARAM).substringBefore("&")
                 return OAuthCallback(token, refreshToken, state)
             }

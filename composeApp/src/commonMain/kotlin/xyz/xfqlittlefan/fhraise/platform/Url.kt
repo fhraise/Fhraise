@@ -35,10 +35,11 @@ import io.ktor.http.*
  * @see URLBuilder
  * @see BrowserActions
  */
-fun openUrl(url: String = "", optionsBuilder: BrowserOptions.() -> Unit = {}, urlBuilder: URLBuilder.() -> Unit = {}) =
-    openUrlImpl(URLBuilder(url).apply(urlBuilder).buildString(), BrowserOptions().apply(optionsBuilder))
+inline fun openUrl(
+    url: String = "", optionsBuilder: BrowserOptions.() -> Unit = {}, urlBuilder: URLBuilder.() -> Unit = {}
+) = openUrl(URLBuilder(url).apply(urlBuilder).buildString(), BrowserOptions().apply(optionsBuilder))
 
-internal expect fun openUrlImpl(url: String, options: BrowserOptions): BrowserActions
+expect fun openUrl(url: String, options: BrowserOptions): BrowserActions
 
 /**
  * 浏览器启动类型，仅限 Android 且 [BrowserOptions.inApp] 为 `true`

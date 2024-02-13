@@ -19,16 +19,11 @@
 package xyz.xfqlittlefan.fhraise.proxy
 
 import io.ktor.client.*
-import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.http.content.*
-import io.ktor.server.plugins.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.utils.io.*
 import xyz.xfqlittlefan.fhraise.appConfig
-import xyz.xfqlittlefan.fhraise.http.safeExplicitness
+import xyz.xfqlittlefan.fhraise.http.keycloakPath
+import xyz.xfqlittlefan.fhraise.http.reverseProxy
 
 private val keycloakProxyClient = HttpClient {
     followRedirects = false
@@ -38,40 +33,12 @@ val keycloakScheme = appConfig.propertyOrNull("keycloak.scheme")?.getString() ?:
 val keycloakHost = appConfig.propertyOrNull("keycloak.host")?.getString() ?: "localhost"
 val keycloakPort = appConfig.propertyOrNull("keycloak.port")?.getString()?.toInt() ?: 8080
 
-@OptIn(InternalAPI::class)
 fun Route.proxyKeycloak() {
-    route(Regex("/auth/((js|realms|resources)/.*|robots.txt|favicon.ico)")) {
-        handle {
-            keycloakProxyClient.request {
-                url {
-                    protocol = URLProtocol.createOrDefault(keycloakScheme)
-                    host = keycloakHost
-                    port = keycloakPort
-                    encodedPath = call.request.uri
-                }
-                method = call.request.httpMethod
-                headers.appendAll(call.request.headers)
-                headers.remove(HttpHeaders.TransferEncoding)
-                headers[HttpHeaders.Host] = "$keycloakHost:$keycloakPort"
-                headers.append(
-                    HttpHeaders.Forwarded,
-                    "for=${call.request.origin.remoteHost};host=${call.request.headers[HttpHeaders.Host] ?: ""};proto=${call.request.origin.scheme}"
-                )
-                body = call.receive()
-            }.let { response ->
-                call.respond(object : OutgoingContent.WriteChannelContent() {
-                    override val contentLength: Long? = response.contentLength()
-                    override val contentType: ContentType? = response.contentType()
-                    override val status: HttpStatusCode = response.status
-                    override val headers: Headers = Headers.build {
-                        appendAll(response.headers.safeExplicitness)
-                    }
-
-                    override suspend fun writeTo(channel: ByteWriteChannel) {
-                        response.content.copyAndClose(channel)
-                    }
-                })
-            }
+    reverseProxy(keycloakPath, keycloakProxyClient) {
+        url {
+            protocol = URLProtocol.createOrDefault(keycloakScheme)
+            host = keycloakHost
+            port = keycloakPort
         }
     }
 }

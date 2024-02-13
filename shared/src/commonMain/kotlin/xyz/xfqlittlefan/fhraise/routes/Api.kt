@@ -80,57 +80,25 @@ class Api {
     @Resource("oauth")
     class OAuth(val parent: Api = Api()) {
         @Resource("request")
-        class Request(
-            val parent: OAuth = OAuth(), val provider: Provider, val callbackPort: Int, val sendDeepLink: Boolean
-        ) {
-            @Serializable
-            data class ResponseBody(val requestId: String, val signInUrl: String)
-        }
-
-        @Resource("message")
-        class Message(val parent: OAuth = OAuth()) {
-            @Serializable
-            data class RequestBody(val authSessionId: String)
-        }
+        data class Request(val parent: OAuth = OAuth(), val provider: Provider? = null)
 
         @Serializable
-        enum class Provider(val brokerName: String, val domain: String) {
-            Google(
-                "google", "google.com"
-            ),
-            GitHub(
-                "github", "github.com"
-            ),
-            Microsoft(
-                "microsoft", "microsoftonline.com"
-            ),
+        enum class Provider(val brokerName: String) {
+            Google("google"), GitHub("github"), Microsoft("microsoft")
         }
 
         companion object {
             const val PATH = "/api/oauth"
-            const val AUTH_SESSION_ID = "AUTH_SESSION_ID"
         }
 
-        object Endpoint {
-            const val PATH = "/api/oauth/endpoint"
-
-            object Query {
-                const val BROKER_NAME = "b"
-            }
-        }
-
-        object Callback {
-            const val PATH = "/api/oauth/callback"
-
+        @Resource("callback")
+        data class Callback(val parent: OAuth = OAuth()) {
             @Serializable
-            data class RequestBody(val requestId: String, val tokenPair: JwtTokenPair)
+            data class RequestBody(val tokenPair: JwtTokenPair)
         }
 
         object Query {
             const val PROVIDER = "p"
-            const val REQUEST_ID = "rid"
-            const val CALLBACK_PORT = "prt"
-            const val SEND_DEEP_LINK = "deep"
         }
     }
 }

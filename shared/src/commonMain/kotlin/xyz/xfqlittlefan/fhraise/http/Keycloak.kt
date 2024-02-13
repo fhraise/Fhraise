@@ -16,11 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.platform
+package xyz.xfqlittlefan.fhraise.http
 
-import java.awt.Desktop
-
-actual fun openUrl(url: String, options: BrowserOptions): BrowserActions {
-    Desktop.getDesktop().browse(java.net.URI(url))
-    return BrowserActions()
-}
+val keycloakPath = Regex("/auth/((js|realms|resources)/.*|robots.txt|favicon.ico)")

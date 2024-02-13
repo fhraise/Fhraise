@@ -16,11 +16,21 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.platform
+package xyz.xfqlittlefan.fhraise.http
 
-import java.awt.Desktop
+import io.ktor.http.*
+import io.ktor.util.*
 
-actual fun openUrl(url: String, options: BrowserOptions): BrowserActions {
-    Desktop.getDesktop().browse(java.net.URI(url))
-    return BrowserActions()
-}
+val Headers.safeExplicitness
+    get() = filter { key, _ ->
+        !key.equals(
+            HttpHeaders.TransferEncoding, ignoreCase = true
+        ) && !key.equals(
+            HttpHeaders.ContentType, ignoreCase = true
+        ) && !key.equals(
+            HttpHeaders.ContentLength, ignoreCase = true
+        )
+    }
+
+val Headers.host get() = get(HttpHeaders.Host)?.split(":")?.firstOrNull()
+val Headers.port get() = get(HttpHeaders.Host)?.split(":")?.getOrNull(1)?.toIntOrNull()

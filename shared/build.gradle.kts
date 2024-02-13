@@ -43,6 +43,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.http)
                 implementation(libs.ktor.resources)
             }
         }
@@ -52,6 +54,8 @@ kotlin {
             dependencies {
                 implementation(libs.androidx.datastore.core)
                 implementation(libs.androidx.datastore.preferences.core)
+                implementation(libs.ktor.server.core)
+                implementation(libs.ktor.server.resources)
             }
 
             tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {

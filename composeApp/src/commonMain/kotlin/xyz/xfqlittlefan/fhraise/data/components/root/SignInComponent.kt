@@ -271,7 +271,7 @@ class AppSignInComponent(
 
     override fun onMicrosoftSignIn() {
         componentScope.launch {
-            microsoftSignIn(serverHost.value, serverPort.value)
+            microsoftSignIn(serverHost.value, serverPort.value)?.let { println(it) }
         }
     }
 

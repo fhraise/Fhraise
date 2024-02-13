@@ -23,6 +23,7 @@ import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.callid.*
 import io.ktor.server.plugins.ratelimit.*
@@ -46,6 +47,7 @@ import xyz.xfqlittlefan.fhraise.appDatabase
 import xyz.xfqlittlefan.fhraise.appSecret
 import xyz.xfqlittlefan.fhraise.auth.*
 import xyz.xfqlittlefan.fhraise.cborContentType
+import xyz.xfqlittlefan.fhraise.http.port
 import xyz.xfqlittlefan.fhraise.models.*
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
@@ -87,7 +89,7 @@ fun AuthenticationConfig.appAuth() {
             url {
                 path(Api.OAuth.PATH)
                 parameters.clear()
-                parameters.appendAll(request.queryParameters.filter { k, _ -> Api.OAuth.Query.run { k == PROVIDER || k == REQUEST_ID || k == CALLBACK_PORT || k == SEND_DEEP_LINK } })
+                parameters.appendAll(request.queryParameters.filter { k, _ -> Api.OAuth.Query.run { k == PROVIDER } })
             }
         }
         providerLookup = {
@@ -102,6 +104,8 @@ fun AuthenticationConfig.appAuth() {
                     key = authNonceSecret, timeoutMillis = appAuthTimeout.inWholeMilliseconds
                 ),
                 authorizeUrlInterceptor = {
+                    request.headers.port?.let { port = it }
+                    application.log.info("query: ${request.queryParameters}")
                     request.queryParameters[Api.OAuth.Query.PROVIDER]?.let { parameters.append("kc_idp_hint", it) }
                 },
             )

@@ -18,8 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise.oauth
 
-import io.ktor.client.*
-import io.ktor.client.plugins.resources.*
 import io.ktor.http.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -27,50 +25,37 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
-import kotlinx.serialization.ExperimentalSerializationApi
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import xyz.xfqlittlefan.fhraise.platform.bringWindowToFront
 import xyz.xfqlittlefan.fhraise.platform.openUrl
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.time.Duration.Companion.minutes
-import io.ktor.client.plugins.resources.Resources as ClientResources
 
 internal expect val sendDeepLink: Boolean
 
-@OptIn(ExperimentalSerializationApi::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int) = coroutineScope {
     withContext(Dispatchers.IO) {
         val channel = Channel<JwtTokenPair?>()
 
-        val server = with(OAuthApplication(Api.OAuth.Provider.Microsoft, host, port)) {
+        val server = with(OAuthApplication(host, port) {
+            bringWindowToFront()
+            channel.send(it)
+        }) {
             embeddedServer(CIO, port = 0, module = module).start()
         }
 
-        val client = HttpClient {
-//            install(ContentNegotiation) { cbor() }
-//            install(WebSockets) {
-//                contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
-//            }
-            install(ClientResources)
-        }
+        val localServerPort = server.engine.resolvedConnectors().first().port
 
-        client.href(
-            Api.OAuth.Request(
-                provider = Api.OAuth.Provider.GitHub,
-                callbackPort = server.engine.resolvedConnectors().first().port,
-                sendDeepLink = sendDeepLink
-            )
-        ).let {
-            openUrl {
-                this.host = host
-                this.port = port
-                encodedPath = it
+        openUrl {
+            takeFrom(Api.OAuth.PATH)
+            this.port = localServerPort
+            parameters.apply {
+                append(Api.OAuth.Query.PROVIDER, Api.OAuth.Provider.Microsoft.brokerName)
             }
         }
 
-        val clean = {
-            server.stop()
-            client.close()
-        }
+        val clean = { server.stop() }
 
         select {
             channel.onReceiveCatching {

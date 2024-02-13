@@ -25,13 +25,12 @@ object AndroidUrlImpl {
     lateinit var open: (url: String) -> BrowserActions
 }
 
-internal actual fun openUrlImpl(url: String, options: BrowserOptions) =
-    if (options.inApp) AndroidUrlImpl.openInApp(url) {
-        when (options.browserType) {
-            BrowserType.Restricted -> {
-                setBookmarksButtonEnabled(false)
-                setDownloadButtonEnabled(false)
-                setShareState(CustomTabsIntent.SHARE_STATE_OFF)
-            }
+actual fun openUrl(url: String, options: BrowserOptions) = if (options.inApp) AndroidUrlImpl.openInApp(url) {
+    when (options.browserType) {
+        BrowserType.Restricted -> {
+            setBookmarksButtonEnabled(false)
+            setDownloadButtonEnabled(false)
+            setShareState(CustomTabsIntent.SHARE_STATE_OFF)
         }
-    } else AndroidUrlImpl.open(url)
+    }
+} else AndroidUrlImpl.open(url)

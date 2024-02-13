@@ -19,15 +19,9 @@
 package xyz.xfqlittlefan.fhraise.http
 
 import io.ktor.http.*
-import io.ktor.util.*
+import io.ktor.resources.*
+import io.ktor.resources.serialization.*
 
-val Headers.safeExplicitness
-    get() = filter { key, _ ->
-        !key.equals(
-            HttpHeaders.TransferEncoding, ignoreCase = true
-        ) && !key.equals(
-            HttpHeaders.ContentType, ignoreCase = true
-        ) && !key.equals(
-            HttpHeaders.ContentLength, ignoreCase = true
-        )
-    }
+inline fun <reified T : Any> href(resource: T, block: URLBuilder.() -> Unit = {}) = URLBuilder().also {
+    href(ResourcesFormat(), resource, it)
+}.apply(block).buildString()
