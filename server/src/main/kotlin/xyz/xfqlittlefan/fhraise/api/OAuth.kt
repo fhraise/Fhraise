@@ -19,10 +19,9 @@
 package xyz.xfqlittlefan.fhraise.api
 
 import io.ktor.client.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.cbor.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.callid.*
@@ -31,24 +30,91 @@ import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
+import io.ktor.util.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import xyz.xfqlittlefan.fhraise.defaultServerPort
 import xyz.xfqlittlefan.fhraise.html.respondAutoClosePage
 import xyz.xfqlittlefan.fhraise.link.AppUri
 import xyz.xfqlittlefan.fhraise.routes.Api
 
 @OptIn(ExperimentalSerializationApi::class)
 private val oAuthApiClient = HttpClient {
-    install(ContentNegotiation) { cbor() }
+//    install(ContentNegotiation) { cbor() }
+//    install(HttpCookies)
+    followRedirects = false
 }
 
 fun Route.apiOAuth() {
     apiOAuthRequest()
     apiOAuthVerify()
+    apiOAuthEndpoint()
 }
 
 private fun Route.apiOAuthRequest() = get<Api.OAuth.Request> { req ->
-    call.respond(ResponseBody(req))
+    oAuthApiClient.get {
+        url {
+            host = "localhost"
+            port = defaultServerPort
+            path(Api.OAuth.PATH)
+            parameters.apply {
+                append(Api.OAuth.Query.PROVIDER, req.provider.brokerName)
+                append(Api.OAuth.Query.REQUEST_ID, call.callId!!)
+                append(Api.OAuth.Query.CALLBACK_PORT, req.callbackPort.toString())
+                append(Api.OAuth.Query.SEND_DEEP_LINK, req.sendDeepLink.toString())
+            }
+        }
+    }.let { parseResponse(it, req.provider, req.callbackPort) }
+}
+
+private suspend fun RoutingContext.parseResponse(
+    response: HttpResponse, provider: Api.OAuth.Provider, callbackPort: Int, setCookie: String? = null
+) {
+    response.headers[HttpHeaders.Location]?.let { location ->
+        val redirection = URLBuilder(location)
+        if (redirection.host.endsWith(provider.domain)) {
+            setCookie?.let { call.response.headers.append(HttpHeaders.SetCookie, it) }
+            response.headers[HttpHeaders.SetCookie]?.let { call.response.headers.append(HttpHeaders.SetCookie, it) }
+            call.respondRedirect(redirection.apply {
+                parameters["redirect_uri"] = url {
+                    this@apply.parameters["redirect_uri"]?.let { takeFrom(it) }
+                    port = callbackPort
+                    call.response.headers.values(HttpHeaders.SetCookie).map { parseServerSetCookieHeader(it) }
+                        .distinct().forEach {
+                            val (name, value) = it
+                            parameters["Cookie$name"] = value
+                        }
+                }
+            }.buildString())
+        } else parseResponse(
+            oAuthApiClient.get(location) {
+                setCookie?.let { headers.append(HttpHeaders.Cookie, it) }
+                response.headers[HttpHeaders.SetCookie]?.let { headers.append(HttpHeaders.Cookie, it) }
+            }, provider, callbackPort, response.headers[HttpHeaders.SetCookie]
+        )
+    } ?: call.respondBytes(response.bodyAsChannel().toByteArray(), response.contentType(), response.status)
+}
+
+private fun Route.apiOAuthEndpoint() = get(Api.OAuth.Endpoint.PATH) {
+    val brokerName = call.parameters[Api.OAuth.Endpoint.Query.BROKER_NAME]
+
+    if (brokerName == null) {
+        call.respond(HttpStatusCode.BadRequest)
+        return@get
+    }
+
+    oAuthApiClient.get {
+        call.request.queryParameters.filter { k, _ -> k.startsWith("Cookie") }.forEach { k, v ->
+            cookie(k.removePrefix("Cookie"), v.first())
+        }
+
+        url {
+            host = "localhost"
+            port = defaultServerPort
+            path("/auth/realms/fhraise/broker/$brokerName/endpoint")
+            parameters.appendAll(call.request.queryParameters)
+        }
+    }.let { call.respondBytes(it.bodyAsChannel().toByteArray(), it.contentType(), it.status) }
 }
 
 private fun Route.apiOAuthVerify() = requireAppAuth {

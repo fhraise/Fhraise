@@ -87,11 +87,35 @@ class Api {
             data class ResponseBody(val requestId: String, val signInUrl: String)
         }
 
+        @Resource("message")
+        class Message(val parent: OAuth = OAuth()) {
+            @Serializable
+            data class RequestBody(val authSessionId: String)
+        }
+
         @Serializable
-        enum class Provider(val brokerName: String) { Google("google"), GitHub("github"), Microsoft("microsoft") }
+        enum class Provider(val brokerName: String, val domain: String) {
+            Google(
+                "google", "google.com"
+            ),
+            GitHub(
+                "github", "github.com"
+            ),
+            Microsoft(
+                "microsoft", "microsoftonline.com"
+            ),
+        }
 
         companion object {
             const val PATH = "/api/oauth"
+        }
+
+        object Endpoint {
+            const val PATH = "/api/oauth/endpoint"
+
+            object Query {
+                const val BROKER_NAME = "b"
+            }
         }
 
         object Callback {

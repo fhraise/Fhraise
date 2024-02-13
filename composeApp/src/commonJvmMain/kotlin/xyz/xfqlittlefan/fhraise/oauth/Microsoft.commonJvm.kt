@@ -19,10 +19,8 @@
 package xyz.xfqlittlefan.fhraise.oauth
 
 import io.ktor.client.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.websocket.*
-import io.ktor.serialization.kotlinx.*
-import io.ktor.serialization.kotlinx.cbor.*
+import io.ktor.client.plugins.resources.*
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -33,8 +31,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import xyz.xfqlittlefan.fhraise.platform.openUrl
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.time.Duration.Companion.minutes
 
@@ -50,12 +48,26 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int) = cor
         }
 
         val client = HttpClient {
-            install(ContentNegotiation) { cbor() }
-            install(WebSockets) {
-                contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
-            }
+//            install(ContentNegotiation) { cbor() }
+//            install(WebSockets) {
+//                contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
+//            }
+            install(Resources)
         }
 
+        client.href(
+            Api.OAuth.Request(
+                provider = Api.OAuth.Provider.Microsoft,
+                callbackPort = server.engine.resolvedConnectors().first().port,
+                sendDeepLink = sendDeepLink
+            )
+        ).let {
+            openUrl {
+                this.host = host
+                this.port = port
+                encodedPath = it
+            }
+        }
 
         val clean = {
             server.stop()
@@ -78,16 +90,23 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int) = cor
 /**
  * 用于更精准地应用 ProGuard 规则
  */
-private class MicrosoftApplicationModule(
-    private val host: String,
-    private val port: Int,
-) {
+private class MicrosoftApplicationModule(private val host: String, private val port: Int) {
     val module: Application.() -> Unit = {
         routing {
-            get(Api.OAuth.Provider.Microsoft.callback) {
+            get("/auth/realms/fhraise/broker/${Api.OAuth.Provider.Microsoft.brokerName}/endpoint") {
+//                call.request.headers[HttpHeaders.SetCookie]?.let {
+//                    call.response.headers.append(HttpHeaders.SetCookie, it)
+//                }
+//                call.request.headers[HttpHeaders.Cookie]?.let {
+//                    call.response.headers.append(HttpHeaders.SetCookie, it)
+//                }
                 call.respondRedirect {
                     this.host = this@MicrosoftApplicationModule.host
                     this.port = this@MicrosoftApplicationModule.port
+                    path(Api.OAuth.Endpoint.PATH)
+                    parameters.append(Api.OAuth.Endpoint.Query.BROKER_NAME, Api.OAuth.Provider.Microsoft.brokerName)
+//                    parameters.appendAll(call.request.queryParameters)
+//                    parameters.append("cc", call.request.headers[HttpHeaders.Cookie] ?: "")
                 }
             }
         }

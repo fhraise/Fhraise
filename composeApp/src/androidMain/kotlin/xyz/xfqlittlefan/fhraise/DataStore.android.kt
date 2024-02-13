@@ -26,6 +26,6 @@ import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
 object PermissionDataStore {
     private val store by preferencesDataStore("permissions")
 
-    class Permission(scope: CoroutineScope, key: String) :
-        PreferenceStateFlow<Boolean, Boolean>(scope, store, booleanPreferencesKey(key), defaultValue = true)
+    fun get(scope: CoroutineScope, key: String) =
+        PreferenceStateFlow(scope, store, booleanPreferencesKey(key), defaultValue = true)
 }

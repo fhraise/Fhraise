@@ -102,8 +102,6 @@ fun AuthenticationConfig.appAuth() {
                     key = authNonceSecret, timeoutMillis = appAuthTimeout.inWholeMilliseconds
                 ),
                 authorizeUrlInterceptor = {
-                    host = request.host()
-                    port = request.port()
                     request.queryParameters[Api.OAuth.Query.PROVIDER]?.let { parameters.append("kc_idp_hint", it) }
                 },
             )

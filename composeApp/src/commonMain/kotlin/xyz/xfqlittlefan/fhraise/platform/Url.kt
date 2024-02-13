@@ -35,7 +35,7 @@ import io.ktor.http.*
  * @see URLBuilder
  * @see BrowserActions
  */
-fun openUrl(url: String, optionsBuilder: BrowserOptions.() -> Unit = {}, urlBuilder: URLBuilder.() -> Unit = {}) =
+fun openUrl(url: String = "", optionsBuilder: BrowserOptions.() -> Unit = {}, urlBuilder: URLBuilder.() -> Unit = {}) =
     openUrlImpl(URLBuilder(url).apply(urlBuilder).buildString(), BrowserOptions().apply(optionsBuilder))
 
 internal expect fun openUrlImpl(url: String, options: BrowserOptions): BrowserActions
