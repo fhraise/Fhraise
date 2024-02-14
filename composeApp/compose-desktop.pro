@@ -4,4 +4,6 @@
 -keep class xyz.xfqlittlefan.fhraise.routes.** { *; }
 -keep @kotlinx.serialization.Serializable class **
 
+-dontwarn jakarta.**
+-dontwarn org.codehaus.**
 -dontwarn org.slf4j.**

@@ -53,7 +53,7 @@ dependencies {
     implementation(libs.ktor.server.resources)
     implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.auth)
-    implementation(libs.ktor.server.auth.jwt) // TODO: Remove
+    implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.server.html.builder)
@@ -71,7 +71,6 @@ dependencies {
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.kotlin.datetime)
     implementation(libs.h2)
-    implementation(libs.bcrypt) // TODO: Remove
     implementation(libs.mail) // TODO: Remove
     implementation(libs.logback)
     testImplementation(libs.kotlin.test.junit)
