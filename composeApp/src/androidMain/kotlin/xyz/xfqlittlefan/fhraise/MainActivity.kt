@@ -25,9 +25,7 @@ import xyz.xfqlittlefan.fhraise.ui.pages.Root
 class MainActivity : FhraiseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         initialize()
-
         super.onCreate(savedInstanceState)
-
         setContent { Root() }
     }
 }

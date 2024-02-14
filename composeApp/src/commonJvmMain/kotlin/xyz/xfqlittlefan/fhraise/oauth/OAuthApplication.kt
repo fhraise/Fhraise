@@ -32,8 +32,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import xyz.xfqlittlefan.fhraise.http.onError
 import xyz.xfqlittlefan.fhraise.http.reverseProxy
 import xyz.xfqlittlefan.fhraise.routes.Api
+import java.net.NoRouteToHostException
 
 /**
  * 用于更精准地应用 ProGuard 规则
@@ -58,7 +60,12 @@ class OAuthApplication(
                 } ?: call.respond(HttpStatusCode.BadRequest)
             }
 
-            reverseProxy(Regex(".*"), appProxyClient) {
+            reverseProxy(Regex(".*"), appProxyClient, onRequestError = {
+                when (it) {
+                    is NoRouteToHostException -> onError(it, "无法连接到认证服务器")
+                    else -> onError(it)
+                }
+            }) {
                 url {
                     host = serverHost
                     port = serverPort

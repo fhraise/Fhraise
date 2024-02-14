@@ -18,23 +18,14 @@
 
 package xyz.xfqlittlefan.fhraise
 
-actual fun getPlatform(): Platform = JvmPlatform(DesktopPlatform.Current.name)
+actual val platform: Platform by lazy { DesktopPlatform.current }
 
-enum class DesktopPlatform {
-    Linux, Windows, MacOS, Unknown;
-
-    companion object {
-        /**
-         * Identify OS on which the application is currently running.
-         */
-        val Current: DesktopPlatform by lazy {
-            val name = System.getProperty("os.name")
-            when {
-                name?.startsWith("Linux") == true -> Linux
-                name?.startsWith("Win") == true -> Windows
-                name == "Mac OS X" -> MacOS
-                else -> Unknown
-            }
+val DesktopPlatform.Companion.current: DesktopPlatform
+    get() = System.getProperty("os.name").let {
+        when {
+            it?.startsWith("Linux") == true -> object : JvmPlatformImpl("Linux"), DesktopPlatform.Linux {}
+            it?.startsWith("Win") == true -> object : JvmPlatformImpl("Windows"), DesktopPlatform.Windows {}
+            it == "Mac OS X" -> object : JvmPlatformImpl("MacOS"), DesktopPlatform.MacOs {}
+            else -> object : JvmPlatformImpl("Unknown"), DesktopPlatform.Unknown {}
         }
     }
-}

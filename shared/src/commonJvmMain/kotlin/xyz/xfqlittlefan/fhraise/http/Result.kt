@@ -16,10 +16,18 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise
+package xyz.xfqlittlefan.fhraise.http
 
-import android.os.Build
+import io.ktor.http.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import org.slf4j.LoggerFactory
 
-actual val platform: Platform = AndroidPlatformImpl
-
-object AndroidPlatformImpl : JvmPlatformImpl("Android ${Build.VERSION.SDK_INT}"), AndroidPlatform
+suspend fun RoutingContext.onError(
+    throwable: Throwable, message: String = "Server error: ${throwable.localizedMessage}"
+) {
+    message.let {
+        LoggerFactory.getLogger(this::class.java).debug(it, throwable)
+        call.respond(HttpStatusCode.InternalServerError, it)
+    }
+}

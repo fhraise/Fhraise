@@ -51,5 +51,5 @@ interface AppComponentContextValues {
         SnackbarHost(hostState = snackbarHostState)
     }
 
-    suspend fun requestAppNotificationPermission(): Boolean?
+    suspend fun requestAppNotificationPermission(reason: String = "开启通知权限，及时接收最新消息"): Boolean?
 }

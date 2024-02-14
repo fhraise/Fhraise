@@ -37,6 +37,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.cbor.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
+import xyz.xfqlittlefan.fhraise.AndroidPlatform
 import xyz.xfqlittlefan.fhraise.ServerDataStore
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
@@ -48,6 +49,7 @@ import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.oauth.microsoftSignIn
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
+import xyz.xfqlittlefan.fhraise.platform
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.js.JsName
 
@@ -271,6 +273,9 @@ class AppSignInComponent(
 
     override fun onMicrosoftSignIn() {
         componentScope.launch {
+            if (platform is AndroidPlatform) {
+                requestAppNotificationPermission("Fhraise 需要显示一条通知以确保身份认证服务正常运行。您可以拒绝该权限，但是拒绝该权限将导致身份认证功能在某些设备上无法工作。如果您选择拒绝，可在手机设置中重新授予")
+            }
             microsoftSignIn(serverHost.value, serverPort.value)?.let { println(it) }
         }
     }

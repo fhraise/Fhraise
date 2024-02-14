@@ -35,37 +35,47 @@ import io.ktor.utils.io.*
  */
 @OptIn(InternalAPI::class)
 @KtorDsl
-fun Route.reverseProxy(path: Regex, client: HttpClient, block: HttpRequestBuilder.() -> Unit) {
+fun Route.reverseProxy(
+    path: Regex,
+    client: HttpClient,
+    onRequestError: suspend RoutingContext.(Throwable) -> Unit = { onError(it) },
+    onResponseError: suspend RoutingContext.(Throwable) -> Unit = { onError(it) },
+    block: HttpRequestBuilder.() -> Unit
+) {
     route(path) {
         handle {
-            client.request {
-                url(call.request.uri)
-                method = call.request.httpMethod
-                headers.appendAll(call.request.headers)
-                headers.remove(HttpHeaders.TransferEncoding)
-                headers.append(
-                    HttpHeaders.Forwarded,
-                    "for=${call.request.origin.remoteHost};host=${call.request.headers[HttpHeaders.Host] ?: ""};proto=${call.request.origin.scheme}"
-                )
-                call.receiveChannel().let {
-                    body = object : OutgoingContent.ReadChannelContent() {
-                        override fun readFrom() = it
+            runCatching {
+                client.request {
+                    url(call.request.uri)
+                    method = call.request.httpMethod
+                    headers.appendAll(call.request.headers)
+                    headers.remove(HttpHeaders.TransferEncoding)
+                    headers.append(
+                        HttpHeaders.Forwarded,
+                        "for=${call.request.origin.remoteHost};host=${call.request.headers[HttpHeaders.Host] ?: ""};proto=${call.request.origin.scheme}"
+                    )
+                    call.receiveChannel().let {
+                        body = object : OutgoingContent.ReadChannelContent() {
+                            override fun readFrom() = it
+                        }
                     }
+                    block()
                 }
-                block()
-            }.let { response ->
-                call.respond(object : OutgoingContent.WriteChannelContent() {
-                    override val contentLength: Long? = response.contentLength()
-                    override val contentType: ContentType? = response.contentType()
-                    override val status: HttpStatusCode = response.status
-                    override val headers: Headers = Headers.build {
-                        appendAll(response.headers.safeExplicitness)
-                    }
+            }.onFailure { onRequestError(it) }.onSuccess { response ->
+                runCatching {
+                    call.respond(object : OutgoingContent.WriteChannelContent() {
+                        override val contentLength: Long? = response.contentLength()
+                        override val contentType: ContentType? = response.contentType()
+                        override val status: HttpStatusCode = response.status
+                        override val headers: Headers = Headers.build {
+                            appendAll(response.headers.safeExplicitness)
+                        }
 
-                    override suspend fun writeTo(channel: ByteWriteChannel) {
-                        response.content.copyAndClose(channel)
-                    }
-                })
+                        override suspend fun writeTo(channel: ByteWriteChannel) {
+                            response.content.copyAndClose(channel)
+                        }
+                    })
+                }.onFailure { onResponseError(it) }
             }
         }
     }

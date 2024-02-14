@@ -50,7 +50,7 @@ interface RootComponent : AppComponentContext, BackHandlerOwner {
         class SignIn(val component: SignInComponent) : Child()
     }
 
-    val showNotificationPermissionDialog: Boolean
+    val notificationPermissionRequestReason: String?
 
     fun startNotificationPermissionRequest()
     fun cancelNotificationPermissionRequest()
@@ -101,34 +101,31 @@ class AppRootComponent(
     private sealed class Configuration {
         @Serializable
         data object SignIn : Configuration()
-
-//        @Serializable
-//        data object SignUp : Configuration()
     }
 
-    override var showNotificationPermissionDialog by mutableStateOf(false)
+    override var notificationPermissionRequestReason: String? by mutableStateOf(null)
     private var permissionRequestContinuation: Continuation<Boolean?>? = null
 
     override fun startNotificationPermissionRequest() {
         componentScope.launch {
             permissionRequestContinuation?.resumeWith(Result.success(requestNotificationPermission()))
-            showNotificationPermissionDialog = false
+            notificationPermissionRequestReason = null
         }
     }
 
     override fun cancelNotificationPermissionRequest() {
         permissionRequestContinuation?.resumeWith(Result.success(null))
-        showNotificationPermissionDialog = false
+        notificationPermissionRequestReason = null
     }
 
-    override suspend fun requestAppNotificationPermission(): Boolean? = suspendCoroutine {
+    override suspend fun requestAppNotificationPermission(reason: String): Boolean? = suspendCoroutine {
         if (notificationPermissionGranted != null) {
             it.resumeWith(Result.success(notificationPermissionGranted))
             return@suspendCoroutine
         }
 
         permissionRequestContinuation = it
-        showNotificationPermissionDialog = true
+        notificationPermissionRequestReason = reason
     }
 
     override fun onBack() = navigation.pop()

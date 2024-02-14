@@ -18,8 +18,4 @@
 
 package xyz.xfqlittlefan.fhraise
 
-class WasmPlatform : Platform {
-    override val name: String = "Web with Kotlin/Wasm"
-}
-
-actual fun getPlatform(): Platform = WasmPlatform()
+actual val platform: Platform = WasmPlatform

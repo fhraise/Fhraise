@@ -33,9 +33,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -64,6 +61,7 @@ import xyz.xfqlittlefan.fhraise.oauth.AndroidStartOAuthApplicationImpl
 import xyz.xfqlittlefan.fhraise.permission
 import xyz.xfqlittlefan.fhraise.platform.*
 import xyz.xfqlittlefan.fhraise.service.OAuthService
+import xyz.xfqlittlefan.fhraise.ui.AppTheme
 import xyz.xfqlittlefan.fhraise.ui.LocalWindowSizeClass
 import xyz.xfqlittlefan.fhraise.ui.windowSizeClass
 import kotlin.coroutines.Continuation
@@ -170,12 +168,21 @@ open class FhraiseActivity : ComponentActivity() {
                 object : ServiceConnection {
                     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                         if (service !is OAuthService.Binder) error("Invalid service")
-                        service.subscriber = {
-                            when (it) {
-                                is OAuthService.Message.Start -> continuation?.resume(it.server)
+                        service.subscriber = { message ->
+                            when (message) {
+                                is OAuthService.Message.Start -> runCatching {
+                                    continuation?.resume(message.server)
+                                }.onFailure {
+                                    it.printStackTrace()
+                                    rootComponent.snackbarHostState.showSnackbar(
+                                        message = "出错了，请尝试重新启动认证（${it.localizedMessage}）",
+                                        withDismissAction = true,
+                                    )
+                                }
+
                                 is OAuthService.Message.Stop -> {
                                     unbindService(this)
-                                    callback(it.tokenPair)
+                                    callback(message.tokenPair)
                                 }
                             }
                         }
@@ -191,26 +198,10 @@ open class FhraiseActivity : ComponentActivity() {
     fun setContent(content: @Composable RootComponent.() -> Unit) {
         setContentBase {
             rootComponent.AdaptiveColorMode {
-                CompositionLocalProvider(LocalActivity provides this@FhraiseActivity) {
-                    CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
-                        content()
-
-                        if (showNotificationPermissionDialog) {
-                            AlertDialog(
-                                onDismissRequest = ::cancelNotificationPermissionRequest,
-                                title = { Text("请授予通知权限") },
-                                text = { Text("开启通知权限，及时接收最新消息") },
-                                confirmButton = {
-                                    Button(onClick = ::startNotificationPermissionRequest) {
-                                        Text("确定")
-                                    }
-                                },
-                                dismissButton = {
-                                    Button(onClick = ::cancelNotificationPermissionRequest) {
-                                        Text("取消")
-                                    }
-                                },
-                            )
+                AppTheme {
+                    CompositionLocalProvider(LocalActivity provides this@FhraiseActivity) {
+                        CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
+                            content()
                         }
                     }
                 }
@@ -219,7 +210,7 @@ open class FhraiseActivity : ComponentActivity() {
     }
 
     @Composable
-    fun RootComponent.AdaptiveColorMode(content: @Composable RootComponent.(colorMode: AppComponentContextValues.ColorMode) -> Unit) {
+    fun RootComponent.AdaptiveColorMode(content: @Composable RootComponent.() -> Unit) {
         val colorMode by settings.colorMode.collectAsState()
 
         LaunchedEffect(colorMode) {
@@ -240,6 +231,6 @@ open class FhraiseActivity : ComponentActivity() {
             }
         }
 
-        content(colorMode)
+        content()
     }
 }

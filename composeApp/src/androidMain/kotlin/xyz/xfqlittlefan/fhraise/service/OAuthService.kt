@@ -49,10 +49,17 @@ class OAuthService : Service() {
 
     private val binder = Binder()
 
+    private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
+
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
 
     private fun start(host: String, port: Int) {
+        server?.run {
+            stop()
+            server = null
+        }
+
         runCatching {
             Notification(AppNotificationChannel.OAuthService) {
                 setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -75,13 +82,14 @@ class OAuthService : Service() {
                 )
             }
             scope.launch {
-                embeddedServer(
+                val server = server ?: embeddedServer(
                     CIO, port = 0,
                     module = OAuthApplication(host, port) {
                         binder.subscriber(Message.Stop(it))
                         stop()
                     }.module,
-                ).start().let { binder.subscriber(Message.Start(it)) }
+                ).start().also { server = it }
+                binder.subscriber(Message.Start(server))
             }
         }.onFailure { it.printStackTrace() }
     }

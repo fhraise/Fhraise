@@ -18,6 +18,6 @@
 
 package xyz.xfqlittlefan.fhraise
 
-class JvmPlatform(addition: String = "") : Platform {
+open class JvmPlatformImpl(addition: String = "") : JvmPlatform {
     override val name: String = "Java ${System.getProperty("java.version")} $addition"
 }

@@ -39,7 +39,7 @@ import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
 import xyz.xfqlittlefan.fhraise.platform.Notification
 import xyz.xfqlittlefan.fhraise.platform.WindowEvent
 import xyz.xfqlittlefan.fhraise.platform.windowFlow
-import xyz.xfqlittlefan.fhraise.ui.pages.Root
+import xyz.xfqlittlefan.fhraise.ui.pages.ThemedRoot
 import javax.swing.SwingUtilities
 
 val windowDataStore by preferencesDataStore(name = "window")
@@ -90,7 +90,7 @@ fun main() {
             icon = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
         ) {
             CompositionLocalProvider(LocalWindowSize provides windowState.size) {
-                rootComponent.Root()
+                rootComponent.ThemedRoot()
             }
 
             LaunchedEffect(Unit) {

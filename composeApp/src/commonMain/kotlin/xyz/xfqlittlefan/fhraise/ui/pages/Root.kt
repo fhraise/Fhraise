@@ -19,6 +19,9 @@
 package xyz.xfqlittlefan.fhraise.ui.pages
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +40,43 @@ import xyz.xfqlittlefan.fhraise.ui.pages.root.SignIn
 @OptIn(ExperimentalDecomposeApi::class)
 @Composable
 fun RootComponent.Root() {
+    Children(
+        stack = stack,
+        animation = predictiveBackAnimation(
+            backHandler = backHandler, fallbackAnimation = stackAnimation(fade() + scale()), onBack = ::onBack
+        ),
+    ) {
+        when (val child = it.instance) {
+            is RootComponent.Child.SignIn -> child.component.SignIn()
+        }
+    }
+
+    notificationPermissionRequestReason?.let {
+        AlertDialog(
+            onDismissRequest = ::cancelNotificationPermissionRequest,
+            title = { Text("请授予通知权限") },
+            text = { Text(it) },
+            confirmButton = {
+                Button(onClick = ::startNotificationPermissionRequest) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                Button(onClick = ::cancelNotificationPermissionRequest) {
+                    Text("取消")
+                }
+            },
+        )
+    }
+}
+
+@Composable
+fun RootComponent.ThemedRoot() {
+    AppTheme { Root() }
+}
+
+@Composable
+fun RootComponent.AppTheme(content: @Composable () -> Unit) {
     val colorMode by settings.colorMode.collectAsState()
 
     AppTheme(
@@ -44,17 +84,6 @@ fun RootComponent.Root() {
             AppComponentContextValues.ColorMode.LIGHT -> false
             AppComponentContextValues.ColorMode.DARK -> true
             AppComponentContextValues.ColorMode.SYSTEM -> isSystemInDarkTheme()
-        },
-    ) {
-        Children(
-            stack = stack,
-            animation = predictiveBackAnimation(
-                backHandler = backHandler, fallbackAnimation = stackAnimation(fade() + scale()), onBack = ::onBack
-            ),
-        ) {
-            when (val child = it.instance) {
-                is RootComponent.Child.SignIn -> child.component.SignIn()
-            }
-        }
-    }
+        }, content = content
+    )
 }
