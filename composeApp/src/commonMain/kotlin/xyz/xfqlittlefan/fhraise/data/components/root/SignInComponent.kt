@@ -312,7 +312,7 @@ class AppSignInComponent(
         }
     }
 
-    private val serverDataStore by ServerDataStore.Preferences.preferences()
+    private val serverDataStore = ServerDataStore.Preferences(componentScope)
 
     override fun hideServerSettings() {
         super.hideServerSettings()

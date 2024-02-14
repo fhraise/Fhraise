@@ -33,7 +33,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -65,7 +64,6 @@ import xyz.xfqlittlefan.fhraise.oauth.AndroidStartOAuthApplicationImpl
 import xyz.xfqlittlefan.fhraise.permission
 import xyz.xfqlittlefan.fhraise.platform.*
 import xyz.xfqlittlefan.fhraise.service.OAuthService
-import xyz.xfqlittlefan.fhraise.ui.AppTheme
 import xyz.xfqlittlefan.fhraise.ui.LocalWindowSizeClass
 import xyz.xfqlittlefan.fhraise.ui.windowSizeClass
 import kotlin.coroutines.Continuation
@@ -192,35 +190,27 @@ open class FhraiseActivity : ComponentActivity() {
 
     fun setContent(content: @Composable RootComponent.() -> Unit) {
         setContentBase {
-            rootComponent.AdaptiveColorMode { colorMode ->
+            rootComponent.AdaptiveColorMode {
                 CompositionLocalProvider(LocalActivity provides this@FhraiseActivity) {
                     CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
-                        AppTheme(
-                            dark = when (colorMode) {
-                                AppComponentContextValues.ColorMode.LIGHT -> false
-                                AppComponentContextValues.ColorMode.DARK -> true
-                                AppComponentContextValues.ColorMode.SYSTEM -> isSystemInDarkTheme()
-                            },
-                        ) {
-                            content()
+                        content()
 
-                            if (showNotificationPermissionDialog) {
-                                AlertDialog(
-                                    onDismissRequest = ::cancelNotificationPermissionRequest,
-                                    title = { Text("请授予通知权限") },
-                                    text = { Text("开启通知权限，及时接收最新消息") },
-                                    confirmButton = {
-                                        Button(onClick = ::startNotificationPermissionRequest) {
-                                            Text("确定")
-                                        }
-                                    },
-                                    dismissButton = {
-                                        Button(onClick = ::cancelNotificationPermissionRequest) {
-                                            Text("取消")
-                                        }
-                                    },
-                                )
-                            }
+                        if (showNotificationPermissionDialog) {
+                            AlertDialog(
+                                onDismissRequest = ::cancelNotificationPermissionRequest,
+                                title = { Text("请授予通知权限") },
+                                text = { Text("开启通知权限，及时接收最新消息") },
+                                confirmButton = {
+                                    Button(onClick = ::startNotificationPermissionRequest) {
+                                        Text("确定")
+                                    }
+                                },
+                                dismissButton = {
+                                    Button(onClick = ::cancelNotificationPermissionRequest) {
+                                        Text("取消")
+                                    }
+                                },
+                            )
                         }
                     }
                 }
@@ -233,7 +223,7 @@ open class FhraiseActivity : ComponentActivity() {
         val colorMode by settings.colorMode.collectAsState()
 
         LaunchedEffect(colorMode) {
-            val systemBarStyle = when (colorMode) {
+            when (colorMode) {
                 AppComponentContextValues.ColorMode.LIGHT -> SystemBarStyle.light(
                     scrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT
                 )
@@ -242,12 +232,12 @@ open class FhraiseActivity : ComponentActivity() {
                 AppComponentContextValues.ColorMode.SYSTEM -> SystemBarStyle.auto(
                     lightScrim = Color.TRANSPARENT, darkScrim = Color.TRANSPARENT
                 )
+            }.let {
+                enableEdgeToEdge(
+                    statusBarStyle = it,
+                    navigationBarStyle = it,
+                )
             }
-
-            enableEdgeToEdge(
-                statusBarStyle = systemBarStyle,
-                navigationBarStyle = systemBarStyle,
-            )
         }
 
         content(colorMode)

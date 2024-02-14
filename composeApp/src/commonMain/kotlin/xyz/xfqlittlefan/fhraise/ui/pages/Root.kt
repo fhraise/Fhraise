@@ -18,7 +18,10 @@
 
 package xyz.xfqlittlefan.fhraise.ui.pages
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.fade
@@ -26,20 +29,32 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.plus
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.scale
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
+import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues
 import xyz.xfqlittlefan.fhraise.data.components.RootComponent
+import xyz.xfqlittlefan.fhraise.ui.AppTheme
 import xyz.xfqlittlefan.fhraise.ui.pages.root.SignIn
 
 @OptIn(ExperimentalDecomposeApi::class)
 @Composable
 fun RootComponent.Root() {
-    Children(
-        stack = stack,
-        animation = predictiveBackAnimation(
-            backHandler = backHandler, fallbackAnimation = stackAnimation(fade() + scale()), onBack = ::onBack
-        ),
+    val colorMode by settings.colorMode.collectAsState()
+
+    AppTheme(
+        dark = when (colorMode) {
+            AppComponentContextValues.ColorMode.LIGHT -> false
+            AppComponentContextValues.ColorMode.DARK -> true
+            AppComponentContextValues.ColorMode.SYSTEM -> isSystemInDarkTheme()
+        },
     ) {
-        when (val child = it.instance) {
-            is RootComponent.Child.SignIn -> child.component.SignIn()
+        Children(
+            stack = stack,
+            animation = predictiveBackAnimation(
+                backHandler = backHandler, fallbackAnimation = stackAnimation(fade() + scale()), onBack = ::onBack
+            ),
+        ) {
+            when (val child = it.instance) {
+                is RootComponent.Child.SignIn -> child.component.SignIn()
+            }
         }
     }
 }

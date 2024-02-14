@@ -24,29 +24,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.arkivanov.decompose.ComponentContext
 import kotlinx.coroutines.CoroutineScope
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode
-import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
-import kotlin.properties.ReadOnlyProperty
 
-private interface Preferences {
-    interface PreferencesFactory {
-        fun preferences(): ReadOnlyProperty<ComponentContext, Preferences>
-    }
-}
 
 object SettingsDataStore {
     private val store by preferencesDataStore("settings")
 
-    class Preferences(scope: CoroutineScope) : xyz.xfqlittlefan.fhraise.Preferences {
-        companion object : xyz.xfqlittlefan.fhraise.Preferences.PreferencesFactory {
-            override fun preferences() =
-                ReadOnlyProperty<ComponentContext, Preferences> { thisRef, _ -> Preferences(thisRef.componentScope) }
-        }
-
+    class Preferences(scope: CoroutineScope) {
         val colorMode = PreferenceStateFlow(
             scope,
             store,
@@ -61,12 +48,7 @@ object SettingsDataStore {
 object ServerDataStore {
     private val store by preferencesDataStore("server")
 
-    class Preferences(scope: CoroutineScope) : xyz.xfqlittlefan.fhraise.Preferences {
-        companion object : xyz.xfqlittlefan.fhraise.Preferences.PreferencesFactory {
-            override fun preferences() =
-                ReadOnlyProperty<ComponentContext, Preferences> { thisRef, _ -> Preferences(thisRef.componentScope) }
-        }
-
+    class Preferences(scope: CoroutineScope) {
         val serverHost =
             PreferenceStateFlow(scope, store, stringPreferencesKey("serverHost"), defaultValue = "localhost")
         val serverPort =
