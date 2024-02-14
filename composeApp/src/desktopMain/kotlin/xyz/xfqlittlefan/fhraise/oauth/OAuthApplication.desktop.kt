@@ -18,4 +18,14 @@
 
 package xyz.xfqlittlefan.fhraise.oauth
 
-actual val sendDeepLink = true
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
+import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import xyz.xfqlittlefan.fhraise.platform.bringWindowToFront
+
+actual suspend inline fun startOAuthApplication(
+    host: String, port: Int, crossinline callback: suspend (JwtTokenPair) -> Unit
+) = with(OAuthApplication(host, port) {
+    bringWindowToFront()
+    callback(it)
+}) { embeddedServer(CIO, port = 0, module = module).start() }

@@ -18,6 +18,37 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import androidx.annotation.StringRes
+import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
+import xyz.xfqlittlefan.fhraise.R
+
+enum class AppNotificationChannel(
+    @StringRes val channelName: Int, @StringRes val description: Int, val importance: Int
+) {
+    OAuthService(
+        R.string.oauth_service_title, R.string.oauth_service_description, NotificationManager.IMPORTANCE_DEFAULT
+    ),
+}
+
 object AndroidNotificationImpl {
-    lateinit var send: (channel: String, title: String, message: String, priority: Int) -> Unit
+    lateinit var send: (channel: AppNotificationChannel, title: String, message: String, priority: Int) -> Unit
+}
+
+inline fun Context.Notification(channel: AppNotificationChannel, block: NotificationCompat.Builder.() -> Unit = {}) =
+    NotificationCompat.Builder(this, channel.name).apply(block).build()
+
+inline fun NotificationCompat.Builder.addAction(block: NotificationActionBuilder.() -> Unit = {}) {
+    addAction(NotificationActionBuilder().apply(block).build())
+}
+
+class NotificationActionBuilder {
+    var icon: IconCompat? = null
+    var title: CharSequence? = null
+    var intent: PendingIntent? = null
+
+    fun build() = NotificationCompat.Action.Builder(icon, title, intent).build()
 }

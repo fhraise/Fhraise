@@ -18,4 +18,14 @@
 
 package xyz.xfqlittlefan.fhraise.oauth
 
-actual val sendDeepLink = true
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
+import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+
+actual suspend inline fun startOAuthApplication(
+    host: String, port: Int, crossinline callback: suspend (JwtTokenPair) -> Unit
+) = AndroidStartOAuthApplicationImpl.start(host, port) { callback(it) }
+
+object AndroidStartOAuthApplicationImpl {
+    lateinit var start: suspend (host: String, port: Int, callback: suspend (JwtTokenPair) -> Unit) -> EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>
+}

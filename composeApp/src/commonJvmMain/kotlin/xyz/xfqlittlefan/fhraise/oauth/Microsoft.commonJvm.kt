@@ -19,8 +19,6 @@
 package xyz.xfqlittlefan.fhraise.oauth
 
 import io.ktor.http.*
-import io.ktor.server.cio.*
-import io.ktor.server.engine.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.onTimeout
@@ -31,31 +29,30 @@ import xyz.xfqlittlefan.fhraise.platform.openUrl
 import xyz.xfqlittlefan.fhraise.routes.Api
 import kotlin.time.Duration.Companion.minutes
 
-internal expect val sendDeepLink: Boolean
+expect val sendDeepLink: Boolean
 
 @OptIn(ExperimentalCoroutinesApi::class)
 actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int) = coroutineScope {
     withContext(Dispatchers.IO) {
         val channel = Channel<JwtTokenPair?>()
 
-        val server = with(OAuthApplication(host, port) {
+        val server = startOAuthApplication(host, port) {
             bringWindowToFront()
             channel.send(it)
-        }) {
-            embeddedServer(CIO, port = 0, module = module).start()
         }
 
-        val localServerPort = server.engine.resolvedConnectors().first().port
-
-        openUrl {
+        val actions = openUrl {
             takeFrom(Api.OAuth.PATH)
-            this.port = localServerPort
+            this.port = server.engine.resolvedConnectors().first().port
             parameters.apply {
                 append(Api.OAuth.Query.PROVIDER, Api.OAuth.Provider.Microsoft.brokerName)
             }
         }
 
-        val clean = { server.stop() }
+        val clean = {
+            actions.close()
+            server.stop()
+        }
 
         select {
             channel.onReceiveCatching {

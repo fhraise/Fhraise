@@ -22,6 +22,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:allowBackup="true"
@@ -63,5 +65,14 @@
                 <data android:scheme="fhraise" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".service.OAuthService"
+            android:foregroundServiceType="specialUse"
+            android:label="@string/oauth_service_title">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="@string/oauth_service_description" />
+        </service>
     </application>
 </manifest>

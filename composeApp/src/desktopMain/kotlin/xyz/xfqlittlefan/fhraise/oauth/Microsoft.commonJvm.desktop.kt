@@ -18,4 +18,4 @@
 
 package xyz.xfqlittlefan.fhraise.oauth
 
-internal actual val sendDeepLink = false
+actual val sendDeepLink = false

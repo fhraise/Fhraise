@@ -19,11 +19,15 @@
 package xyz.xfqlittlefan.fhraise.activity
 
 import android.Manifest
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -34,10 +38,15 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.arkivanov.decompose.defaultComponentContext
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -52,11 +61,16 @@ import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues
 import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
 import xyz.xfqlittlefan.fhraise.data.components.RootComponent
 import xyz.xfqlittlefan.fhraise.datastore.AndroidPreferencesDataStoreImpl
+import xyz.xfqlittlefan.fhraise.oauth.AndroidStartOAuthApplicationImpl
 import xyz.xfqlittlefan.fhraise.permission
 import xyz.xfqlittlefan.fhraise.platform.*
+import xyz.xfqlittlefan.fhraise.service.OAuthService
 import xyz.xfqlittlefan.fhraise.ui.AppTheme
 import xyz.xfqlittlefan.fhraise.ui.LocalWindowSizeClass
 import xyz.xfqlittlefan.fhraise.ui.windowSizeClass
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import androidx.activity.compose.setContent as setContentBase
 
 open class FhraiseActivity : ComponentActivity() {
@@ -93,8 +107,17 @@ open class FhraiseActivity : ComponentActivity() {
         val notificationPermission =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission(Manifest.permission.POST_NOTIFICATIONS) else null
 
+        NotificationManagerCompat.from(this).apply {
+            AppNotificationChannel.entries.forEach { channel ->
+                NotificationChannelCompat.Builder(channel.name, channel.importance).apply {
+                    setName(getString(channel.channelName))
+                    setDescription(getString(channel.description))
+                }.build().let { createNotificationChannel(it) }
+            }
+        }
+
         AndroidNotificationImpl.send = { channel, title, message, priority ->
-            val notification = NotificationCompat.Builder(this, channel).apply {
+            val notification = NotificationCompat.Builder(this, channel.name).apply {
                 setSmallIcon(R.drawable.ic_launcher_foreground)
                 setContentTitle(title)
                 setContentText(message)
@@ -103,8 +126,7 @@ open class FhraiseActivity : ComponentActivity() {
                 setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             }.build()
             val notificationManager = getSystemService(android.app.NotificationManager::class.java)
-            val id =
-                (channel.hashCode() shl 48) or (title.hashCode() shl 32) or (message.hashCode() shl 16) or priority.hashCode()
+            val id = "$channel:$title:$message:$priority".hashCode()
             notificationManager.notify(id, notification)
         }
 
@@ -137,6 +159,34 @@ open class FhraiseActivity : ComponentActivity() {
             BrowserActions().apply {
                 close = { browserFlow.tryEmit(usedId to BrowserMessage.Close) }
             }
+        }
+
+        AndroidStartOAuthApplicationImpl.start = { host, port, callback ->
+            var continuation: Continuation<EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>>? =
+                null
+            Intent(this, OAuthService::class.java).apply {
+                putExtra(OAuthService.EXTRA_HOST, host)
+                putExtra(OAuthService.EXTRA_PORT, port)
+            }.let { intent ->
+                ContextCompat.startForegroundService(this, intent)
+                object : ServiceConnection {
+                    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                        if (service !is OAuthService.Binder) error("Invalid service")
+                        service.subscriber = {
+                            when (it) {
+                                is OAuthService.Message.Start -> continuation?.resume(it.server)
+                                is OAuthService.Message.Stop -> {
+                                    unbindService(this)
+                                    callback(it.tokenPair)
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onServiceDisconnected(name: ComponentName?) {}
+                }.let { bindService(intent, it, Context.BIND_AUTO_CREATE) }
+            }
+            suspendCoroutine { continuation = it }
         }
     }
 

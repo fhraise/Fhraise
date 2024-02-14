@@ -22,6 +22,8 @@ import io.ktor.client.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.cbor.*
 import io.ktor.server.application.*
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.resources.*
@@ -65,3 +67,7 @@ class OAuthApplication(
         }
     }
 }
+
+expect suspend inline fun startOAuthApplication(
+    host: String, port: Int, crossinline callback: suspend (JwtTokenPair) -> Unit
+): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>
