@@ -58,11 +58,10 @@ import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.defaultServerPort
+import xyz.xfqlittlefan.fhraise.icon.AppIcons
+import xyz.xfqlittlefan.fhraise.icon.Microsoft
 import xyz.xfqlittlefan.fhraise.rememberMutableState
-import xyz.xfqlittlefan.fhraise.ui.AnimationValue
-import xyz.xfqlittlefan.fhraise.ui.DensityScope
-import xyz.xfqlittlefan.fhraise.ui.WindowSizeClass
-import xyz.xfqlittlefan.fhraise.ui.WindowWidthSizeClass
+import xyz.xfqlittlefan.fhraise.ui.*
 import xyz.xfqlittlefan.fhraise.ui.composables.TypeWriter
 import xyz.xfqlittlefan.fhraise.ui.composables.VerticalScrollbar
 import xyz.xfqlittlefan.fhraise.ui.composables.safeDrawingWithoutIme
@@ -345,16 +344,16 @@ private fun SignInLayout(
             // == Measure additional content ==
             val insetsBottom = insetsWithoutIme.getBottom(this@SubcomposeLayout)
 
-            val additionalContentWidth = (AnimationValue(width, width * 2f / 9f).animatedSecondStage).roundToInt()
+            val additionalContentWidth = (((width) animatedSecondStageTo (width * 2f / 9f))).roundToInt()
 
             val additionalContentMeasurable = subcompose(slotId = "additionalContent") {
                 Box(modifier = Modifier.verticalScroll(state = additionalContentScrollState)) {
                     additionalContent(
                         PaddingValues(
-                            start = (AnimationValue(32, 16).animatedSecondStage.dpAsPx + contentPaddingLeft).toDp(),
-                            top = 8.dpAsPx.animatedFirstStageToZero.toDp(),
+                            start = ((32 animatedSecondStageTo 16).dpAsPx + contentPaddingLeft).toDp(),
+                            top = (8.dpAsPx animatedFirstStageTo 0).toDp(),
                             end = (32.dpAsPx + contentPaddingRight).toDp(),
-                            bottom = (16.dpAsPx + insetsBottom).animatedSecondStageToZero.toDp()
+                            bottom = (16.dpAsPx + insetsBottom animatedSecondStageTo 0).toDp()
                         )
                     )
                 }
@@ -369,8 +368,7 @@ private fun SignInLayout(
             val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
             // == Measure main ==
-            val mainPaddingBottom =
-                max(contentPaddingBottom, additionalContentPlaceable.height.animatedSecondStageToZero)
+            val mainPaddingBottom = max(contentPaddingBottom, additionalContentPlaceable.height animatedSecondStageTo 0)
 
             val mainMeasurable = subcompose("main") {
                 SignInMainLayout(
@@ -384,18 +382,17 @@ private fun SignInLayout(
                 )
             }.first()
 
-            val mainWidth = AnimationValue(width, width * 7f / 9f).animatedSecondStage.coerceAtLeast(0f).roundToInt()
+            val mainWidth = (width animatedSecondStageTo (width * 7f / 9f)).coerceAtLeast(0f).roundToInt()
 
             val mainConstraints = Constraints.fixed(width = mainWidth, height = height)
             val mainPlaceable = mainMeasurable.measure(mainConstraints)
 
             // == Place ==
-            val additionalContentX = mainPlaceable.width.animatedSecondStageFromZero
+            val additionalContentX = 0 animatedSecondStageTo mainPlaceable.width
 
             val additionalContentCompatMediumY = height - additionalContentPlaceable.height
             val additionalContentExpandedY = (safeHeight - additionalContentPlaceable.height) / 2f + contentPaddingTop
-            val additionalContentY =
-                AnimationValue(additionalContentCompatMediumY, additionalContentExpandedY).animatedSecondStage
+            val additionalContentY = additionalContentCompatMediumY animatedSecondStageTo additionalContentExpandedY
 
             val additionalContentBackgroundPlaceable = subcompose("additionalContentBackground") {
                 val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
@@ -413,7 +410,7 @@ private fun SignInLayout(
                 }
             }.first().measure(Constraints.fixed(width = width, height = additionalContentPlaceable.height))
 
-            val additionalContentBackgroundY = AnimationValue(additionalContentY, height).animatedSecondStage
+            val additionalContentBackgroundY = additionalContentY animatedSecondStageTo height
 
             // == Scrollbars ==
             val mainScrollbarHeight = (height - contentPaddingTop - mainPaddingBottom).roundToInt().coerceAtLeast(0)
@@ -428,7 +425,7 @@ private fun SignInLayout(
             val mainScrollbarY = contentPaddingTop.roundToInt()
 
             val additionalContentScrollbarHeight =
-                (additionalContentPlaceable.height - insetsBottom.animatedSecondStageToZero).roundToInt()
+                (additionalContentPlaceable.height - (insetsBottom animatedSecondStageTo 0)).roundToInt()
                     .coerceAtLeast(0)
 
             val additionalContentScrollbarPlaceable = subcompose("additionalContentScrollbar") {
@@ -492,18 +489,18 @@ private fun SignInLayoutScope.SignInMainLayout(
 
             // == Header's padding and width ==
             val headerPaddingLeft = 32.dpAsPx + contentPaddingLeft
-            val headerPaddingTop = 24.dpAsPx.animatedFirstStageToZero + contentPaddingTop
-            val headerPaddingRight = AnimationValue(32.dpAsPx + contentPaddingRight, 16.dpAsPx).animatedFirstStage
-            val headerPaddingBottom = AnimationValue(8.dpAsPx, contentPaddingBottom).animatedFirstStage
+            val headerPaddingTop = 24.dpAsPx animatedFirstStageTo 0 + contentPaddingTop
+            val headerPaddingRight = 32.dpAsPx + contentPaddingRight animatedFirstStageTo 16.dpAsPx
+            val headerPaddingBottom = 8.dpAsPx animatedFirstStageTo contentPaddingBottom
 
             val headerCompatWidth = width.toFloat()
             val headerMediumWidth = width * 4f / 9f
             val headerExpandedWidth = width * 3f / 7f
             val headerWidth = when {
                 animation == 0f -> headerCompatWidth
-                animation < 1f -> AnimationValue(headerCompatWidth, headerMediumWidth).animatedFirstStage
+                animation < 1f -> headerCompatWidth animatedFirstStageTo headerMediumWidth
                 animation == 1f -> headerMediumWidth
-                animation < 2f -> AnimationValue(headerMediumWidth, headerExpandedWidth).animatedSecondStage
+                animation < 2f -> headerMediumWidth animatedSecondStageTo headerExpandedWidth
                 else -> headerExpandedWidth
             }
 
@@ -519,9 +516,9 @@ private fun SignInLayoutScope.SignInMainLayout(
             }.firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
 
             // == Main content's padding and width ==
-            val mainContentPaddingLeft = AnimationValue(32.dpAsPx + contentPaddingLeft, 16.dpAsPx).animatedFirstStage
-            val mainContentPaddingTop = AnimationValue(8.dpAsPx, 16.dpAsPx + contentPaddingTop).animatedFirstStage
-            val mainContentPaddingRight = AnimationValue(32.dpAsPx + contentPaddingRight, 16.dpAsPx).animatedSecondStage
+            val mainContentPaddingLeft = 32.dpAsPx + contentPaddingLeft animatedFirstStageTo 16.dpAsPx
+            val mainContentPaddingTop = 8.dpAsPx animatedFirstStageTo (16.dpAsPx + contentPaddingTop)
+            val mainContentPaddingRight = 32.dpAsPx + contentPaddingRight animatedSecondStageTo 16.dpAsPx
             val mainContentPaddingBottom = 16.dpAsPx + contentPaddingBottom
 
             val mainContentMaxWidth = 512.dpAsPx
@@ -530,9 +527,9 @@ private fun SignInLayoutScope.SignInMainLayout(
             val mainContentExpandedWidth = width * 4f / 7f
             val mainContentWidth = when {
                 animation == 0f -> mainContentCompatWidth
-                animation < 1f -> AnimationValue(mainContentCompatWidth, mainContentMediumWidth).animatedFirstStage
+                animation < 1f -> mainContentCompatWidth animatedFirstStageTo mainContentMediumWidth
                 animation == 1f -> mainContentMediumWidth
-                animation < 2f -> AnimationValue(mainContentMediumWidth, mainContentExpandedWidth).animatedSecondStage
+                animation < 2f -> mainContentMediumWidth animatedSecondStageTo mainContentExpandedWidth
                 else -> mainContentExpandedWidth
             }
 
@@ -562,19 +559,18 @@ private fun SignInLayoutScope.SignInMainLayout(
 
             val requiredColumnHeight = headerPlaceable.height + mainContentPlaceable.height
             val requiredRowHeight = max(headerPlaceable.height, mainContentPlaceable.height)
-            val requiredHeight = AnimationValue(requiredColumnHeight, requiredRowHeight).animatedFirstStage
+            val requiredHeight = requiredColumnHeight animatedFirstStageTo requiredRowHeight
             val requiredBoxHeight = max(boxHeight, requiredHeight.roundToInt())
 
-            val headerX = (headerWidth - headerPlaceable.width).animatedFirstStageFromZero
-            val headerY = ((boxHeight - headerPlaceable.height) / 2f + scrollState.value).animatedFirstStageFromZero
+            val headerX = 0 animatedFirstStageTo (headerWidth - headerPlaceable.width)
+            val headerY = 0 animatedFirstStageTo ((boxHeight - headerPlaceable.height) / 2f + scrollState.value)
 
-            val mainContentX =
-                headerWidth.animatedFirstStageFromZero + (mainContentWidth - mainContentConstraintWidth) / 2f
+            val mainContentX = 0 animatedFirstStageTo headerWidth + (mainContentWidth - mainContentConstraintWidth) / 2f
 
             val mainContentCompatY =
                 (requiredBoxHeight - headerPlaceable.height - mainContentPlaceable.height) / 2f + headerPlaceable.height
             val mainContentMediumExpandedY = (requiredBoxHeight - mainContentPlaceable.height) / 2f
-            val mainContentY = AnimationValue(mainContentCompatY, mainContentMediumExpandedY).animatedFirstStage
+            val mainContentY = mainContentCompatY animatedFirstStageTo mainContentMediumExpandedY
 
             layout(width, requiredBoxHeight) {
                 headerPlaceable.placeRelative(headerX.roundToInt(), headerY.roundToInt())
@@ -584,7 +580,6 @@ private fun SignInLayoutScope.SignInMainLayout(
     }
 }
 
-@OptIn(ExperimentalResourceApi::class)
 @Composable
 private fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
@@ -607,7 +602,7 @@ private fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
             shape = MaterialTheme.shapes.large,
         ) {
             Icon(
-                painter = painterResource(DrawableResource("drawable/microsoft_logo.xml")),
+                imageVector = AppIcons.Microsoft,
                 contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -787,19 +782,7 @@ private class SignInLayoutScope(density: Density, val animation: Float) : Densit
     val AnimationValue.animatedFirstStage
         get() = animated(animationFirstStage)
 
-    /**
-     * 将以 0 作为起始值，以给定的 [Number] 作为结束值的 [AnimationValue] 应用于从 [WindowWidthSizeClass.Compact] 到 [WindowWidthSizeClass.Medium] 的过渡。
-     *
-     * @see animatedFirstStage
-     */
-    val Number.animatedFirstStageFromZero get() = AnimationValue(0f, this).animatedFirstStage
-
-    /**
-     * 将以给定的 [Number] 作为起始值，以 0 作为结束值的 [AnimationValue] 应用于从 [WindowWidthSizeClass.Compact] 到 [WindowWidthSizeClass.Medium] 的过渡。
-     *
-     * @see animatedFirstStage
-     */
-    val Number.animatedFirstStageToZero get() = AnimationValue(this, 0f).animatedFirstStage
+    infix fun Number.animatedFirstStageTo(target: Number) = (this animateTo target).animatedFirstStage
 
     /**
      * 将给定的 [AnimationValue] 应用于从 [WindowWidthSizeClass.Medium] 到 [WindowWidthSizeClass.Expanded] 的过渡。
@@ -809,17 +792,5 @@ private class SignInLayoutScope(density: Density, val animation: Float) : Densit
     val AnimationValue.animatedSecondStage
         get() = animated(animationSecondStage)
 
-    /**
-     * 将以 0 作为起始值，以给定的 [Number] 作为结束值的 [AnimationValue] 应用于从 [WindowWidthSizeClass.Medium] 到 [WindowWidthSizeClass.Expanded] 的过渡。
-     *
-     * @see animatedSecondStage
-     */
-    val Number.animatedSecondStageFromZero get() = AnimationValue(0f, this).animatedSecondStage
-
-    /**
-     * 将以给定的 [Number] 作为起始值，以 0 作为结束值的 [AnimationValue] 应用于从 [WindowWidthSizeClass.Medium] 到 [WindowWidthSizeClass.Expanded] 的过渡。
-     *
-     * @see animatedSecondStage
-     */
-    val Number.animatedSecondStageToZero get() = AnimationValue(this, 0f).animatedSecondStage
+    infix fun Number.animatedSecondStageTo(target: Number) = (this animateTo target).animatedSecondStage
 }

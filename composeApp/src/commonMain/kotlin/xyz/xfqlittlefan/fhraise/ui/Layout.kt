@@ -59,3 +59,5 @@ data class AnimationValue(val source: Number, val target: Number) {
         return sourceFloat + (targetFloat - sourceFloat) * animation
     }
 }
+
+infix fun Number.animateTo(target: Number) = AnimationValue(this, target)
