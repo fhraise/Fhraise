@@ -42,19 +42,19 @@ import xyz.xfqlittlefan.fhraise.ServerDataStore
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
-import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.CredentialType.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
-import xyz.xfqlittlefan.fhraise.oauth.microsoftSignIn
+import xyz.xfqlittlefan.fhraise.oauth.oAuthSignIn
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.platform
 import xyz.xfqlittlefan.fhraise.routes.Api
+import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType
 import kotlin.js.JsName
 
 internal typealias OnRequest = suspend (client: HttpClient, credential: String) -> Boolean
-internal typealias OnVerify = suspend (client: HttpClient, credential: String, verification: String) -> Boolean
+internal typealias OnVerify = suspend (client: HttpClient, verification: String) -> Boolean
 
 interface SignInComponent : AppComponentContext {
     var step: Step
@@ -82,11 +82,19 @@ interface SignInComponent : AppComponentContext {
         operator fun inc(): Step = next
     }
 
-    enum class CredentialType(val displayName: String, val keyboardType: KeyboardType) {
-        Username("用户名", KeyboardType.Text), PhoneNumber("手机号", KeyboardType.Phone), Email(
-            "电子邮件地址", KeyboardType.Email
-        )
-    }
+    val CredentialType.displayName
+        get() = when (this) {
+            CredentialType.Username -> "用户名"
+            CredentialType.PhoneNumber -> "手机号"
+            CredentialType.Email -> "电子邮件地址"
+        }
+
+    val CredentialType.keyboardType
+        get() = when (this) {
+            CredentialType.Username -> KeyboardType.Text
+            CredentialType.PhoneNumber -> KeyboardType.Phone
+            CredentialType.Email -> KeyboardType.Email
+        }
 
     sealed class VerificationType(
         val displayName: String,
@@ -152,16 +160,15 @@ interface SignInComponent : AppComponentContext {
 
     val defaultVerifications
         get() = listOf(
-            FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
-            QrCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
-            SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
+            QrCode(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
+            SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
             EmailCode(
                 onRequest = { client, credential ->
                     runCatching {
                         client.post(
                             Api.Auth.Type.Request(
-                                Api.Auth.Type.CredentialType.Email,
-                                Api.Auth.Type.Request.VerificationType.VerificationCode
+                                CredentialType.Email, Api.Auth.Type.Request.VerificationType.VerificationCode
                             )
                         ) {
                             contentType(ContentType.Application.Cbor)
@@ -178,9 +185,9 @@ interface SignInComponent : AppComponentContext {
                         }
                     } ?: false
                 },
-                onVerify = { client, credential, verification ->
+                onVerify = { client, verification ->
                     runCatching {
-                        client.post(Api.Auth.Type.Verify(Api.Auth.Type.CredentialType.Email, verifyingToken!!)) {
+                        client.post(Api.Auth.Type.Verify(CredentialType.Email, verifyingToken!!)) {
                             contentType(ContentType.Application.Cbor)
                             setBody(Api.Auth.Type.Verify.RequestBody(verification))
                         }.body<Api.Auth.Type.Verify.ResponseBody>()
@@ -197,11 +204,47 @@ interface SignInComponent : AppComponentContext {
                     } ?: false
                 },
             ),
-            Password(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
-            Face(onRequest = { _, _ -> false }, onVerify = { _, _, _ -> false }),
+            Password(
+                onRequest = { client, credential ->
+                    runCatching {
+                        client.post(
+                            Api.Auth.Type.Request(credentialType, Api.Auth.Type.Request.VerificationType.Password)
+                        ) {
+                            contentType(ContentType.Application.Cbor)
+                            setBody(Api.Auth.Type.Request.RequestBody(credential))
+                        }.body<Api.Auth.Type.Request.ResponseBody.Success>()
+                    }.getOrElse {
+                        it.printStackTrace()
+                        null
+                    }?.let {
+                        verifyingToken = it.token
+                        true
+                    } ?: false
+                },
+                onVerify = { client, verification ->
+                    runCatching {
+                        client.post(Api.Auth.Type.Verify(credentialType, verifyingToken!!)) {
+                            contentType(ContentType.Application.Cbor)
+                            setBody(Api.Auth.Type.Verify.RequestBody(verification))
+                        }.body<Api.Auth.Type.Verify.ResponseBody.Success>()
+                    }.getOrElse {
+                        it.printStackTrace()
+                        null
+                    }?.let {
+                        verifyingToken = null
+                        enter(it.tokenPair)
+                        true
+                    } ?: false
+                },
+            ),
+            Face(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
         )
 
     suspend fun requestVerification(): Boolean
+
+    fun onGoogleSignIn()
+
+    fun onGitHubSignIn()
 
     fun onMicrosoftSignIn()
 
@@ -238,7 +281,7 @@ class AppSignInComponent(
     componentContext: AppComponentContext, private val onEnter: () -> Unit
 ) : SignInComponent, AppComponentContext by componentContext {
     override var step by mutableStateOf(EnteringCredential)
-    override var credentialType by mutableStateOf(Username)
+    override var credentialType by mutableStateOf(CredentialType.Username)
     override var credential by mutableStateOf("")
     private var _verificationType: SignInComponent.VerificationType? by mutableStateOf(null)
     override var verificationType
@@ -249,9 +292,9 @@ class AppSignInComponent(
 
     override val credentialValid
         get() = when (credentialType) {
-            Username -> credential.matches(usernameRegex)
-            PhoneNumber -> credential.matches(phoneNumberRegex)
-            Email -> credential.matches(emailRegex)
+            CredentialType.Username -> credential.matches(usernameRegex)
+            CredentialType.PhoneNumber -> credential.matches(phoneNumberRegex)
+            CredentialType.Email -> credential.matches(emailRegex)
         }
 
     private val emailRegex = Regex("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+\$")
@@ -271,30 +314,35 @@ class AppSignInComponent(
         }
     } ?: false
 
-    override fun onMicrosoftSignIn() {
+    private fun onOAuthSignIn(provider: Api.OAuth.Provider) {
         componentScope.launch {
             if (platform is AndroidPlatform) {
                 requestAppNotificationPermission("Fhraise 需要显示一条通知以确保身份认证服务正常运行。您可以拒绝该权限，但是拒绝该权限将导致身份认证功能在某些设备上无法工作。如果您选择拒绝，可在手机设置中重新授予")
             }
-            microsoftSignIn(serverHost.value, serverPort.value)?.let { println(it) }
+            oAuthSignIn(serverHost.value, serverPort.value, provider)
         }
     }
 
+    override fun onGoogleSignIn() = onOAuthSignIn(Api.OAuth.Provider.Google)
+
+    override fun onGitHubSignIn() = onOAuthSignIn(Api.OAuth.Provider.GitHub)
+
+    override fun onMicrosoftSignIn() = onOAuthSignIn(Api.OAuth.Provider.Microsoft)
+
     override fun enter(tokenPair: JwtTokenPair?) {
         if (!credentialValid) return
-        val verification = verificationType
-        if (verification == null) {
-            // TODO: 询问是否验证
-            onEnter()
-        } else {
+        verificationType?.let {
             componentScope.launch {
-                if (verification.onVerify(client, credential, this@AppSignInComponent.verification)) {
+                if (it.onVerify(client, verification)) {
                     snackbarHostState.showSnackbar(message = "验证成功", withDismissAction = true)
                     onEnter()
                 } else {
                     snackbarHostState.showSnackbar(message = "验证失败", withDismissAction = true)
                 }
             }
+        } ?: run {
+            // TODO: 询问是否验证
+            onEnter()
         }
     }
 

@@ -20,5 +20,8 @@ package xyz.xfqlittlefan.fhraise.oauth
 
 import kotlinx.coroutines.CoroutineScope
 import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import xyz.xfqlittlefan.fhraise.routes.Api
 
-expect suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): JwtTokenPair?
+actual suspend fun CoroutineScope.oAuthSignIn(host: String, port: Int, provider: Api.OAuth.Provider): JwtTokenPair? {
+    TODO("Not yet implemented")
+}

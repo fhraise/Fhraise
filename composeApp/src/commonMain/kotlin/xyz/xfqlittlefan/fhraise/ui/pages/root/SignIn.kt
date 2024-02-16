@@ -59,8 +59,11 @@ import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.defaultServerPort
 import xyz.xfqlittlefan.fhraise.icon.AppIcons
+import xyz.xfqlittlefan.fhraise.icon.Github
+import xyz.xfqlittlefan.fhraise.icon.Google
 import xyz.xfqlittlefan.fhraise.icon.Microsoft
 import xyz.xfqlittlefan.fhraise.rememberMutableState
+import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.ui.*
 import xyz.xfqlittlefan.fhraise.ui.composables.TypeWriter
 import xyz.xfqlittlefan.fhraise.ui.composables.VerticalScrollbar
@@ -167,7 +170,7 @@ fun SignInComponent.SignIn() {
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
                                 ) {
-                                    SignInComponent.CredentialType.entries.forEach {
+                                    Api.Auth.Type.CredentialType.entries.forEach {
                                         FilterChip(
                                             selected = credentialType == it,
                                             onClick = it.use,
@@ -598,6 +601,32 @@ private fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         FilledTonalButton(
+            onClick = ::onGoogleSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = AppIcons.Google,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "使用 Google 登录")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        FilledTonalButton(
+            onClick = ::onMicrosoftSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Icon(
+                imageVector = AppIcons.Github,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "使用 GitHub 登录")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        FilledTonalButton(
             onClick = ::onMicrosoftSignIn,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
@@ -664,7 +693,7 @@ private fun SignInComponent.Credential() {
         onValueChange = ::credential::set,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         label = { Text(text = credentialType.displayName) },
-        prefix = if (credentialType == SignInComponent.CredentialType.PhoneNumber) {
+        prefix = if (credentialType == Api.Auth.Type.CredentialType.PhoneNumber) {
             { Text(text = "+86") }
         } else null,
         supportingText = {

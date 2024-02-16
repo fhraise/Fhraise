@@ -24,11 +24,12 @@ import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import xyz.xfqlittlefan.fhraise.logger
 
 suspend fun HttpClient.getTokensByPassword(clientId: String, clientSecret: String, username: String, password: String) =
     runCatching {
         submitForm(
-            url = appTokenUrl,
+            url = keycloakTokenUrl,
             formParameters = parameters {
                 append("client_id", clientId)
                 append("client_secret", clientSecret)
@@ -37,11 +38,14 @@ suspend fun HttpClient.getTokensByPassword(clientId: String, clientSecret: Strin
                 append("password", password)
             },
         ).body<KeycloakTokens>()
-    }.getOrNull()
+    }.getOrElse {
+        logger.error("Failed to get tokens by password", it)
+        null
+    }
 
 suspend fun HttpClient.refreshTokens(clientId: String, clientSecret: String, refreshToken: String) = runCatching {
     submitForm(
-        url = appTokenUrl,
+        url = keycloakTokenUrl,
         formParameters = parameters {
             append("client_id", clientId)
             append("client_secret", clientSecret)
@@ -49,7 +53,10 @@ suspend fun HttpClient.refreshTokens(clientId: String, clientSecret: String, ref
             append("refresh_token", refreshToken)
         },
     ).body<KeycloakTokens>()
-}.getOrNull()
+}.getOrElse {
+    logger.error("Failed to refresh tokens", it)
+    null
+}
 
 @Serializable
 data class KeycloakTokens(

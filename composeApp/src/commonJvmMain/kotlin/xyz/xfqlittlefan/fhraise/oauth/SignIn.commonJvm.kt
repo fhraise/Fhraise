@@ -32,7 +32,7 @@ import kotlin.time.Duration.Companion.minutes
 expect val sendDeepLink: Boolean
 
 @OptIn(ExperimentalCoroutinesApi::class)
-actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int) = coroutineScope {
+actual suspend fun CoroutineScope.oAuthSignIn(host: String, port: Int, provider: Api.OAuth.Provider) = coroutineScope {
     withContext(Dispatchers.IO) {
         val channel = Channel<JwtTokenPair?>()
 
@@ -45,7 +45,7 @@ actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int) = cor
             takeFrom(Api.OAuth.PATH)
             this.port = server.engine.resolvedConnectors().first().port
             parameters.apply {
-                append(Api.OAuth.Query.PROVIDER, Api.OAuth.Provider.Microsoft.brokerName)
+                append(Api.OAuth.Query.PROVIDER, provider.brokerName)
             }
         }
 

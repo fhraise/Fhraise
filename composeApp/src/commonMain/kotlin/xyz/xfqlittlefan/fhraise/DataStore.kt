@@ -57,15 +57,14 @@ object ServerDataStore {
 }
 
 @Composable
-fun <K, V> PreferenceStateFlow<K, V>.rememberMutableState(): MutableState<V> {
-    return remember {
-        val mutableState = mutableStateOf(value)
-        object : MutableState<V> by mutableState {
+fun <K, V> PreferenceStateFlow<K, V>.rememberMutableState() = remember {
+    mutableStateOf(value).let { state ->
+        object : MutableState<V> by state {
             override var value: V
-                get() = mutableState.value
+                get() = state.value
                 set(value) {
                     this@rememberMutableState.value = value
-                    mutableState.value = value
+                    state.value = value
                 }
 
             override fun component1() = value

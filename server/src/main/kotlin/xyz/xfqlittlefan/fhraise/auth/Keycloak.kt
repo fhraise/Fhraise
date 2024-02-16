@@ -31,12 +31,19 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.util.*
 import kotlinx.serialization.json.Json
 import xyz.xfqlittlefan.fhraise.appSecret
-import xyz.xfqlittlefan.fhraise.defaultServerPort
 import xyz.xfqlittlefan.fhraise.models.UserQuery
 import xyz.xfqlittlefan.fhraise.models.UserRepresentation
 import xyz.xfqlittlefan.fhraise.proxy.keycloakHost
 import xyz.xfqlittlefan.fhraise.proxy.keycloakPort
 import xyz.xfqlittlefan.fhraise.proxy.keycloakScheme
+
+private val authClient = HttpClient {
+    install(ContentNegotiation) {
+        json(Json {
+            ignoreUnknownKeys = true
+        })
+    }
+}
 
 private val adminClient = HttpClient {
     install(ContentNegotiation) {
@@ -49,7 +56,7 @@ private val adminClient = HttpClient {
         bearer {
             loadTokens(::loadTokens)
             refreshTokens(RefreshTokensParams::refreshTokens)
-            sendWithoutRequest { it.url.host == "localhost" && it.url.port == defaultServerPort }
+            sendWithoutRequest { it.url.host == keycloakHost && it.url.port == keycloakPort }
         }
     }
 }
@@ -57,48 +64,44 @@ private val adminClient = HttpClient {
 private const val adminClientId = "admin-cli"
 private val adminUsername = appSecret.propertyOrNull("auth.keycloak.admin.username")?.getString() ?: "admin"
 private val adminPassword = appSecret.propertyOrNull("auth.keycloak.admin.password")?.getString() ?: "admin"
-private val adminClientSecret = appSecret.propertyOrNull("auth.keycloak.admin.clientSecret")?.getString() ?: "admin"
+private val adminClientSecret = appSecret.propertyOrNull("auth.keycloak.admin.client-secret")?.getString() ?: "admin"
 
-val appAuthUrl = url {
+val keycloakTokenUrl = url {
     protocol = URLProtocol.createOrDefault(keycloakScheme)
-    host = "localhost"
-    port = defaultServerPort
-    path("/auth/realms/fhraise/protocol/openid-connect/auth")
-}
-
-val appTokenUrl = url {
-    protocol = URLProtocol.createOrDefault(keycloakScheme)
-    host = "localhost"
-    port = defaultServerPort
+    host = keycloakHost
+    port = keycloakPort
     path("/auth/realms/fhraise/protocol/openid-connect/token")
 }
 
-private var currentTokens = BearerTokens("", "")
+private var currentTokens: BearerTokens? = null
 
 private const val phoneNumberAttribute = "phoneNumber"
 
 private suspend fun loadTokens(): BearerTokens? =
-    adminClient.getTokensByPassword(adminClientId, adminClientSecret, adminUsername, adminPassword)
+    currentTokens ?: authClient.getTokensByPassword(adminClientId, adminClientSecret, adminUsername, adminPassword)
         ?.let { BearerTokens(it.accessToken, it.refreshToken) }?.also { currentTokens = it }
 
 private suspend fun RefreshTokensParams.refreshTokens(): BearerTokens? =
-    adminClient.refreshTokens(adminClientId, adminClientSecret, oldTokens?.refreshToken ?: currentTokens.refreshToken)
-        ?.let { BearerTokens(it.accessToken, it.refreshToken) }?.also { currentTokens = it }
+    (oldTokens?.refreshToken ?: currentTokens?.refreshToken)?.let {
+        authClient.refreshTokens(adminClientId, adminClientSecret, it)
+    }?.let { BearerTokens(it.accessToken, it.refreshToken) }?.also { currentTokens = it }
 
-suspend fun exchangeToken(userId: String) = runCatching {
-    adminClient.submitForm(
-        url = appTokenUrl,
-        formParameters = parameters {
-            append("client_id", adminClientId)
-            append("client_secret", adminClientSecret)
-            append("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
-            append("subject_token", currentTokens.accessToken)
-            append("requested_token_type", "urn:ietf:params:oauth:token-type:refresh_token")
-            append("audience", "fhraise")
-            append("requested_subject", userId)
-        },
-    ).body<KeycloakTokens>()
-}.getOrNull()?.let { JwtTokenPair(it.accessToken, it.refreshToken) }
+suspend fun exchangeToken(userId: String) = currentTokens?.let {
+    runCatching {
+        adminClient.submitForm(
+            url = keycloakTokenUrl,
+            formParameters = parameters {
+                append("client_id", adminClientId)
+                append("client_secret", adminClientSecret)
+                append("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+                append("subject_token", it.accessToken)
+                append("requested_token_type", "urn:ietf:params:oauth:token-type:refresh_token")
+                append("audience", "fhraise")
+                append("requested_subject", userId)
+            },
+        ).body<KeycloakTokens>()
+    }.getOrNull()
+}?.let { JwtTokenPair(it.accessToken, it.refreshToken) }
 
 suspend fun getOrCreateUser(block: UserQuery.() -> Unit) = getUser(block)?.let { Result.success(it) } ?: run {
     createUser(UserQuery().apply(block)).fold(
@@ -132,7 +135,7 @@ private suspend fun createUser(query: UserQuery) = adminClient.post {
     })
 }.let { if (it.status.isSuccess()) Result.success(Unit) else Result.failure(Exception(it.bodyAsText())) }
 
-fun adminUrl(builder: URLBuilder.() -> Unit) = URLBuilder().apply {
+private fun adminUrl(builder: URLBuilder.() -> Unit) = URLBuilder().apply {
     protocol = URLProtocol.createOrDefault(keycloakScheme)
     host = keycloakHost
     port = keycloakPort

@@ -16,8 +16,10 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.pattern
+package xyz.xfqlittlefan.fhraise.oauth
 
-val usernameRegex = Regex("^[a-zA-Z0-9_-]{4,}\$")
-val phoneNumberRegex =
-    Regex("^1(3(([0-3]|[5-9])[0-9]{8}|4[0-8][0-9]{7})|(45|5([0-2]|[5-6]|[8-9])|6(2|[5-7])|7([0-1]|[5-8])|8[0-9]|9([0-3]|[5-9]))[0-9]{8})$")
+import kotlinx.coroutines.CoroutineScope
+import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import xyz.xfqlittlefan.fhraise.routes.Api
+
+expect suspend fun CoroutineScope.oAuthSignIn(host: String, port: Int, provider: Api.OAuth.Provider): JwtTokenPair?

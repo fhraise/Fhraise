@@ -73,7 +73,7 @@ class Api {
             }
 
             @Serializable
-            enum class CredentialType { Username, Email, PhoneNumber }
+            enum class CredentialType { Username, PhoneNumber, Email }
         }
     }
 

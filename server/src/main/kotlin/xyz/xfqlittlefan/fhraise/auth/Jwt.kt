@@ -29,6 +29,7 @@ import kotlinx.datetime.toJavaInstant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonPrimitive
 import xyz.xfqlittlefan.fhraise.appSecret
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -113,8 +114,15 @@ fun JWTCreator.Builder.withExpiresIn(duration: Duration): JWTCreator.Builder =
 
 inline fun <reified T> JWTCreator.Builder.withPayload(payload: T) = Json.encodeToJsonElement(payload).let {
     if (it !is JsonObject) error("Payload must be a JsonObject")
-    it.entries.forEach { (key, value) -> withClaim(key, value.toString()) }
+    it.entries.forEach { (key, value) -> withClaim(key, value.jsonPrimitive.content) }
 }
 
+inline val json
+    get() = Json {
+        ignoreUnknownKeys = true
+    }
+
 @OptIn(ExperimentalEncodingApi::class)
-inline fun <reified T> DecodedJWT.decodedPayload(): T = Json.decodeFromString(Base64.decode(payload).decodeToString())
+inline fun <reified T> DecodedJWT.decodedPayload(): T = json.decodeFromString(Base64.decode(payload).decodeToString())
+
+inline fun <reified T> DecodedJWT.decodedPayloadOrNull(): T? = runCatching { decodedPayload<T>() }.getOrNull()

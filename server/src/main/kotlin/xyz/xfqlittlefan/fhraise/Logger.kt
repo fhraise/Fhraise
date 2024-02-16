@@ -16,11 +16,9 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.oauth
+package xyz.xfqlittlefan.fhraise
 
-import kotlinx.coroutines.CoroutineScope
-import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-actual suspend fun CoroutineScope.microsoftSignIn(host: String, port: Int): JwtTokenPair? {
-    TODO("Not yet implemented")
-}
+val Any.logger: Logger get() = LoggerFactory.getLogger(this::class.java)
