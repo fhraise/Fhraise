@@ -153,7 +153,7 @@ fun SignInComponent.SignIn() {
                             slideInVertically { it / 2 } + fadeIn() togetherWith slideOutHorizontally() + fadeOut()
                         } else {
                             slideInHorizontally() + fadeIn() togetherWith slideOutVertically { it / 2 } + fadeOut()
-                        }
+                        } using SizeTransform(clip = false)
                     },
                     contentAlignment = Alignment.Center,
                 ) { step ->
