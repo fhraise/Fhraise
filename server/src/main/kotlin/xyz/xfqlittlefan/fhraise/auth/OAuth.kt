@@ -25,23 +25,29 @@ import io.ktor.http.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import xyz.xfqlittlefan.fhraise.logger
+import xyz.xfqlittlefan.fhraise.routes.Api
 
-suspend fun HttpClient.getTokensByPassword(clientId: String, clientSecret: String, username: String, password: String) =
-    runCatching {
-        submitForm(
-            url = keycloakTokenUrl,
-            formParameters = parameters {
-                append("client_id", clientId)
-                append("client_secret", clientSecret)
-                append("grant_type", "password")
-                append("username", username)
-                append("password", password)
-            },
-        ).body<KeycloakTokens>()
-    }.getOrElse {
-        logger.error("Failed to get tokens by password", it)
-        null
-    }
+suspend fun HttpClient.getTokensByPassword(
+    clientId: String,
+    clientSecret: String,
+    username: String,
+    verification: Api.Auth.Type.Verify.RequestBody.Verification
+) = runCatching {
+    submitForm(
+        url = keycloakTokenUrl,
+        formParameters = parameters {
+            append("client_id", clientId)
+            append("client_secret", clientSecret)
+            append("grant_type", "password")
+            append("username", username)
+            append("password", verification.value)
+            verification.otp?.let { if (it.isNotBlank()) append("otp", it) }
+        },
+    ).body<KeycloakTokens>()
+}.getOrElse {
+    logger.error("Failed to get tokens by password", it)
+    null
+}
 
 suspend fun HttpClient.refreshTokens(clientId: String, clientSecret: String, refreshToken: String) = runCatching {
     submitForm(

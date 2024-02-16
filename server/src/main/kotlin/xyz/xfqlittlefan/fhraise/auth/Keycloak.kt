@@ -36,6 +36,7 @@ import xyz.xfqlittlefan.fhraise.models.UserRepresentation
 import xyz.xfqlittlefan.fhraise.proxy.keycloakHost
 import xyz.xfqlittlefan.fhraise.proxy.keycloakPort
 import xyz.xfqlittlefan.fhraise.proxy.keycloakScheme
+import xyz.xfqlittlefan.fhraise.routes.Api
 
 private val authClient = HttpClient {
     install(ContentNegotiation) {
@@ -77,9 +78,9 @@ private var currentTokens: BearerTokens? = null
 
 private const val phoneNumberAttribute = "phoneNumber"
 
-private suspend fun loadTokens(): BearerTokens? =
-    currentTokens ?: authClient.getTokensByPassword(adminClientId, adminClientSecret, adminUsername, adminPassword)
-        ?.let { BearerTokens(it.accessToken, it.refreshToken) }?.also { currentTokens = it }
+private suspend fun loadTokens(): BearerTokens? = currentTokens ?: authClient.getTokensByPassword(
+    adminClientId, adminClientSecret, adminUsername, Api.Auth.Type.Verify.RequestBody.Verification(adminPassword)
+)?.let { BearerTokens(it.accessToken, it.refreshToken) }?.also { currentTokens = it }
 
 private suspend fun RefreshTokensParams.refreshTokens(): BearerTokens? =
     (oldTokens?.refreshToken ?: currentTokens?.refreshToken)?.let {
@@ -106,7 +107,7 @@ suspend fun exchangeToken(userId: String) = currentTokens?.let {
 suspend fun getOrCreateUser(block: UserQuery.() -> Unit) = getUser(block)?.let { Result.success(it) } ?: run {
     createUser(UserQuery().apply(block)).fold(
         onSuccess = { getUser(block)?.let { Result.success(it) } ?: Result.failure(IllegalStateException()) },
-        onFailure = { Result.failure(it) },
+        onFailure = { Result.failure(it) }, // TODO: 什么鬼玩意！！！
     )
 }
 
@@ -134,6 +135,14 @@ private suspend fun createUser(query: UserQuery) = adminClient.post {
         query.phoneNumber?.let { attributes = mapOf(phoneNumberAttribute to listOf(it)) }
     })
 }.let { if (it.status.isSuccess()) Result.success(Unit) else Result.failure(Exception(it.bodyAsText())) }
+
+infix fun Api.Auth.Type.CredentialType.provide(credential: String): UserQuery.() -> Unit = {
+    when (this@provide) {
+        Api.Auth.Type.CredentialType.Username -> username = credential
+        Api.Auth.Type.CredentialType.PhoneNumber -> phoneNumber = credential
+        Api.Auth.Type.CredentialType.Email -> email = credential
+    }
+}
 
 private fun adminUrl(builder: URLBuilder.() -> Unit) = URLBuilder().apply {
     protocol = URLProtocol.createOrDefault(keycloakScheme)

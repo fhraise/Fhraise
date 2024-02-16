@@ -49,6 +49,7 @@ data class UserRepresentation(
     var requiredActions: List<String>? = null,
     var self: String? = null,
     var serviceAccountClientId: String? = null,
+    var totp: Boolean? = null,
     var username: String? = null
 )
 

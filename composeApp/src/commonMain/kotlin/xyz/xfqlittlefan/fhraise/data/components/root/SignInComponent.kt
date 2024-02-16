@@ -63,6 +63,7 @@ interface SignInComponent : AppComponentContext {
     var verificationType: VerificationType?
     var verification: String
     var showVerification: Boolean
+    var otp: String?
 
     val credentialValid: Boolean
 
@@ -189,7 +190,11 @@ interface SignInComponent : AppComponentContext {
                     runCatching {
                         client.post(Api.Auth.Type.Verify(CredentialType.Email, verifyingToken!!)) {
                             contentType(ContentType.Application.Cbor)
-                            setBody(Api.Auth.Type.Verify.RequestBody(verification))
+                            setBody(
+                                Api.Auth.Type.Verify.RequestBody(
+                                    Api.Auth.Type.Verify.RequestBody.Verification(verification)
+                                )
+                            )
                         }.body<Api.Auth.Type.Verify.ResponseBody>()
                     }.getOrNull()?.let {
                         when (it) {
@@ -218,6 +223,7 @@ interface SignInComponent : AppComponentContext {
                         null
                     }?.let {
                         verifyingToken = it.token
+                        otp = if (it.otpNeeded) "" else null
                         true
                     } ?: false
                 },
@@ -225,7 +231,11 @@ interface SignInComponent : AppComponentContext {
                     runCatching {
                         client.post(Api.Auth.Type.Verify(credentialType, verifyingToken!!)) {
                             contentType(ContentType.Application.Cbor)
-                            setBody(Api.Auth.Type.Verify.RequestBody(verification))
+                            setBody(
+                                Api.Auth.Type.Verify.RequestBody(
+                                    Api.Auth.Type.Verify.RequestBody.Verification(verification, otp)
+                                )
+                            )
                         }.body<Api.Auth.Type.Verify.ResponseBody.Success>()
                     }.getOrElse {
                         it.printStackTrace()
@@ -289,6 +299,7 @@ class AppSignInComponent(
         set(value) = changeVerificationType(value)
     override var verification by mutableStateOf("")
     override var showVerification by mutableStateOf(false)
+    override var otp: String? by mutableStateOf(null)
 
     override val credentialValid
         get() = when (credentialType) {

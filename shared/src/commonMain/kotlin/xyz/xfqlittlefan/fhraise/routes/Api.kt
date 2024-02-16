@@ -40,7 +40,7 @@ class Api {
                 @Serializable
                 sealed class ResponseBody {
                     @Serializable
-                    data class Success(val token: String) : ResponseBody()
+                    data class Success(val token: String, val otpNeeded: Boolean = false) : ResponseBody()
 
                     @Serializable
                     data object InvalidCredential : ResponseBody()
@@ -60,7 +60,10 @@ class Api {
                 )
 
                 @Serializable
-                data class RequestBody(val verification: String)
+                data class RequestBody(val verification: Verification) {
+                    @Serializable
+                    data class Verification(val value: String, val otp: String? = null)
+                }
 
                 @Serializable
                 sealed class ResponseBody {

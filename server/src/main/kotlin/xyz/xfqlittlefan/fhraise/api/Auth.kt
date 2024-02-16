@@ -155,6 +155,8 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
             withPayload(AuthProcessToken(requestId, req.type, body.credential))
         }
 
+        val user = getOrCreateUser(req.parent.credentialType provide body.credential).getOrThrow()
+
         when (req.type) {
             Api.Auth.Type.Request.VerificationType.VerificationCode -> {
                 val code = appDatabase.queryOrGenerateVerificationCode(this, token.hashCode())
@@ -172,7 +174,7 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
             }
 
             Api.Auth.Type.Request.VerificationType.Password -> call.respond(
-                Api.Auth.Type.Request.ResponseBody.Success(token)
+                Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
             )
         }
     }
@@ -195,14 +197,14 @@ private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
 private suspend fun RoutingCall.respondCodeVerificationResult(
     request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
 ) {
-    val verificationValid = appDatabase.verifyCode(request.token.hashCode(), body.verification)
+    val verificationValid = appDatabase.verifyCode(request.token.hashCode(), body.verification.value)
 
     if (verificationValid) {
         getOrCreateUser {
             when (request.parent.credentialType) {
-                Username -> username = body.verification
-                Email -> email = body.verification
-                PhoneNumber -> phoneNumber = body.verification
+                Username -> username = body.verification.value
+                Email -> email = body.verification.value
+                PhoneNumber -> phoneNumber = body.verification.value
             }
         }.fold(
             onSuccess = { user ->
@@ -220,13 +222,7 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
 private suspend fun RoutingCall.respondPasswordVerificationResult(
     token: AuthProcessToken, request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
 ) {
-    val user = getUser {
-        when (request.parent.credentialType) {
-            Username -> username = token.credential
-            Email -> email = token.credential
-            PhoneNumber -> phoneNumber = token.credential
-        }
-    } ?: run {
+    val user = getUser(request.parent.credentialType provide token.credential) ?: run {
         respond(Api.Auth.Type.Verify.ResponseBody.Failure)
         return
     }

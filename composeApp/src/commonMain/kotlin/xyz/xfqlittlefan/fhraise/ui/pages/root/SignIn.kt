@@ -239,6 +239,7 @@ fun SignInComponent.SignIn() {
 
                                     is QrCode, is Face -> {}
                                 }
+                                Otp()
                                 Spacer(modifier = Modifier.height(32.dp))
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
@@ -739,18 +740,38 @@ private fun SignInComponent.Password() {
         trailingIcon = {
             IconButton(onClick = ::switchShowVerification) {
                 Icon(
-                    imageVector = if (showVerification) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    imageVector = if (showVerification) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                     contentDescription = if (showVerification) "隐藏密码" else "显示密码",
                 )
             }
         },
-        visualTransformation = if (showVerification) PasswordVisualTransformation() else VisualTransformation.None,
+        visualTransformation = if (showVerification) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
+            keyboardType = KeyboardType.Password, imeAction = if (otp != null) ImeAction.Next else ImeAction.Done
         ),
         keyboardActions = KeyboardActions(onDone = enterAction),
         maxLines = 1,
     )
+}
+
+@Composable
+private fun SignInComponent.Otp() {
+    otp?.let {
+        Column {
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = it,
+                onValueChange = ::otp::set,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                label = { Text(text = "一次性验证码") },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number, imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = enterAction),
+                maxLines = 1,
+            )
+        }
+    }
 }
 
 @Composable
