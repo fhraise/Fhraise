@@ -60,4 +60,11 @@ data class AnimationValue(val source: Number, val target: Number) {
     }
 }
 
+/**
+ * 一个中缀函数，用于创建一个 [AnimationValue] 实例。
+ *
+ * @param target 一个 [Number]，表示动画的目标值。
+ *
+ * @return 一个 [AnimationValue] 实例。
+ */
 infix fun Number.animateTo(target: Number) = AnimationValue(this, target)

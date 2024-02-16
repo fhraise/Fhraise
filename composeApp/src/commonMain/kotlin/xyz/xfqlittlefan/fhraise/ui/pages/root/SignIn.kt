@@ -489,7 +489,7 @@ private fun SignInLayoutScope.SignInMainLayout(
 
             // == Header's padding and width ==
             val headerPaddingLeft = 32.dpAsPx + contentPaddingLeft
-            val headerPaddingTop = 24.dpAsPx animatedFirstStageTo 0 + contentPaddingTop
+            val headerPaddingTop = (24.dpAsPx animatedFirstStageTo 0) + contentPaddingTop
             val headerPaddingRight = 32.dpAsPx + contentPaddingRight animatedFirstStageTo 16.dpAsPx
             val headerPaddingBottom = 8.dpAsPx animatedFirstStageTo contentPaddingBottom
 
@@ -517,7 +517,7 @@ private fun SignInLayoutScope.SignInMainLayout(
 
             // == Main content's padding and width ==
             val mainContentPaddingLeft = 32.dpAsPx + contentPaddingLeft animatedFirstStageTo 16.dpAsPx
-            val mainContentPaddingTop = 8.dpAsPx animatedFirstStageTo (16.dpAsPx + contentPaddingTop)
+            val mainContentPaddingTop = 8.dpAsPx animatedFirstStageTo 16.dpAsPx + contentPaddingTop
             val mainContentPaddingRight = 32.dpAsPx + contentPaddingRight animatedSecondStageTo 16.dpAsPx
             val mainContentPaddingBottom = 16.dpAsPx + contentPaddingBottom
 
@@ -562,10 +562,11 @@ private fun SignInLayoutScope.SignInMainLayout(
             val requiredHeight = requiredColumnHeight animatedFirstStageTo requiredRowHeight
             val requiredBoxHeight = max(boxHeight, requiredHeight.roundToInt())
 
-            val headerX = 0 animatedFirstStageTo (headerWidth - headerPlaceable.width)
-            val headerY = 0 animatedFirstStageTo ((boxHeight - headerPlaceable.height) / 2f + scrollState.value)
+            val headerX = 0 animatedFirstStageTo headerWidth - headerPlaceable.width
+            val headerY = 0 animatedFirstStageTo (boxHeight - headerPlaceable.height) / 2f + scrollState.value
 
-            val mainContentX = 0 animatedFirstStageTo headerWidth + (mainContentWidth - mainContentConstraintWidth) / 2f
+            val mainContentX =
+                (0 animatedFirstStageTo headerWidth) + (mainContentWidth - mainContentConstraintWidth) / 2f
 
             val mainContentCompatY =
                 (requiredBoxHeight - headerPlaceable.height - mainContentPlaceable.height) / 2f + headerPlaceable.height
