@@ -281,6 +281,20 @@ tasks.register<Tar>("releaseTarWebApp") {
     from(file("web".outputDirectory))
 }
 
+tasks.register("releaseServer") {
+    group = "project build"
+    description = "Build the server release"
+
+    dependsOn("server:shadowJar")
+
+    doLast {
+        val jar = file(project(":server").layout.buildDirectory.file("libs/server-all.jar"))
+        val outputDir = file("server".outputDirectory)
+        jar.copyTo(outputDir.resolve("fhraise-server-$version.$buildNumber.jar"), overwrite = true)
+        logger.lifecycle("output directory: ${outputDir.absolutePath}")
+    }
+}
+
 tasks.register("ciVersioning") {
     group = "ci"
     description = "Update the version and output it"
@@ -298,7 +312,7 @@ tasks.register("ciReleaseLinuxApp") {
     group = "ci"
     description = "Build on the linux platform"
 
-    dependsOn("releaseAndroidApp", "releaseTarLinuxApp", "releaseTarWebApp")
+    dependsOn("releaseAndroidApp", "releaseTarLinuxApp", "releaseTarWebApp", "releaseServer")
 
     doLast {
         val assetsDir = file(layout.buildDirectory.dir("assets"))
@@ -315,6 +329,7 @@ tasks.register("ciReleaseLinuxApp") {
         )
         file("linux-tar".outputDirectory).copyRecursively(assetsDir, overwrite = true)
         file("web-tar".outputDirectory).copyRecursively(assetsDir, overwrite = true)
+        file("server".outputDirectory).copyRecursively(assetsDir, overwrite = true)
     }
 }
 
