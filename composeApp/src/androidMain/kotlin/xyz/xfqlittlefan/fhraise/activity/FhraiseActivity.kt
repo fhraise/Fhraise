@@ -61,8 +61,8 @@ import xyz.xfqlittlefan.fhraise.oauth.AndroidStartOAuthApplicationImpl
 import xyz.xfqlittlefan.fhraise.permission
 import xyz.xfqlittlefan.fhraise.platform.*
 import xyz.xfqlittlefan.fhraise.service.OAuthService
-import xyz.xfqlittlefan.fhraise.ui.AppTheme
 import xyz.xfqlittlefan.fhraise.ui.LocalWindowSizeClass
+import xyz.xfqlittlefan.fhraise.ui.pages.AppTheme
 import xyz.xfqlittlefan.fhraise.ui.windowSizeClass
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
