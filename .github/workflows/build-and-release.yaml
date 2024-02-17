@@ -49,7 +49,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ secrets.KEY }}" != "" ] && [ "${{ secrets.PROPERTIES }}" != "" ]; then
-            cd composeApp
+            cd compose-app
             echo ${{ secrets.KEY }} | base64 --decode > key.jks
             echo ${{ secrets.PROPERTIES }} | base64 --decode > key.properties
           fi
