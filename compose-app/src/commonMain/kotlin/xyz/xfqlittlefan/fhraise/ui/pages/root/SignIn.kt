@@ -34,12 +34,20 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -692,32 +700,49 @@ private fun SignInComponent.MoreMethods(modifier: Modifier = Modifier) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun SignInComponent.Credential() {
-    OutlinedTextField(
-        value = credential,
-        onValueChange = ::credential::set,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        label = { Text(text = credentialType.displayName) },
-        prefix = if (credentialType == Api.Auth.Type.CredentialType.PhoneNumber) {
-            { Text(text = "+86") }
-        } else null,
-        supportingText = {
-            AnimatedVisibility(
-                visible = credential.isNotEmpty() && !credentialValid,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
-            ) {
-                Text(text = "${credentialType.displayName}格式不正确")
-            }
-        },
-        isError = credential.isNotEmpty() && !credentialValid,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = credentialType.keyboardType, imeAction = ImeAction.Next
+    AutofillNode(
+        autofillTypes = listOf(
+            AutofillType.Username, AutofillType.NewUsername, AutofillType.EmailAddress, AutofillType.PhoneNumber
         ),
-        keyboardActions = KeyboardActions(onNext = forwardAction),
-        maxLines = 1,
-    )
+        onFill = ::credential::set,
+    ).let { node ->
+        LocalAutofillTree.current += node
+        val autofill = LocalAutofill.current
+        OutlinedTextField(
+            value = credential,
+            onValueChange = ::credential::set,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).onGloballyPositioned {
+                node.boundingBox = it.boundsInWindow()
+            }.onFocusEvent {
+                if (node.boundingBox == null) return@onFocusEvent
+                autofill?.run {
+                    if (it.isFocused) requestAutofillForNode(node) else cancelAutofillForNode(node)
+                }
+            },
+            label = { Text(text = credentialType.displayName) },
+            prefix = if (credentialType == Api.Auth.Type.CredentialType.PhoneNumber) {
+                { Text(text = "+86") }
+            } else null,
+            supportingText = {
+                AnimatedVisibility(
+                    visible = credential.isNotEmpty() && !credentialValid,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Text(text = "${credentialType.displayName}格式不正确")
+                }
+            },
+            isError = credential.isNotEmpty() && !credentialValid,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = credentialType.keyboardType, imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(onNext = forwardAction),
+            maxLines = 1,
+        )
+    }
 }
 
 @Composable
@@ -735,28 +760,43 @@ private fun SignInComponent.VerificationCode() {
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun SignInComponent.Password() {
-    OutlinedTextField(
-        value = verification,
-        onValueChange = ::verification::set,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        label = { Text(text = "密码") },
-        trailingIcon = {
-            IconButton(onClick = ::switchShowVerification) {
-                Icon(
-                    imageVector = if (showVerification) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                    contentDescription = if (showVerification) "隐藏密码" else "显示密码",
-                )
-            }
-        },
-        visualTransformation = if (showVerification) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Password, imeAction = if (otp != null) ImeAction.Next else ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(onDone = enterAction),
-        maxLines = 1,
-    )
+    AutofillNode(
+        autofillTypes = listOf(AutofillType.Password, AutofillType.NewPassword),
+        onFill = ::verification::set,
+    ).let { node ->
+        LocalAutofillTree.current += node
+        val autofill = LocalAutofill.current
+        OutlinedTextField(
+            value = verification,
+            onValueChange = ::verification::set,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).onGloballyPositioned {
+                node.boundingBox = it.boundsInWindow()
+            }.onFocusEvent {
+                autofill?.run {
+                    if (node.boundingBox == null) return@onFocusEvent
+                    if (it.isFocused) requestAutofillForNode(node) else cancelAutofillForNode(node)
+                }
+            },
+            label = { Text(text = "密码") },
+            trailingIcon = {
+                IconButton(onClick = ::switchShowVerification) {
+                    Icon(
+                        imageVector = if (showVerification) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showVerification) "隐藏密码" else "显示密码",
+                    )
+                }
+            },
+            visualTransformation = if (showVerification) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password, imeAction = if (otp != null) ImeAction.Next else ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(onDone = enterAction),
+            maxLines = 1,
+        )
+    }
 }
 
 @Composable
