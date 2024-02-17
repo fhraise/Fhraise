@@ -233,6 +233,17 @@ tasks.register<Zip>("releaseZipWindowsApp") {
     from(file("desktop/main-release/app/Fhraise".outputDirectory))
 }
 
+tasks.register("releaseDesktopApp") {
+    group = "project build"
+    description = "Build the desktop release"
+
+    if (isLinux) {
+        dependsOn("releaseLinuxApp")
+    } else if (isWindows) {
+        dependsOn("releaseWindowsApp")
+    }
+}
+
 tasks.register("releaseArchiveDesktopApp") {
     group = "project build"
     description = "Build the desktop release archive"
@@ -340,12 +351,6 @@ tasks.register("release") {
     dependsOn("versioning", "releaseAndroidApp", "releaseLinuxApp", "releaseWindowsApp", "releaseWebApp")
 }
 
-project(":compose-app").tasks.configureEach {
-    if (name == "assembleDebug") {
-        dependsOn(":versioning")
-    }
-}
-
 tasks.register("cleanReleases") {
     group = "project build"
     description = "Clean the releases"
@@ -366,14 +371,14 @@ tasks.register("runDesktopApp") {
     group = "project build"
     description = "Run the desktop app"
 
-    dependsOn("versioning", "compose-app:run")
+    dependsOn("compose-app:run")
 }
 
 tasks.register("runWebApp") {
     group = "project build"
     description = "Run the web app"
 
-    dependsOn("versioning", "compose-app:wasmJsBrowserDevelopmentRun")
+    dependsOn("compose-app:wasmJsBrowserDevelopmentRun")
 }
 
 tasks.register("installReleaseAndroidApp") {
