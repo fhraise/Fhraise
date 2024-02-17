@@ -162,10 +162,10 @@ tasks.register("releaseAndroidApp") {
     group = "project build"
     description = "Build the Android release APK"
 
-    dependsOn("composeApp:assembleRelease")
+    dependsOn("compose-app:assembleRelease")
 
     doLast {
-        val apkDir = file(project(":composeApp").layout.buildDirectory.dir("outputs/apk/release"))
+        val apkDir = file(project(":compose-app").layout.buildDirectory.dir("outputs/apk/release"))
         val outputDir = file("android".outputDirectory)
         apkDir.copyRecursively(outputDir, overwrite = true)
         logger.lifecycle("output directory: ${outputDir.absolutePath}")
@@ -180,7 +180,7 @@ tasks.register("releaseLinuxApp") {
         enabled = false
     }
 
-    dependsOn("composeApp:packageReleaseAppImage", "composeApp:packageReleaseDeb", "composeApp:packageReleaseRpm")
+    dependsOn("compose-app:packageReleaseAppImage", "compose-app:packageReleaseDeb", "compose-app:packageReleaseRpm")
 }
 
 tasks.register<Tar>("releaseTarLinuxApp") {
@@ -211,7 +211,7 @@ tasks.register("releaseWindowsApp") {
         enabled = false
     }
 
-    dependsOn("composeApp:packageReleaseAppImage", "composeApp:packageReleaseMsi")
+    dependsOn("compose-app:packageReleaseAppImage", "compose-app:packageReleaseMsi")
 }
 
 tasks.register<Zip>("releaseZipWindowsApp") {
@@ -248,7 +248,7 @@ tasks.register("releaseWebApp") {
     group = "project build"
     description = "Build the Web release"
 
-    dependsOn("composeApp:wasmJsBrowserProductionWebpack")
+    dependsOn("compose-app:wasmJsBrowserProductionWebpack")
 
     doLast {
         logger.lifecycle("output directory: ${file("web".outputDirectory).absolutePath}")
@@ -338,7 +338,7 @@ tasks.register("release") {
     dependsOn("versioning", "releaseAndroidApp", "releaseLinuxApp", "releaseWindowsApp", "releaseWebApp")
 }
 
-project(":composeApp").tasks.configureEach {
+project(":compose-app").tasks.configureEach {
     if (name == "assembleDebug") {
         dependsOn(":versioning")
     }
@@ -364,14 +364,14 @@ tasks.register("runDesktopApp") {
     group = "project build"
     description = "Run the desktop app"
 
-    dependsOn("versioning", "composeApp:run")
+    dependsOn("versioning", "compose-app:run")
 }
 
 tasks.register("runWebApp") {
     group = "project build"
     description = "Run the web app"
 
-    dependsOn("versioning", "composeApp:wasmJsBrowserDevelopmentRun")
+    dependsOn("versioning", "compose-app:wasmJsBrowserDevelopmentRun")
 }
 
 tasks.register("installReleaseAndroidApp") {
