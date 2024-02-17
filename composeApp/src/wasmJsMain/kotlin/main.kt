@@ -26,17 +26,14 @@ import kotlinx.browser.document
 import org.w3c.dom.Document
 import org.w3c.dom.get
 import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
-import xyz.xfqlittlefan.fhraise.ui.pages.Root
+import xyz.xfqlittlefan.fhraise.ui.pages.ThemedRoot
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     val lifecycleRegistry = LifecycleRegistry()
-
     val rootComponent = AppRootComponent(componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry))
-
     lifecycleRegistry.attachToDocument()
-
-    CanvasBasedWindow(canvasElementId = "fhraise") { Root(component = rootComponent) }
+    CanvasBasedWindow(canvasElementId = "fhraise") { rootComponent.ThemedRoot() }
 }
 
 private fun LifecycleRegistry.attachToDocument() {

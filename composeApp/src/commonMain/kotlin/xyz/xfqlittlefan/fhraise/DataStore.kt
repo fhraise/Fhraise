@@ -18,19 +18,17 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode
+import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.datastore.preferencesDataStore
-import kotlin.properties.ReadWriteProperty
-import kotlin.reflect.KProperty
+
 
 object SettingsDataStore {
     private val store by preferencesDataStore("settings")
@@ -47,40 +45,30 @@ object SettingsDataStore {
     }
 }
 
-open class PreferenceStateFlowBase<T> internal constructor(protected val base: MutableStateFlow<T>) :
-    MutableStateFlow<T> by base
+object ServerDataStore {
+    private val store by preferencesDataStore("server")
 
-open class PreferenceStateFlow<K, V>(
-    private val scope: CoroutineScope,
-    private val store: DataStore<Preferences>,
-    private val key: Preferences.Key<K>,
-    @Suppress("UNCHECKED_CAST") transform: (K) -> V = { it as V },
-    @Suppress("UNCHECKED_CAST") private val restore: (V) -> K = { it as K },
-    defaultValue: V
-) : PreferenceStateFlowBase<V>(MutableStateFlow(defaultValue)), ReadWriteProperty<Any?, V> {
-    init {
-        scope.launch {
-            store.data[key].transform(transform).map { it ?: defaultValue }.collect { base.value = it }
-        }
-    }
-
-    override var value
-        get() = base.value
-        set(value) = updateValue(value)
-
-    private fun updateValue(value: V) {
-        scope.launch {
-            store.edit { it[key] = value.let(restore) }
-        }
-    }
-
-    override fun getValue(thisRef: Any?, property: KProperty<*>) = value
-
-    override fun setValue(thisRef: Any?, property: KProperty<*>, value: V) {
-        this.value = value
+    class Preferences(scope: CoroutineScope) {
+        val serverHost =
+            PreferenceStateFlow(scope, store, stringPreferencesKey("serverHost"), defaultValue = "localhost")
+        val serverPort =
+            PreferenceStateFlow(scope, store, intPreferencesKey("serverPort"), defaultValue = defaultServerPort)
     }
 }
 
-private operator fun <T> Flow<Preferences>.get(key: Preferences.Key<T>) = map { it[key] }
-private operator fun <T, R> Flow<T?>.invoke(transform: (T) -> R?) = this.transform(transform)
-private fun <T, R> Flow<T?>.transform(transform: (T) -> R?) = map { it?.let { transform(it) } }
+@Composable
+fun <K, V> PreferenceStateFlow<K, V>.rememberMutableState() = remember {
+    mutableStateOf(value).let { state ->
+        object : MutableState<V> by state {
+            override var value: V
+                get() = state.value
+                set(value) {
+                    this@rememberMutableState.value = value
+                    state.value = value
+                }
+
+            override fun component1() = value
+            override fun component2(): (V) -> Unit = { value = it }
+        }
+    }
+}

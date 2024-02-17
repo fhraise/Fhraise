@@ -16,8 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import com.android.build.gradle.internal.lint.AndroidLintAnalysisTask
-import com.android.build.gradle.internal.lint.LintModelWriterTask
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
@@ -83,7 +81,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(libs.kotlinx.coroutines.core)
+                implementation(projects.shared)
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.animation)
@@ -91,14 +89,16 @@ kotlin {
                 implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
+                implementation(compose.components.uiToolingPreview)
                 implementation(libs.decompose)
                 implementation(libs.decompose.extensions.compose)
-                implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.resources)
                 implementation(libs.ktor.client.auth)
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.client.websockets)
-                implementation(projects.shared)
+                implementation(libs.ktor.serialization.kotlinx.cbor)
+                implementation(libs.bcrypt)
             }
         }
 
@@ -106,13 +106,14 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.androidx.datastore.core)
-                implementation(libs.androidx.datastore.core.okio)
                 implementation(libs.androidx.datastore.preferences.core)
                 implementation(compose.preview)
-            }
-
-            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
-                exclude("androidx/datastore/**")
+                implementation(libs.ktor.server.core)
+                implementation(libs.ktor.server.cio)
+                implementation(libs.ktor.server.resources)
+                implementation(libs.ktor.server.content.negotiation)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.slf4j.api)
             }
         }
 
@@ -124,7 +125,8 @@ kotlin {
                 implementation(libs.androidx.core.splashscreen)
                 implementation(libs.androidx.window)
                 implementation(libs.androidx.activity.compose)
-                implementation(libs.androidx.datastore.preferences)
+                implementation(libs.androidx.browser)
+                implementation(libs.logback.android)
             }
         }
 
@@ -133,6 +135,13 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(compose.desktop.currentOs)
+                implementation(libs.logback)
+            }
+        }
+
+        val wasmJsMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.js)
             }
         }
     }
@@ -207,7 +216,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Msi)
-            modules("jdk.unsupported")
+            modules("java.instrument", "java.management", "jdk.unsupported")
             packageName = "Fhraise"
             packageVersion = version
             description = "Fhraise"
@@ -248,13 +257,4 @@ compose.desktop {
 
 compose.experimental {
     web.application {}
-}
-
-// TODO: Workaround for https://github.com/JetBrains/compose-multiplatform/issues/4085, remove when fixed
-tasks.withType<LintModelWriterTask> {
-    dependsOn("copyFontsToAndroidAssets")
-}
-
-tasks.withType<AndroidLintAnalysisTask> {
-    dependsOn("copyFontsToAndroidAssets")
 }

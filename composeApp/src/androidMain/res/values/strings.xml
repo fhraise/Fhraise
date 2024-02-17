@@ -18,4 +18,10 @@
 
 <resources>
     <string name="app_name">Fhraise</string>
+    <string name="action_back">返回</string>
+    <string name="browser_title">请等待</string>
+    <string name="browser_message">正在加载页面，请稍候…</string>
+    <string name="oauth_service_title">Fhraise 后台认证服务</string>
+    <string name="oauth_service_description">Fhraise 的后台认证服务，用于保证使用第三方登录时的畅通体验</string>
+    <string name="oauth_service_notification_action_stop">停止</string>
 </resources>

@@ -45,10 +45,11 @@ interface AppComponentContextValues {
 
     val snackbarHostState: SnackbarHostState
 
+    // 不能替换为成员变量，否则会因为未知原因的找不到 setter 而崩溃
     @Composable
     fun SnackbarHost() {
         SnackbarHost(hostState = snackbarHostState)
     }
 
-    suspend fun requestAppNotificationPermission(): Boolean?
+    suspend fun requestAppNotificationPermission(reason: String = "开启通知权限，及时接收最新消息"): Boolean?
 }

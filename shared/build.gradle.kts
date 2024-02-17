@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.androidLibrary)
 }
 
@@ -39,8 +40,42 @@ kotlin {
     jvm()
 
     sourceSets {
-        commonMain.dependencies {
-            // put your Multiplatform dependencies here
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.http)
+                implementation(libs.ktor.resources)
+            }
+        }
+
+        val commonJvmMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.androidx.datastore.core)
+                implementation(libs.androidx.datastore.preferences.core)
+                implementation(libs.ktor.server.core)
+                implementation(libs.ktor.server.resources)
+            }
+
+            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
+                exclude("androidx/datastore/**")
+            }
+        }
+
+        val androidMain by getting {
+            dependsOn(commonJvmMain)
+            dependencies {
+                implementation(libs.androidx.datastore.preferences)
+            }
+        }
+
+        val jvmMain by getting {
+            dependsOn(commonJvmMain)
+        }
+
+        val wasmJsMain by getting {
+            dependencies {}
         }
     }
 }

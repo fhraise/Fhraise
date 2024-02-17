@@ -28,7 +28,7 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.suspendCoroutine
 
 class Permission(private val activity: ComponentActivity, private val permission: String) {
-    private var firstRequest by PermissionDataStore.Permission(activity.lifecycleScope, permission)
+    private var firstRequest by PermissionDataStore.get(activity.lifecycleScope, permission)
 
     val granted: Boolean?
         get() {

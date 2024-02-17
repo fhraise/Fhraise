@@ -1,20 +1,47 @@
+# IntelliJ IDEA files
 *.iml
-.gradle
-**/build/
-xcuserdata
-!src/**/build/
-local.properties
 .idea
-.DS_Store
+**/build/
+!src/**/build/
+.gradle
 captures
-.externalNativeBuild
-.cxx
+
+# Xcode files
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
+xcuserdata
+
+# macOS files
+.DS_Store
+
+# C++ files
+.externalNativeBuild
+.cxx
+
+# Key and properties files
 *key.jks*
 *key.properties*
+local.properties
 version.properties
+
+# Database files
+databases/
+
+# Documentation
+server/docs/
+
+# Secret files
+*secret*
+
+# Datastore
+datastore/
+
+# Keycloak
+server/keycloak*/
+
+# Environment files
+environment.yaml

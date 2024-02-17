@@ -38,8 +38,8 @@ import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.AppSignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
-import xyz.xfqlittlefan.fhraise.notificationPermissionGranted
-import xyz.xfqlittlefan.fhraise.requestNotificationPermission
+import xyz.xfqlittlefan.fhraise.platform.notificationPermissionGranted
+import xyz.xfqlittlefan.fhraise.platform.requestNotificationPermission
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.suspendCoroutine
 
@@ -50,7 +50,7 @@ interface RootComponent : AppComponentContext, BackHandlerOwner {
         class SignIn(val component: SignInComponent) : Child()
     }
 
-    val showNotificationPermissionDialog: Boolean
+    val notificationPermissionRequestReason: String?
 
     fun startNotificationPermissionRequest()
     fun cancelNotificationPermissionRequest()
@@ -92,21 +92,7 @@ class AppRootComponent(
             object : AppComponentContext, ComponentContext by componentContext, AppComponentContextValues by this {}
         return when (config) {
             is Configuration.SignIn -> RootComponent.Child.SignIn(
-                component = AppSignInComponent(componentContext = childComponentContext) {
-                    AppSignInComponent.ComponentState.SignIn(
-                        context = this,
-                        onGuestSignIn = {},
-                        onFaceSignIn = {},
-                    )
-                },
-            )
-
-            is Configuration.SignUp -> RootComponent.Child.SignIn(
-                component = AppSignInComponent(componentContext = childComponentContext) {
-                    AppSignInComponent.ComponentState.SignUp(
-                        context = this,
-                    )
-                },
+                component = AppSignInComponent(componentContext = childComponentContext) {},
             )
         }
     }
@@ -115,34 +101,31 @@ class AppRootComponent(
     private sealed class Configuration {
         @Serializable
         data object SignIn : Configuration()
-
-        @Serializable
-        data object SignUp : Configuration()
     }
 
-    override var showNotificationPermissionDialog by mutableStateOf(false)
+    override var notificationPermissionRequestReason: String? by mutableStateOf(null)
     private var permissionRequestContinuation: Continuation<Boolean?>? = null
 
     override fun startNotificationPermissionRequest() {
         componentScope.launch {
             permissionRequestContinuation?.resumeWith(Result.success(requestNotificationPermission()))
-            showNotificationPermissionDialog = false
+            notificationPermissionRequestReason = null
         }
     }
 
     override fun cancelNotificationPermissionRequest() {
         permissionRequestContinuation?.resumeWith(Result.success(null))
-        showNotificationPermissionDialog = false
+        notificationPermissionRequestReason = null
     }
 
-    override suspend fun requestAppNotificationPermission(): Boolean? = suspendCoroutine {
+    override suspend fun requestAppNotificationPermission(reason: String): Boolean? = suspendCoroutine {
         if (notificationPermissionGranted != null) {
             it.resumeWith(Result.success(notificationPermissionGranted))
             return@suspendCoroutine
         }
 
         permissionRequestContinuation = it
-        showNotificationPermissionDialog = true
+        notificationPermissionRequestReason = reason
     }
 
     override fun onBack() = navigation.pop()
