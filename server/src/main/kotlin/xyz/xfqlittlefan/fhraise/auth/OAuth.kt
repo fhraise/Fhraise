@@ -41,7 +41,7 @@ suspend fun HttpClient.getTokensByPassword(
             append("grant_type", "password")
             append("username", username)
             append("password", verification.value)
-            verification.otp?.let { if (it.isNotBlank()) append("otp", it) }
+            verification.otp?.let { if (it.isNotBlank()) append("totp", it) }
         },
     ).body<KeycloakTokens>()
 }.getOrElse {

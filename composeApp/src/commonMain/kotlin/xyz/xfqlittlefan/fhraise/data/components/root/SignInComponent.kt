@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -43,7 +42,6 @@ import xyz.xfqlittlefan.fhraise.auth.JwtTokenPair
 import xyz.xfqlittlefan.fhraise.data.AppComponentContext
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
-import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.datastore.PreferenceStateFlow
 import xyz.xfqlittlefan.fhraise.oauth.oAuthSignIn
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
@@ -51,6 +49,7 @@ import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.platform
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType
+import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.Request.VerificationType
 import kotlin.js.JsName
 
 internal typealias OnRequest = suspend (client: HttpClient, credential: String) -> Boolean
@@ -97,30 +96,68 @@ interface SignInComponent : AppComponentContext {
             CredentialType.Email -> KeyboardType.Email
         }
 
-    sealed class VerificationType(
-        val displayName: String,
-        val icon: ImageVector,
-        internal val onRequest: OnRequest,
-        internal val onVerify: OnVerify
-    ) {
-        class FhraiseToken(onRequest: OnRequest, onVerify: OnVerify) :
-            VerificationType("Fhraise令牌", Icons.Default.Key, onRequest, onVerify)
+    val VerificationType.displayName
+        get() = when (this) {
+            VerificationType.FhraiseToken -> "Fhraise 令牌"
+            VerificationType.QrCode -> "二维码"
+            VerificationType.SmsCode -> "短信验证码"
+            VerificationType.EmailCode -> "电子邮件验证码"
+            VerificationType.Password -> "密码"
+            VerificationType.Face -> "人脸"
+        }
 
-        class QrCode(onRequest: OnRequest, onVerify: OnVerify) :
-            VerificationType("二维码", Icons.Default.QrCode, onRequest, onVerify)
+    val VerificationType.icon
+        get() = when (this) {
+            VerificationType.FhraiseToken -> Icons.Default.Key
+            VerificationType.QrCode -> Icons.Default.QrCode
+            VerificationType.SmsCode -> Icons.Default.Sms
+            VerificationType.EmailCode -> Icons.Default.Mail
+            VerificationType.Password -> Icons.Default.Password
+            VerificationType.Face -> Icons.Default.Face
+        }
 
-        class SmsCode(onRequest: OnRequest, onVerify: OnVerify) :
-            VerificationType("短信验证", Icons.Default.Sms, onRequest, onVerify)
+    val VerificationType.onRequest: OnRequest
+        get() = { client, credential ->
+            runCatching {
+                client.post(Api.Auth.Type.Request(credentialType, this)) {
+                    contentType(ContentType.Application.Cbor)
+                    setBody(Api.Auth.Type.Request.RequestBody(credential))
+                }.body<Api.Auth.Type.Request.ResponseBody.Success>()
+            }.getOrElse {
+                it.printStackTrace()
+                null
+            }?.let {
+                verifyingToken = it.token
+                otp = if (it.otpNeeded) "" else null
+                true
+            } ?: false
+        }
 
-        class EmailCode(onRequest: OnRequest, onVerify: OnVerify) :
-            VerificationType("电子邮件验证", Icons.Default.Mail, onRequest, onVerify)
+    val VerificationType.onVerify: OnVerify
+        get() = when (this) {
+            VerificationType.FhraiseToken, VerificationType.SmsCode, VerificationType.EmailCode, VerificationType.Password -> { client, verification ->
+                runCatching {
+                    client.post(Api.Auth.Type.Verify(credentialType, verifyingToken!!)) {
+                        contentType(ContentType.Application.Cbor)
+                        setBody(
+                            Api.Auth.Type.Verify.RequestBody(
+                                Api.Auth.Type.Verify.RequestBody.Verification(verification, otp)
+                            )
+                        )
+                    }.body<Api.Auth.Type.Verify.ResponseBody.Success>()
+                }.getOrElse {
+                    it.printStackTrace()
+                    null
+                }?.let {
+                    verifyingToken = null
+                    enter(it.tokenPair)
+                    true
+                } ?: false
+            }
 
-        class Password(onRequest: OnRequest, onVerify: OnVerify) :
-            VerificationType("密码", Icons.Default.Password, onRequest, onVerify)
-
-        class Face(onRequest: OnRequest, onVerify: OnVerify) :
-            VerificationType("人脸", Icons.Default.Face, onRequest, onVerify)
-    }
+            VerificationType.QrCode -> { _, _ -> false }
+            VerificationType.Face -> { _, _ -> false }
+        }
 
     val CredentialType.use: () -> Unit
         get() = {
@@ -158,97 +195,6 @@ interface SignInComponent : AppComponentContext {
         }
 
     var verifyingToken: String?
-
-    val defaultVerifications
-        get() = listOf(
-            FhraiseToken(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
-            QrCode(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
-            SmsCode(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
-            EmailCode(
-                onRequest = { client, credential ->
-                    runCatching {
-                        client.post(
-                            Api.Auth.Type.Request(
-                                CredentialType.Email, Api.Auth.Type.Request.VerificationType.VerificationCode
-                            )
-                        ) {
-                            contentType(ContentType.Application.Cbor)
-                            setBody(Api.Auth.Type.Request.RequestBody(credential))
-                        }.body<Api.Auth.Type.Request.ResponseBody>()
-                    }.getOrNull()?.let {
-                        when (it) {
-                            is Api.Auth.Type.Request.ResponseBody.Success -> {
-                                verifyingToken = it.token
-                                true
-                            }
-
-                            else -> false
-                        }
-                    } ?: false
-                },
-                onVerify = { client, verification ->
-                    runCatching {
-                        client.post(Api.Auth.Type.Verify(CredentialType.Email, verifyingToken!!)) {
-                            contentType(ContentType.Application.Cbor)
-                            setBody(
-                                Api.Auth.Type.Verify.RequestBody(
-                                    Api.Auth.Type.Verify.RequestBody.Verification(verification)
-                                )
-                            )
-                        }.body<Api.Auth.Type.Verify.ResponseBody>()
-                    }.getOrNull()?.let {
-                        when (it) {
-                            is Api.Auth.Type.Verify.ResponseBody.Success -> {
-                                verifyingToken = null
-                                enter(it.tokenPair)
-                                true
-                            }
-
-                            else -> false
-                        }
-                    } ?: false
-                },
-            ),
-            Password(
-                onRequest = { client, credential ->
-                    runCatching {
-                        client.post(
-                            Api.Auth.Type.Request(credentialType, Api.Auth.Type.Request.VerificationType.Password)
-                        ) {
-                            contentType(ContentType.Application.Cbor)
-                            setBody(Api.Auth.Type.Request.RequestBody(credential))
-                        }.body<Api.Auth.Type.Request.ResponseBody.Success>()
-                    }.getOrElse {
-                        it.printStackTrace()
-                        null
-                    }?.let {
-                        verifyingToken = it.token
-                        otp = if (it.otpNeeded) "" else null
-                        true
-                    } ?: false
-                },
-                onVerify = { client, verification ->
-                    runCatching {
-                        client.post(Api.Auth.Type.Verify(credentialType, verifyingToken!!)) {
-                            contentType(ContentType.Application.Cbor)
-                            setBody(
-                                Api.Auth.Type.Verify.RequestBody(
-                                    Api.Auth.Type.Verify.RequestBody.Verification(verification, otp)
-                                )
-                            )
-                        }.body<Api.Auth.Type.Verify.ResponseBody.Success>()
-                    }.getOrElse {
-                        it.printStackTrace()
-                        null
-                    }?.let {
-                        verifyingToken = null
-                        enter(it.tokenPair)
-                        true
-                    } ?: false
-                },
-            ),
-            Face(onRequest = { _, _ -> false }, onVerify = { _, _ -> false }),
-        )
 
     suspend fun requestVerification(): Boolean
 
@@ -293,7 +239,7 @@ class AppSignInComponent(
     override var step by mutableStateOf(EnteringCredential)
     override var credentialType by mutableStateOf(CredentialType.Username)
     override var credential by mutableStateOf("")
-    private var _verificationType: SignInComponent.VerificationType? by mutableStateOf(null)
+    private var _verificationType: VerificationType? by mutableStateOf(null)
     override var verificationType
         get() = _verificationType
         set(value) = changeVerificationType(value)
@@ -361,9 +307,10 @@ class AppSignInComponent(
         // TODO
     }
 
-    private fun changeVerificationType(type: SignInComponent.VerificationType?) {
+    private fun changeVerificationType(type: VerificationType?) {
+        verification = ""
         showVerification = when (type) {
-            is Password -> false
+            VerificationType.Password -> false
             else -> true
         }
         _verificationType = type

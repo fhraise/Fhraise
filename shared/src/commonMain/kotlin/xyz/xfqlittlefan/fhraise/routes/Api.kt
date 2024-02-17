@@ -50,7 +50,7 @@ class Api {
                 }
 
                 @Serializable
-                enum class VerificationType { VerificationCode, Password }
+                enum class VerificationType { FhraiseToken, QrCode, SmsCode, EmailCode, Password, Face }
             }
 
             @Resource("verify")

@@ -56,7 +56,6 @@ import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.componentScope
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent
 import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.Step.*
-import xyz.xfqlittlefan.fhraise.data.components.root.SignInComponent.VerificationType.*
 import xyz.xfqlittlefan.fhraise.defaultServerPort
 import xyz.xfqlittlefan.fhraise.icon.AppIcons
 import xyz.xfqlittlefan.fhraise.icon.Github
@@ -198,7 +197,7 @@ fun SignInComponent.SignIn() {
                                 BackButton(requiredStep = step)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
-                                defaultVerifications.forEach { verification ->
+                                Api.Auth.Type.Request.VerificationType.entries.forEach { verification ->
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Card(
                                         onClick = verification.use, modifier = Modifier.fillMaxWidth()
@@ -229,15 +228,15 @@ fun SignInComponent.SignIn() {
                                 Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 when (type) {
-                                    is FhraiseToken, is SmsCode, is EmailCode -> {
+                                    Api.Auth.Type.Request.VerificationType.FhraiseToken, Api.Auth.Type.Request.VerificationType.SmsCode, Api.Auth.Type.Request.VerificationType.EmailCode -> {
                                         VerificationCode()
                                     }
 
-                                    is Password -> {
+                                    Api.Auth.Type.Request.VerificationType.Password -> {
                                         Password()
                                     }
 
-                                    is QrCode, is Face -> {}
+                                    Api.Auth.Type.Request.VerificationType.QrCode, Api.Auth.Type.Request.VerificationType.Face -> {}
                                 }
                                 Otp()
                                 Spacer(modifier = Modifier.height(32.dp))

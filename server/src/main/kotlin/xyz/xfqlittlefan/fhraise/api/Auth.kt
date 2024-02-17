@@ -34,7 +34,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
-import kotlinx.coroutines.future.await
 import kotlinx.html.stream.appendHTML
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -51,6 +50,7 @@ import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.proxy.keycloakScheme
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType.*
+import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.Request.VerificationType.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -158,7 +158,7 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
         val user = getOrCreateUser(req.parent.credentialType provide body.credential).getOrThrow()
 
         when (req.type) {
-            Api.Auth.Type.Request.VerificationType.VerificationCode -> {
+            FhraiseToken, QrCode, SmsCode, EmailCode -> {
                 val code = appDatabase.queryOrGenerateVerificationCode(this, token.hashCode())
 
                 if (body.dry) {
@@ -166,14 +166,20 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
                     return@post
                 }
 
-                if (sendVerificationCode(req, body.credential, code.code)) {
+                if (sendVerificationCode(req, user, code.code)) {
                     call.respond(Api.Auth.Type.Request.ResponseBody.Success(token))
                 } else {
                     call.respond(Api.Auth.Type.Request.ResponseBody.Failure)
                 }
             }
 
-            Api.Auth.Type.Request.VerificationType.Password -> call.respond(
+            Face -> {
+                // TODO
+                call.respond(Api.Auth.Type.Request.ResponseBody.Failure)
+            }
+
+
+            Password -> call.respond(
                 Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
             )
         }
@@ -189,24 +195,19 @@ private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
     }
 
     when (token.type) {
-        Api.Auth.Type.Request.VerificationType.VerificationCode -> call.respondCodeVerificationResult(req, body)
-        Api.Auth.Type.Request.VerificationType.Password -> call.respondPasswordVerificationResult(token, req, body)
+        FhraiseToken, QrCode, SmsCode, EmailCode -> call.respondCodeVerificationResult(token, req, body)
+        Face -> call.respond(Api.Auth.Type.Verify.ResponseBody.Failure)
+        Password -> call.respondPasswordVerificationResult(token, req, body)
     }
 }
 
 private suspend fun RoutingCall.respondCodeVerificationResult(
-    request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
+    token: AuthProcessToken, request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
 ) {
     val verificationValid = appDatabase.verifyCode(request.token.hashCode(), body.verification.value)
 
     if (verificationValid) {
-        getOrCreateUser {
-            when (request.parent.credentialType) {
-                Username -> username = body.verification.value
-                Email -> email = body.verification.value
-                PhoneNumber -> phoneNumber = body.verification.value
-            }
-        }.fold(
+        getOrCreateUser(request.parent.credentialType provide token.credential).fold(
             onSuccess = { user ->
                 exchangeToken(user.id!!)?.let {
                     respond(Api.Auth.Type.Verify.ResponseBody.Success(it))
@@ -238,14 +239,19 @@ private fun Api.Auth.Type.validate(credential: String) = when (credentialType) {
     Email -> JMail.strictValidator().isValid(credential)
 }
 
-private suspend fun sendVerificationCode(request: Api.Auth.Type.Request, credential: String, code: String) =
-    when (request.parent.credentialType) {
-        Username -> false
-        PhoneNumber -> false
-        Email -> sendEmailVerificationCode(credential, code)
+private fun sendVerificationCode(request: Api.Auth.Type.Request, user: UserRepresentation, code: String) =
+    when (request.type) {
+        FhraiseToken -> false
+        QrCode -> false
+        SmsCode -> false
+        EmailCode -> user.email?.let {
+            sendEmailVerificationCode(it, code)
+        } ?: false
+
+        else -> false
     }
 
-private suspend fun sendEmailVerificationCode(emailAddress: String, code: String): Boolean {
+private fun sendEmailVerificationCode(emailAddress: String, code: String): Boolean {
     if (!smtpReady) {
         return false
     }
@@ -263,8 +269,8 @@ private suspend fun sendEmailVerificationCode(emailAddress: String, code: String
     runCatching {
         MailerBuilder.withTransportStrategy(TransportStrategy.SMTPS)
             .withSMTPServer(smtpServer!!, smtpPort!!, smtpUsername!!, smtpPassword!!).buildMailer()
-            .sendMail(email, true).await()
-    }.onFailure { return false }
+            .sendMail(email, true)
+    }
 
     return true
 }
