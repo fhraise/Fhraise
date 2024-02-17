@@ -34,7 +34,6 @@ import xyz.xfqlittlefan.fhraise.AppDatabase
 import xyz.xfqlittlefan.fhraise.api.appAuthTimeout
 import xyz.xfqlittlefan.fhraise.appDatabase
 import xyz.xfqlittlefan.fhraise.appSecret
-import xyz.xfqlittlefan.fhraise.routes.Api
 
 val smtpServer = appSecret.propertyOrNull("auth.email.smtp.server")?.getString()
 val smtpPort = smtpServer?.let { appSecret.propertyOrNull("auth.email.smtp.port")?.getString()?.toIntOrNull() }
@@ -60,8 +59,6 @@ class VerificationCode(id: EntityID<Int>) : Entity<Int>(id) {
     var createdAt by VerificationCodes.createdAt
         internal set
 }
-
-private fun Api.Auth.Type.getOwner(credential: String) = "${credentialType.name}:$credential"
 
 suspend fun AppDatabase.queryOrGenerateVerificationCode(scope: CoroutineScope, tokenHash: Int) = dbQuery {
     VerificationCode.find { VerificationCodes.tokenHash eq tokenHash }.firstOrNull()
