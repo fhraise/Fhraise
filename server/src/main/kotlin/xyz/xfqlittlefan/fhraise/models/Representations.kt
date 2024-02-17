@@ -98,11 +98,8 @@ data class CredentialRepresentation(
         @SerialName("password")
         Password,
 
-        @SerialName("totp")
-        Totp,
-
-        @SerialName("hotp")
-        Hotp,
+        @SerialName("otp")
+        Otp,
 
         @SerialName("kerberos")
         Kerberos
