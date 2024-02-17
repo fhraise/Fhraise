@@ -396,6 +396,13 @@ tasks.register("runWebApp") {
     dependsOn("compose-app:wasmJsBrowserDevelopmentRun")
 }
 
+tasks.register("runServer") {
+    group = "project build"
+    description = "Run the server"
+
+    dependsOn("server:run")
+}
+
 tasks.register("installReleaseAndroidApp") {
     group = "project build"
     description = "Install the Android release APK"

@@ -27,6 +27,7 @@ import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.plugins.callid.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
@@ -37,6 +38,7 @@ import xyz.xfqlittlefan.fhraise.api.apiAuth
 import xyz.xfqlittlefan.fhraise.api.apiOAuth
 import xyz.xfqlittlefan.fhraise.api.appAuth
 import xyz.xfqlittlefan.fhraise.api.registerAppCodeVerification
+import xyz.xfqlittlefan.fhraise.auth.cleanupUnverifiedUsersPreDay
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
 import xyz.xfqlittlefan.fhraise.proxy.proxyKeycloak
 
@@ -58,12 +60,15 @@ fun Application.module() {
         appAuth()
     }
 
+    install(DoubleReceive)
+
     install(ContentNegotiation) { cbor() }
 
     install(WebSockets) {
         contentConverter = KotlinxWebsocketSerializationConverter(Cbor)
     }
 
+    cleanupUnverifiedUsersPreDay()
     cleanupVerificationCodes()
 
     routing {

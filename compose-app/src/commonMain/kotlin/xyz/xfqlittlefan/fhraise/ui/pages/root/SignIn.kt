@@ -180,6 +180,12 @@ fun SignInComponent.SignIn() {
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Credential()
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "新用户将自动注册，未添加验证方式的用户将在 7 天后被删除",
+                                    modifier = Modifier.alpha(0.6f),
+                                    style = MaterialTheme.typography.labelMedium
+                                )
                                 Spacer(modifier = Modifier.height(32.dp))
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),

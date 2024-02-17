@@ -209,6 +209,19 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
     if (verificationValid) {
         getOrCreateUser(request.parent.credentialType provide token.credential).fold(
             onSuccess = { user ->
+                var userNeedsUpdate = false
+
+                if (user.enabled != true) {
+                    user.enabled = true
+                    userNeedsUpdate = true
+                }
+                if (request.parent.credentialType == Email && user.emailVerified != true) {
+                    user.emailVerified = true
+                    userNeedsUpdate = true
+                }
+
+                if (userNeedsUpdate) user.update()
+
                 exchangeToken(user.id!!)?.let {
                     respond(Api.Auth.Type.Verify.ResponseBody.Success(it))
                 } ?: respond(Api.Auth.Type.Verify.ResponseBody.Failure)
@@ -226,6 +239,10 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
     val user = getUser(request.parent.credentialType provide token.credential) ?: run {
         respond(Api.Auth.Type.Verify.ResponseBody.Failure)
         return
+    }
+
+    if (user.getCredentials()?.any { it.type == CredentialRepresentation.CredentialType.Password } != true) {
+        user.resetPassword { value = body.verification.value }.onSuccess { user.update { enabled = true } }
     }
 
     keycloakClient.getTokensByPassword(authClientId, authClientSecret, user.username!!, body.verification)?.let {

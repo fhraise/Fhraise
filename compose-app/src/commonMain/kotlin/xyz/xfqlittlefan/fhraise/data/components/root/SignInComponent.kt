@@ -22,6 +22,8 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -53,7 +55,7 @@ import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.Request.VerificationType
 import kotlin.js.JsName
 
 internal typealias OnRequest = suspend (client: HttpClient, credential: String) -> Boolean
-internal typealias OnVerify = suspend (client: HttpClient, verification: String) -> Boolean
+internal typealias OnVerify = suspend (client: HttpClient, verification: String) -> JwtTokenPair?
 
 interface SignInComponent : AppComponentContext {
     var step: Step
@@ -150,13 +152,12 @@ interface SignInComponent : AppComponentContext {
                     null
                 }?.let {
                     verifyingToken = null
-                    enter(it.tokenPair)
-                    true
-                } ?: false
+                    it.tokenPair
+                }
             }
 
-            VerificationType.QrCode -> { _, _ -> false }
-            VerificationType.Face -> { _, _ -> false }
+            VerificationType.QrCode -> { _, _ -> null }
+            VerificationType.Face -> { _, _ -> null }
         }
 
     val CredentialType.use: () -> Unit
@@ -204,7 +205,7 @@ interface SignInComponent : AppComponentContext {
 
     fun onMicrosoftSignIn()
 
-    fun enter(tokenPair: JwtTokenPair? = null)
+    fun enter()
 
     val enterAction: KeyboardActionScope.() -> Unit
         get() = {
@@ -234,7 +235,7 @@ interface SignInComponent : AppComponentContext {
 }
 
 class AppSignInComponent(
-    componentContext: AppComponentContext, private val onEnter: () -> Unit
+    componentContext: AppComponentContext, onEnter: (JwtTokenPair?) -> Unit
 ) : SignInComponent, AppComponentContext by componentContext {
     override var step by mutableStateOf(EnteringCredential)
     override var credentialType by mutableStateOf(CredentialType.Username)
@@ -286,20 +287,39 @@ class AppSignInComponent(
 
     override fun onMicrosoftSignIn() = onOAuthSignIn(Api.OAuth.Provider.Microsoft)
 
-    override fun enter(tokenPair: JwtTokenPair?) {
+    private val onEnter: (JwtTokenPair?) -> Unit = onEnter@{ tokenPair ->
+        onEnter(tokenPair)
+        if (tokenPair != null) return@onEnter
+        componentScope.launch {
+            snackbarHostState.showSnackbar(
+                message = "登录账号可享受完整服务",
+                actionLabel = "返回登录",
+                withDismissAction = true,
+                duration = SnackbarDuration.Short
+            ).let {
+                if (it == SnackbarResult.ActionPerformed) Unit // TODO
+            }
+        }
+    }
+
+    override fun enter() {
         if (!credentialValid) return
         verificationType?.let {
             componentScope.launch {
-                if (it.onVerify(client, verification)) {
+                it.onVerify(client, verification)?.let {
                     snackbarHostState.showSnackbar(message = "验证成功", withDismissAction = true)
-                    onEnter()
-                } else {
-                    snackbarHostState.showSnackbar(message = "验证失败", withDismissAction = true)
+                    onEnter(it)
+                } ?: snackbarHostState.showSnackbar(
+                    message = "验证失败",
+                    actionLabel = "仅浏览",
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Short
+                ).let {
+                    if (it == SnackbarResult.ActionPerformed) onEnter(null)
                 }
             }
         } ?: run {
-            // TODO: 询问是否验证
-            onEnter()
+            onEnter(null)
         }
     }
 
@@ -318,7 +338,12 @@ class AppSignInComponent(
             if (requestVerification()) {
                 step = Verification
             } else {
-                snackbarHostState.showSnackbar(message = "请求验证失败", withDismissAction = true)
+                snackbarHostState.showSnackbar(
+                    message = "请求验证失败",
+                    actionLabel = "仅浏览",
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Short
+                )
             }
         }
     }

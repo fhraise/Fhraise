@@ -21,6 +21,7 @@ package xyz.xfqlittlefan.fhraise.auth
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -32,36 +33,36 @@ suspend fun HttpClient.getTokensByPassword(
     clientSecret: String,
     username: String,
     verification: Api.Auth.Type.Verify.RequestBody.Verification
-) = runCatching {
-    submitForm(
-        url = keycloakTokenUrl,
-        formParameters = parameters {
-            append("client_id", clientId)
-            append("client_secret", clientSecret)
-            append("grant_type", "password")
-            append("username", username)
-            append("password", verification.value)
-            verification.otp?.let { if (it.isNotBlank()) append("totp", it) }
-        },
-    ).body<KeycloakTokens>()
-}.getOrElse {
-    logger.error("Failed to get tokens by password", it)
-    null
+) = submitForm(
+    url = keycloakTokenUrl,
+    formParameters = parameters {
+        append("client_id", clientId)
+        append("client_secret", clientSecret)
+        append("grant_type", "password")
+        append("username", username)
+        append("password", verification.value)
+        verification.otp?.let { if (it.isNotBlank()) append("totp", it) }
+    },
+).let { response ->
+    runCatching { response.body<KeycloakTokens>() }.getOrElse {
+        logger.error("Failed to get tokens by password", Exception(response.bodyAsText(), it))
+        null
+    }
 }
 
-suspend fun HttpClient.refreshTokens(clientId: String, clientSecret: String, refreshToken: String) = runCatching {
-    submitForm(
-        url = keycloakTokenUrl,
-        formParameters = parameters {
-            append("client_id", clientId)
-            append("client_secret", clientSecret)
-            append("grant_type", "refresh_token")
-            append("refresh_token", refreshToken)
-        },
-    ).body<KeycloakTokens>()
-}.getOrElse {
-    logger.error("Failed to refresh tokens", it)
-    null
+suspend fun HttpClient.refreshTokens(clientId: String, clientSecret: String, refreshToken: String) = submitForm(
+    url = keycloakTokenUrl,
+    formParameters = parameters {
+        append("client_id", clientId)
+        append("client_secret", clientSecret)
+        append("grant_type", "refresh_token")
+        append("refresh_token", refreshToken)
+    },
+).let { response ->
+    runCatching { response.body<KeycloakTokens>() }.getOrElse {
+        logger.error("Failed to refresh tokens", Exception(response.bodyAsText(), it))
+        null
+    }
 }
 
 @Serializable
