@@ -89,4 +89,11 @@ android {
     defaultConfig {
         minSdk = androidMinSdk.toInt()
     }
+
+    splits {
+        abi {
+            isEnable = true
+            isUniversalApk = true
+        }
+    }
 }
