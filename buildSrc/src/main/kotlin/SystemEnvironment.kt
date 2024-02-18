@@ -16,24 +16,12 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
+package xyz.xfqlittlefan.fhraise.buildsrc
 
-plugins {
-    alias(libs.plugins.kotlinJvm)
-    `java-library`
-}
+import org.gradle.internal.os.OperatingSystem
 
-group = "xyz.xfqlittlefan.fhraise"
-project.version = projectVersion
-
-dependencies {
-    implementation(libs.keycloak.core)
-    implementation(libs.keycloak.server.spi)
-    implementation(libs.keycloak.server.spi.private)
-}
-
-tasks.withType<Jar> {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    from(configurations.runtimeClasspath.get().filter { it.name.contains("kotlin") }
-             .map { if (it.isDirectory) it else zipTree(it) })
+object SystemEnvironment {
+    val isLinux = OperatingSystem.current().isLinux
+    val isWindows = OperatingSystem.current().isWindows
+    val arch: String = System.getProperty("os.arch")
 }

@@ -16,13 +16,10 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import org.gradle.internal.os.OperatingSystem
+import xyz.xfqlittlefan.fhraise.buildsrc.*
 import java.io.ByteArrayOutputStream
-import java.util.*
 
 plugins {
-    // this is necessary to avoid the plugins to be loaded multiple times
-    // in each subproject's classloader
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.kotlinJvm) apply false
     alias(libs.plugins.kotlinSerialization) apply false
@@ -41,37 +38,7 @@ allprojects {
     apply(plugin = "kotlinx-atomicfu")
 }
 
-val versionPropertiesFile = file("version.properties")
-val versionProperties = Properties().apply {
-    with(versionPropertiesFile) {
-        if (exists()) {
-            load(inputStream())
-        }
-    }
-}
-
-var devVer: String by versionProperties
-var commitSha: String by versionProperties
-var reversion: String by versionProperties
-var version: String by versionProperties
-
-val buildNumberPropertiesFile = file("build-number.properties")
-val buildNumberProperties = Properties().apply {
-    with(buildNumberPropertiesFile) {
-        if (exists()) {
-            load(inputStream())
-        }
-    }
-}
-
-var buildNumber: String by buildNumberProperties
-
-val String.outputDirectory
-    get() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
-
-val isLinux = OperatingSystem.current().isLinux
-val isWindows = OperatingSystem.current().isWindows
-val arch: String = System.getProperty("os.arch")
+RootProject.project = rootProject
 
 tasks.register("updateDevVer") {
     group = "versioning"
@@ -84,9 +51,8 @@ tasks.register("updateDevVer") {
             standardOutput = stream
             isIgnoreExitValue = true
         }
-        devVer = if (result.exitValue == 0) stream.toString().trim().substringAfter("dev") else "0.0"
-        versionProperties.store(versionPropertiesFile.outputStream(), null)
-        logger.lifecycle("devVer: $devVer")
+        projectDevVer = if (result.exitValue == 0) stream.toString().trim().substringAfter("dev") else "0.0"
+        logger.lifecycle("devVer: $projectDevVer")
     }
 }
 
@@ -100,9 +66,8 @@ tasks.register("updateCommitSha") {
             commandLine = listOf("git", "rev-parse", "--short", "HEAD")
             standardOutput = stream
         }
-        commitSha = stream.toString().trim()
-        versionProperties.store(versionPropertiesFile.outputStream(), null)
-        logger.lifecycle("commitSha: $commitSha")
+        projectCommitSha = stream.toString().trim()
+        logger.lifecycle("commitSha: $projectCommitSha")
     }
 }
 
@@ -113,13 +78,12 @@ tasks.register("updateReversion") {
     doLast {
         val stream = ByteArrayOutputStream()
         val result = exec {
-            commandLine = listOf("git", "rev-list", "--count", "dev$devVer..main")
+            commandLine = listOf("git", "rev-list", "--count", "dev$projectDevVer..main")
             standardOutput = stream
             isIgnoreExitValue = true
         }
-        reversion = if (result.exitValue == 0) stream.toString().trim() else "0"
-        versionProperties.store(versionPropertiesFile.outputStream(), null)
-        logger.lifecycle("reversion: $reversion")
+        projectReversion = if (result.exitValue == 0) stream.toString().trim().toInt() else 0
+        logger.lifecycle("reversion: $projectReversion")
     }
 }
 
@@ -130,9 +94,8 @@ tasks.register("updateVersion") {
     dependsOn("updateDevVer", "updateCommitSha", "updateReversion")
 
     doLast {
-        version = "$devVer.$reversion+$commitSha"
-        versionProperties.store(versionPropertiesFile.outputStream(), null)
-        logger.lifecycle("version: $version")
+        version = "$projectDevVer.$projectReversion+$projectCommitSha"
+        logger.lifecycle("version: $projectVersion")
     }
 }
 
@@ -141,13 +104,8 @@ tasks.register("increaseBuildNumber") {
     description = "Increase the build number"
 
     doLast {
-        buildNumber = try {
-            (buildNumber.toInt() + 1).toString()
-        } catch (e: Throwable) {
-            "1"
-        }
-        buildNumberProperties.store(buildNumberPropertiesFile.outputStream(), null)
-        logger.lifecycle("buildNumber: $buildNumber")
+        projectBuildNumber += 1
+        logger.lifecycle("buildNumber: $projectBuildNumber")
     }
 }
 
@@ -166,7 +124,7 @@ tasks.register("releaseAndroidApp") {
 
     doLast {
         val apkDir = file(project(":compose-app").layout.buildDirectory.dir("outputs/apk/release"))
-        val outputDir = file("android".outputDirectory)
+        val outputDir = file(outputDirectoryOf("android"))
         apkDir.copyRecursively(outputDir, overwrite = true)
         logger.lifecycle("output directory: ${outputDir.absolutePath}")
     }
@@ -176,7 +134,7 @@ tasks.register("releaseLinuxApp") {
     group = "project build"
     description = "Build the Linux release executable"
 
-    if (!isLinux) {
+    if (!SystemEnvironment.isLinux) {
         enabled = false
     }
 
@@ -187,7 +145,7 @@ tasks.register<Tar>("releaseTarLinuxApp") {
     group = "project build"
     description = "Build the Linux release tar"
 
-    if (!isLinux) {
+    if (!SystemEnvironment.isLinux) {
         enabled = false
     }
 
@@ -195,19 +153,19 @@ tasks.register<Tar>("releaseTarLinuxApp") {
 
     archiveBaseName = "fhraise"
     archiveAppendix = "linux"
-    archiveVersion = "$version.$buildNumber"
-    archiveClassifier = arch
+    archiveVersion = "$projectVersion.$projectBuildNumber"
+    archiveClassifier = SystemEnvironment.arch
     archiveExtension = "tar"
     compression = Compression.GZIP
-    destinationDirectory = file("linux-tar".outputDirectory)
-    from(file("desktop/main-release/app/Fhraise".outputDirectory))
+    destinationDirectory = file(outputDirectoryOf("linux-tar"))
+    from(file(outputDirectoryOf("desktop/main-release/app/Fhraise")))
 }
 
 tasks.register("releaseWindowsApp") {
     group = "project build"
     description = "Build the Windows release executable"
 
-    if (!isWindows) {
+    if (!SystemEnvironment.isWindows) {
         enabled = false
     }
 
@@ -218,7 +176,7 @@ tasks.register<Zip>("releaseZipWindowsApp") {
     group = "project build"
     description = "Build the Windows release zip"
 
-    if (!isWindows) {
+    if (!SystemEnvironment.isWindows) {
         enabled = false
     }
 
@@ -226,20 +184,20 @@ tasks.register<Zip>("releaseZipWindowsApp") {
 
     archiveBaseName = "fhraise"
     archiveAppendix = "windows"
-    archiveVersion = "$version.$buildNumber"
-    archiveClassifier = arch
+    archiveVersion = "$projectVersion.$projectBuildNumber"
+    archiveClassifier = SystemEnvironment.arch
     archiveExtension = "zip"
-    destinationDirectory = file("windows-zip".outputDirectory)
-    from(file("desktop/main-release/app/Fhraise".outputDirectory))
+    destinationDirectory = file(outputDirectoryOf("windows-zip"))
+    from(file(outputDirectoryOf("desktop/main-release/app/Fhraise")))
 }
 
 tasks.register("releaseDesktopApp") {
     group = "project build"
     description = "Build the desktop release"
 
-    if (isLinux) {
+    if (SystemEnvironment.isLinux) {
         dependsOn("releaseLinuxApp")
-    } else if (isWindows) {
+    } else if (SystemEnvironment.isWindows) {
         dependsOn("releaseWindowsApp")
     }
 }
@@ -248,9 +206,9 @@ tasks.register("releaseArchiveDesktopApp") {
     group = "project build"
     description = "Build the desktop release archive"
 
-    if (isLinux) {
+    if (SystemEnvironment.isLinux) {
         dependsOn("releaseTarLinuxApp")
-    } else if (isWindows) {
+    } else if (SystemEnvironment.isWindows) {
         dependsOn("releaseZipWindowsApp")
     }
 }
@@ -262,7 +220,7 @@ tasks.register("releaseWebApp") {
     dependsOn("compose-app:wasmJsBrowserProductionWebpack")
 
     doLast {
-        logger.lifecycle("output directory: ${file("web".outputDirectory).absolutePath}")
+        logger.lifecycle("output directory: ${file(outputDirectoryOf("web")).absolutePath}")
     }
 }
 
@@ -274,11 +232,11 @@ tasks.register<Tar>("releaseTarWebApp") {
 
     archiveBaseName = "fhraise"
     archiveAppendix = "web"
-    archiveVersion = "$version.$buildNumber"
+    archiveVersion = "$projectVersion.$projectBuildNumber"
     archiveExtension = "tar"
     compression = Compression.GZIP
-    destinationDirectory = file("web-tar".outputDirectory)
-    from(file("web".outputDirectory))
+    destinationDirectory = file(outputDirectoryOf("web-tar"))
+    from(file(outputDirectoryOf("web")))
 }
 
 tasks.register("releaseServer") {
@@ -289,8 +247,8 @@ tasks.register("releaseServer") {
 
     doLast {
         val jar = file(project(":server").layout.buildDirectory.file("libs/server-all.jar"))
-        val outputDir = file("server".outputDirectory)
-        jar.copyTo(outputDir.resolve("fhraise-server-$version.$buildNumber.jar"), overwrite = true)
+        val outputDir = file(outputDirectoryOf("server"))
+        jar.copyTo(outputDir.resolve("fhraise-server-$projectVersion.$projectBuildNumber.jar"), overwrite = true)
         logger.lifecycle("output directory: ${outputDir.absolutePath}")
     }
 }
@@ -302,7 +260,7 @@ tasks.register("ciVersioning") {
     dependsOn("updateVersion")
 
     doLast {
-        val outputVersion = "v${version.substringBefore('+')}"
+        val outputVersion = "v${projectVersion.substringBefore('+')}"
         file(System.getenv("GITHUB_OUTPUT")).writeText("version=$outputVersion")
         logger.lifecycle("Wrote version to GitHub output: $outputVersion")
     }
@@ -316,20 +274,24 @@ tasks.register("ciReleaseLinuxApp") {
 
     doLast {
         val assetsDir = file(layout.buildDirectory.dir("assets"))
-        file("android".outputDirectory).listFiles()?.filter { it.name.endsWith(".apk") }?.forEach { file ->
+        file(outputDirectoryOf("android")).listFiles()?.filter { it.name.endsWith(".apk") }?.forEach { file ->
             file.name.substringAfter("compose-app-").substringBefore("-release").let {
-                file.copyTo(assetsDir.resolve("fhraise-android-$version.$buildNumber-$it.apk"), overwrite = true)
+                file.copyTo(
+                    assetsDir.resolve("fhraise-android-$projectVersion.$projectBuildNumber-$it.apk"), overwrite = true
+                )
             }
         }
-        file("desktop/main-release/deb".outputDirectory).listFiles()?.first()?.copyTo(
-            assetsDir.resolve("fhraise-linux-$version.$buildNumber-$arch.deb"), overwrite = true
+        file(outputDirectoryOf("desktop/main-release/deb")).listFiles()?.first()?.copyTo(
+            assetsDir.resolve("fhraise-linux-$projectVersion.$projectBuildNumber-${SystemEnvironment.arch}.deb"),
+            overwrite = true
         )
-        file("desktop/main-release/rpm".outputDirectory).listFiles()?.first()?.copyTo(
-            assetsDir.resolve("fhraise-linux-$version.$buildNumber-$arch.rpm"), overwrite = true
+        file(outputDirectoryOf("desktop/main-release/rpm")).listFiles()?.first()?.copyTo(
+            assetsDir.resolve("fhraise-linux-$projectVersion.$projectBuildNumber-${SystemEnvironment.arch}.rpm"),
+            overwrite = true
         )
-        file("linux-tar".outputDirectory).copyRecursively(assetsDir, overwrite = true)
-        file("web-tar".outputDirectory).copyRecursively(assetsDir, overwrite = true)
-        file("server".outputDirectory).copyRecursively(assetsDir, overwrite = true)
+        file(outputDirectoryOf("linux-tar")).copyRecursively(assetsDir, overwrite = true)
+        file(outputDirectoryOf("web-tar")).copyRecursively(assetsDir, overwrite = true)
+        file(outputDirectoryOf("server")).copyRecursively(assetsDir, overwrite = true)
     }
 }
 
@@ -341,9 +303,10 @@ tasks.register("ciReleaseWindowsApp") {
 
     doLast {
         val assetsDir = file(layout.buildDirectory.dir("assets"))
-        file("windows-zip".outputDirectory).copyRecursively(assetsDir, overwrite = true)
-        file("desktop/main-release/msi".outputDirectory).listFiles()?.first()?.copyTo(
-            assetsDir.resolve("fhraise-windows-$version.$buildNumber-$arch.msi"), overwrite = true
+        file(outputDirectoryOf("windows-zip")).copyRecursively(assetsDir, overwrite = true)
+        file(outputDirectoryOf("desktop/main-release/msi")).listFiles()?.first()?.copyTo(
+            assetsDir.resolve("fhraise-windows-$projectVersion.$projectBuildNumber-${SystemEnvironment.arch}.msi"),
+            overwrite = true
         )
     }
 }
@@ -352,9 +315,9 @@ tasks.register("ciReleaseApp") {
     group = "ci"
     description = "Build the release app"
 
-    if (isLinux) {
+    if (SystemEnvironment.isLinux) {
         dependsOn("ciReleaseLinuxApp")
-    } else if (isWindows) {
+    } else if (SystemEnvironment.isWindows) {
         dependsOn("ciReleaseWindowsApp")
     }
 }
@@ -410,7 +373,7 @@ tasks.register("installReleaseAndroidApp") {
     dependsOn("releaseAndroidApp")
 
     doLast {
-        val apk = file("android".outputDirectory).listFiles()!!.first { it.name.endsWith(".apk") }!!
+        val apk = file(outputDirectoryOf("android")).listFiles()!!.first { it.name.endsWith(".apk") }!!
         val cmd = mutableListOf("adb")
         if (hasProperty("device")) {
             cmd.add("-s")

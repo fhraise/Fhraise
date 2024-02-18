@@ -19,6 +19,9 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import xyz.xfqlittlefan.fhraise.buildsrc.outputDirectoryOf
+import xyz.xfqlittlefan.fhraise.buildsrc.projectBuildNumber
+import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
 import java.time.Year
 import java.util.*
 
@@ -33,27 +36,6 @@ val androidCompileSdk: String by project
 val androidMinSdk: String by project
 val androidTargetSdk: String by project
 
-val versionProperties = Properties().apply {
-    with(rootProject.file("version.properties")) {
-        if (exists()) {
-            load(inputStream())
-        }
-    }
-}
-val version: String = versionProperties.getProperty("version", "0.1.0")
-
-val buildNumberProperties = Properties().apply {
-    with(rootProject.file("build-number.properties")) {
-        if (exists()) {
-            load(inputStream())
-        }
-    }
-}
-val buildNumber: String = buildNumberProperties.getProperty("buildNumber", "1")
-
-val String.outputDirectory
-    get() = rootProject.layout.buildDirectory.dir("outputs/binaries/$version.$buildNumber/$this")
-
 kotlin {
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
         moduleName = "fhraise"
@@ -62,7 +44,7 @@ kotlin {
                 outputFileName = "fhraise.js"
             }
             @OptIn(ExperimentalDistributionDsl::class) distribution {
-                outputDirectory = "web".outputDirectory
+                outputDirectory = outputDirectoryOf("web")
             }
         }
         binaries.executable()
@@ -159,8 +141,8 @@ android {
         applicationId = "xyz.xfqlittlefan.fhraise"
         minSdk = androidMinSdk.toInt()
         targetSdk = androidTargetSdk.toInt()
-        versionCode = buildNumber.toInt()
-        versionName = version
+        versionCode = projectBuildNumber
+        versionName = projectVersion
     }
     packaging {
         resources {
@@ -222,7 +204,7 @@ compose.desktop {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Msi)
             modules("java.instrument", "java.management", "jdk.unsupported")
             packageName = "Fhraise"
-            packageVersion = version
+            packageVersion = projectVersion
             description = "Fhraise"
             copyright = "© 2024${
                 Year.now().value.let {
@@ -231,7 +213,7 @@ compose.desktop {
             } HSAS Foodies. All Rights Reserved."
             vendor = "HSAS Foodies"
             licenseFile = rootProject.file("LICENSE")
-            outputBaseDir = "desktop".outputDirectory
+            outputBaseDir = outputDirectoryOf("desktop")
 
             linux {
                 debMaintainer = "xfqwdsj@qq.com"
@@ -240,7 +222,7 @@ compose.desktop {
             }
 
             windows {
-                packageVersion = version.split("+").first()
+                packageVersion = projectVersion.split("+").first()
                 dirChooser = true
                 menuGroup = "HSAS Foodies"
                 upgradeUuid = "e72b5bab-6eb1-41a6-b9c4-d755d92103ae"

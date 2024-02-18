@@ -16,24 +16,11 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
+package xyz.xfqlittlefan.fhraise.buildsrc
 
-plugins {
-    alias(libs.plugins.kotlinJvm)
-    `java-library`
-}
+import org.gradle.api.Project
+import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
 
-group = "xyz.xfqlittlefan.fhraise"
-project.version = projectVersion
-
-dependencies {
-    implementation(libs.keycloak.core)
-    implementation(libs.keycloak.server.spi)
-    implementation(libs.keycloak.server.spi.private)
-}
-
-tasks.withType<Jar> {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    from(configurations.runtimeClasspath.get().filter { it.name.contains("kotlin") }
-             .map { if (it.isDirectory) it else zipTree(it) })
-}
+fun Project.outputDirectoryOf(target: String): Provider<Directory> =
+    rootProject.layout.buildDirectory.dir("outputs/binaries/$projectVersion.$projectBuildNumber/$target")

@@ -16,7 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import java.util.*
+import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
 
 plugins {
     alias(libs.plugins.kotlinJvm)
@@ -25,17 +25,8 @@ plugins {
     application
 }
 
-val versionProperties = Properties().apply {
-    with(rootProject.file("version.properties")) {
-        if (exists()) {
-            load(inputStream())
-        }
-    }
-}
-val version: String = versionProperties.getProperty("version", "0.1.0")
-
 group = "xyz.xfqlittlefan.fhraise"
-project.version = version
+project.version = projectVersion
 
 application {
     mainClass.set("xyz.xfqlittlefan.fhraise.ApplicationKt")
