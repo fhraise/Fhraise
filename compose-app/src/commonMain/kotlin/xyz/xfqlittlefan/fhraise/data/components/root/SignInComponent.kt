@@ -182,6 +182,15 @@ interface SignInComponent : AppComponentContext {
         step--
     }
 
+    fun canChangeStep(step: Step): Boolean {
+        return when (step) {
+            EnteringCredential -> true
+            SelectingVerification -> credentialValid
+            Verification -> verification.isNotBlank()
+            Done -> false
+        }
+    }
+
     fun forward() {
         if (step.next != Done) {
             step++
@@ -237,7 +246,12 @@ interface SignInComponent : AppComponentContext {
 class AppSignInComponent(
     componentContext: AppComponentContext, onEnter: (JwtTokenPair?) -> Unit
 ) : SignInComponent, AppComponentContext by componentContext {
-    override var step by mutableStateOf(EnteringCredential)
+    private var _step by mutableStateOf(EnteringCredential)
+    override var step
+        get() = _step
+        set(value) {
+            if (canChangeStep(value)) _step = value
+        }
     override var credentialType by mutableStateOf(CredentialType.Username)
     override var credential by mutableStateOf("")
     private var _verificationType: VerificationType? by mutableStateOf(null)

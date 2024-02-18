@@ -21,8 +21,10 @@ package xyz.xfqlittlefan.fhraise.ui.pages.root
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -76,8 +78,9 @@ import xyz.xfqlittlefan.fhraise.ui.composables.TypeWriter
 import xyz.xfqlittlefan.fhraise.ui.composables.VerticalScrollbar
 import xyz.xfqlittlefan.fhraise.ui.composables.safeDrawingWithoutIme
 import xyz.xfqlittlefan.fhraise.ui.modifiers.applyBrush
-import kotlin.math.max
-import kotlin.math.roundToInt
+import kotlin.math.*
+// 避免 Unresolved reference
+import androidx.compose.foundation.gestures.AnchoredDraggableState as GesturesAnchoredDraggableState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -204,7 +207,9 @@ fun SignInComponent.SignIn() {
                             Api.Auth.Type.Request.VerificationType.entries.forEach { verification ->
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Card(
-                                    onClick = verification.use, modifier = Modifier.fillMaxWidth()
+                                    onClick = verification.use,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = this@SignIn.step == step
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -523,7 +528,7 @@ private fun SignInLayoutScope.SignInMainLayout(
          */
         val containerHeight = constraints.maxHeight
 
-        SubcomposeLayout(modifier = Modifier.fillMaxSize()/*.verticalScroll(state = scrollState)*/) { layoutConstraints ->
+        SubcomposeLayout(modifier = Modifier.fillMaxSize().verticalScroll(state = scrollState)) { layoutConstraints ->
             // == Layout size ==
             val width = layoutConstraints.maxWidth
 
@@ -583,7 +588,6 @@ private fun SignInLayoutScope.SignInMainLayout(
 
             val mainContentMeasurable = subcompose("mainContent") {
                 SignInContent(
-                    containerWidth = mainContentConstraintWidth,
                     containerHeight = containerHeight,
                     scrollState = scrollState,
                     contentPaddingLeft = 32.dpAsPx + contentPaddingLeft animatedFirstStageTo 16.dpAsPx,
@@ -650,7 +654,6 @@ private fun SignInLayoutScope.SignInMainLayout(
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun SignInLayoutScope.SignInContent(
-    containerWidth: Int,
     containerHeight: Int,
     scrollState: ScrollState,
     contentPaddingLeft: Float,
@@ -659,97 +662,100 @@ private fun SignInLayoutScope.SignInContent(
     contentPaddingBottom: Float,
     content: @Composable (PaddingValues, SignInComponent.Step) -> Unit
 ) {
-    val anchors = remember {
-        androidx.compose.foundation.gestures.DraggableAnchors {
-            SignInComponent.Step.entries.forEach { it at it.ordinal.toFloat() }
-        }
-    }
-    val anchoredDraggableState = remember {
-        androidx.compose.foundation.gestures.AnchoredDraggableState(
-            initialValue = step,
-            anchors = anchors,
-            positionalThreshold = { it / 2 },
-            velocityThreshold = { containerWidth / 2f },
-            animationSpec = spring(stiffness = Spring.StiffnessLow),
-        )
-    }
-//    val animatable = remember { Animatable(0f) }
-    val progress = anchoredDraggableState.progress
-
-    SubcomposeLayout(
-        modifier = Modifier.anchoredDraggable(
-            state = anchoredDraggableState,
-            orientation = Orientation.Horizontal,
-        )/*.draggable(
-            state = rememberDraggableState {
-                if (it >= 0) return@rememberDraggableState
-                componentScope.launch(Dispatchers.Main, start = CoroutineStart.UNDISPATCHED) {
-                    animatable.snapTo(animation + it)
-                }
-            },
-            orientation = Orientation.Horizontal,
-            onDragStopped = { velocity ->
-                if (-velocity > containerWidth / 2) {
-                    animatable.animateTo(floor(animation) - 1, animationSpec = spring(stiffness = Spring.StiffnessLow))
-                }
-            },
-        )*/
-    ) { constraints ->
+    BoxWithConstraints {
         val width = constraints.maxWidth
 
-        val previousStep = anchoredDraggableState.currentValue
-        val nextStep = anchoredDraggableState.targetValue
-
-        val previous = subcompose(previousStep) {
-            content(
-                PaddingValues(
-                    start = contentPaddingLeft.toDp(),
-                    top = contentPaddingTop.toDp(),
-                    end = contentPaddingRight.toDp(),
-                    bottom = contentPaddingBottom.toDp()
-                ), previousStep
+        val anchors = remember {
+            DraggableAnchors {
+                SignInComponent.Step.entries.forEach { it at it.ordinal * width.toFloat() }
+            }
+        }
+        val state = remember {
+            GesturesAnchoredDraggableState(
+                initialValue = step,
+                anchors = anchors,
+                positionalThreshold = { it / 2 },
+                velocityThreshold = { width / 3f },
+                animationSpec = spring(stiffness = Spring.StiffnessLow),
+                confirmValueChange = { canChangeStep(it) },
             )
-            Spacer(Modifier)
-        }.first().measure(Constraints.fixedWidth(width))
+        }
 
-        val next = if (previousStep != nextStep) {
-            subcompose(nextStep) {
-                content(
-                    PaddingValues(
-                        start = contentPaddingLeft.toDp(),
-                        top = contentPaddingTop.toDp(),
-                        end = contentPaddingRight.toDp(),
-                        bottom = contentPaddingBottom.toDp()
-                    ), nextStep
-                )
+        val animation = (state.requireOffset().coerceIn(
+            max(0f, -width.toFloat()), min(width.toFloat(), SignInComponent.Step.entries.size * width.toFloat())
+        ) / width.toFloat())
+        val progress = animation % 1
+
+        val maxHeight = constraints.maxHeight
+
+        SubcomposeLayout(
+            modifier = Modifier.fillMaxSize().anchoredDraggable(
+                state = state,
+                orientation = Orientation.Horizontal,
+                reverseDirection = true,
+            )
+        ) { constraints ->
+            val previousStep = SignInComponent.Step.entries.getOrNull(floor(animation).toInt())
+            val nextStep = SignInComponent.Step.entries.getOrNull(ceil(animation).toInt())
+
+            val previous = subcompose(previousStep) {
+                previousStep?.let {
+                    Box(modifier = Modifier.alpha(1 - progress)) {
+                        content(
+                            PaddingValues(
+                                start = contentPaddingLeft.toDp(),
+                                top = contentPaddingTop.toDp(),
+                                end = contentPaddingRight.toDp(),
+                                bottom = contentPaddingBottom.toDp()
+                            ), it
+                        )
+                    }
+                }
                 Spacer(Modifier)
             }.first().measure(Constraints.fixedWidth(width))
-        } else subcompose("spacer") { Spacer(Modifier) }.first().measure(Constraints.fixedWidth(width))
 
-        val height = previous.height animateTo next.height animatedBy progress
+            val next = if (previousStep != nextStep) {
+                subcompose(nextStep) {
+                    nextStep?.let {
+                        Box(modifier = Modifier.alpha(progress)) {
+                            content(
+                                PaddingValues(
+                                    start = contentPaddingLeft.toDp(),
+                                    top = contentPaddingTop.toDp(),
+                                    end = contentPaddingRight.toDp(),
+                                    bottom = contentPaddingBottom.toDp()
+                                ), it
+                            )
+                        }
+                    }
+                    Spacer(Modifier)
+                }.first().measure(Constraints.fixedWidth(width))
+            } else subcompose("spacer") { Spacer(Modifier) }.first().measure(Constraints.fixedWidth(width))
 
-        val previousX = when {
-            previousStep == nextStep -> 0f
-            else -> 0 animateTo -width / 2 animatedBy progress
+            val height = previous.height animateTo next.height animatedBy progress
+
+            val previousX = when {
+                previousStep == nextStep -> 0f
+                else -> 0 animateTo -width / 2 animatedBy progress
+            }
+            val nextY = when {
+                previousStep == nextStep -> 0f
+                else -> height / 2 animateTo 0 animatedBy progress
+            }
+
+            layout(width, max(containerHeight, height.roundToInt())) {
+                previous.placeRelative(previousX.roundToInt(), 0)
+                next.placeRelative(0, nextY.roundToInt())
+            }
         }
-        val nextY = when {
-            previousStep == nextStep -> 0f
-            else -> height / 2 animateTo 0 animatedBy progress
+
+        LaunchedEffect(step) {
+            state.animateTo(step)
         }
 
-        layout(width, height.roundToInt()) {
-            previous.placeRelative(previousX.roundToInt(), 0)
-            next.placeRelative(0, nextY.roundToInt())
+        LaunchedEffect(state.targetValue) {
+            step = state.targetValue
         }
-    }
-
-//    LaunchedEffect(step) {
-////        animatable.animateTo(step.ordinal.toFloat(), animationSpec = spring(stiffness = Spring.StiffnessLow))
-//        anchoredDraggableState.animateTo(step)
-//    }
-
-    LaunchedEffect(anchoredDraggableState.currentValue) {
-        step = anchoredDraggableState.currentValue
     }
 }
 
@@ -992,11 +998,7 @@ private fun SignInComponent.ForwardButton(
 ) {
     Button(
         onClick = { componentScope.launch { if (condition()) forward() } },
-        enabled = step == requiredStep && when (requiredStep) {
-            EnteringCredential -> credentialValid
-            Verification -> verification.isNotBlank()
-            else -> false
-        },
+        enabled = step == requiredStep && canChangeStep(step.next),
         shape = MaterialTheme.shapes.large,
     ) {
         Icon(
