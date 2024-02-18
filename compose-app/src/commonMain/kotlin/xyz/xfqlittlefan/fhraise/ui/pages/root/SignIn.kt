@@ -368,7 +368,7 @@ private fun SignInLayout(
                 Box(modifier = Modifier.verticalScroll(state = additionalContentScrollState)) {
                     additionalContent(
                         PaddingValues(
-                            start = ((32 animatedSecondStageTo 16).dpAsPx + contentPaddingLeft).toDp(),
+                            start = (32.dpAsPx + contentPaddingLeft animatedSecondStageTo 16.dpAsPx).toDp(),
                             top = (8.dpAsPx animatedFirstStageTo 0).toDp(),
                             end = (32.dpAsPx + contentPaddingRight).toDp(),
                             bottom = (16.dpAsPx + insetsBottom animatedSecondStageTo 0).toDp()
@@ -386,7 +386,7 @@ private fun SignInLayout(
             val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
             // == Measure main ==
-            val mainPaddingBottom = max(contentPaddingBottom, additionalContentPlaceable.height animatedSecondStageTo 0)
+            val mainPaddingBottom = additionalContentPlaceable.height animatedSecondStageTo contentPaddingBottom
 
             val mainMeasurable = subcompose("main") {
                 SignInMainLayout(
