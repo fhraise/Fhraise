@@ -94,7 +94,7 @@ tasks.register("updateVersion") {
     dependsOn("updateDevVer", "updateCommitSha", "updateReversion")
 
     doLast {
-        version = "$projectDevVer.$projectReversion+$projectCommitSha"
+        projectVersion = "$projectDevVer.$projectReversion+$projectCommitSha"
         logger.lifecycle("version: $projectVersion")
     }
 }
