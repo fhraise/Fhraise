@@ -52,7 +52,7 @@ data class AnimationValue(val source: Number, val target: Number) {
      *
      * @return 一个 [Float]，表示插值后的值。
      */
-    fun animated(animation: Float): Float {
+    infix fun animatedBy(animation: Float): Float {
         val sourceFloat = source.toFloat()
         val targetFloat = target.toFloat()
 

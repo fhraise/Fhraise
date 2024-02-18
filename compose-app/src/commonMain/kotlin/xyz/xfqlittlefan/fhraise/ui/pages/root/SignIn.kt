@@ -20,13 +20,12 @@ package xyz.xfqlittlefan.fhraise.ui.pages.root
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.background
+import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -140,6 +139,7 @@ fun SignInComponent.SignIn() {
         snackbarHost = { SnackbarHost() },
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { paddingValues ->
+        // SignInLayout 占满屏幕，传入 paddingValues 在其内部处理
         SignInLayout(
             modifier = Modifier.fillMaxSize(),
             contentPadding = paddingValues,
@@ -156,117 +156,105 @@ fun SignInComponent.SignIn() {
                     )
                 }
             },
-            content = { padding ->
-                AnimatedContent(
-                    targetState = step,
-                    transitionSpec = {
-                        if (targetState.ordinal > initialState.ordinal) {
-                            slideInVertically { it / 2 } + fadeIn() togetherWith slideOutHorizontally() + fadeOut()
-                        } else {
-                            slideInHorizontally() + fadeIn() togetherWith slideOutVertically { it / 2 } + fadeOut()
-                        } using SizeTransform(clip = false)
-                    },
-                    contentAlignment = Alignment.Center,
-                ) { step ->
-                    when (step) {
-                        EnteringCredential -> {
-                            Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                FlowRow(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
-                                ) {
-                                    Api.Auth.Type.CredentialType.entries.forEach {
-                                        FilterChip(
-                                            selected = credentialType == it,
-                                            onClick = it.use,
-                                            label = { Text(text = "使用${it.displayName}") },
-                                            enabled = step == EnteringCredential,
-                                        )
-                                    }
+            content = { padding, step ->
+                when (step) {
+                    EnteringCredential -> {
+                        Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
+                            ) {
+                                Api.Auth.Type.CredentialType.entries.forEach {
+                                    FilterChip(
+                                        selected = credentialType == it,
+                                        onClick = it.use,
+                                        label = { Text(text = "使用${it.displayName}") },
+                                        enabled = step == EnteringCredential,
+                                    )
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Credential()
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "新用户将自动注册，未添加验证方式的用户将在 7 天后被删除",
-                                    modifier = Modifier.alpha(0.6f),
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                                Spacer(modifier = Modifier.height(32.dp))
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    ForwardButton(requiredStep = step)
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
                             }
-                        }
-
-                        SelectingVerification -> {
-                            Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                BackButton(requiredStep = step)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
-                                Api.Auth.Type.Request.VerificationType.entries.forEach { verification ->
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Card(
-                                        onClick = verification.use, modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(16.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = verification.icon,
-                                                contentDescription = null,
-                                            )
-                                            Spacer(modifier = Modifier.width(16.dp))
-                                            Text(text = verification.displayName)
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Credential()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "新用户将自动注册，未添加验证方式的用户将在 7 天后被删除",
+                                modifier = Modifier.alpha(0.6f),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ForwardButton(requiredStep = step)
                             }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
-
-                        Verification -> {
-                            val type = verificationType ?: error("Verification type is not selected")
-                            Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                BackButton(requiredStep = step)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                when (type) {
-                                    Api.Auth.Type.Request.VerificationType.FhraiseToken, Api.Auth.Type.Request.VerificationType.SmsCode, Api.Auth.Type.Request.VerificationType.EmailCode -> {
-                                        VerificationCode()
-                                    }
-
-                                    Api.Auth.Type.Request.VerificationType.Password -> {
-                                        Password()
-                                    }
-
-                                    Api.Auth.Type.Request.VerificationType.QrCode, Api.Auth.Type.Request.VerificationType.Face -> {}
-                                }
-                                Otp()
-                                Spacer(modifier = Modifier.height(32.dp))
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    ForwardButton(requiredStep = step)
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
-
-                        Done -> {}
                     }
+
+                    SelectingVerification -> {
+                        Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            BackButton(requiredStep = step)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
+                            Api.Auth.Type.Request.VerificationType.entries.forEach { verification ->
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Card(
+                                    onClick = verification.use, modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(16.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = verification.icon,
+                                            contentDescription = null,
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Text(text = verification.displayName)
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+
+                    Verification -> {
+                        val type = verificationType ?: return@SignInLayout
+                        Column(modifier = Modifier.padding(padding).fillMaxWidth()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            BackButton(requiredStep = step)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(text = step.displayName, style = MaterialTheme.typography.headlineSmall)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            when (type) {
+                                Api.Auth.Type.Request.VerificationType.FhraiseToken, Api.Auth.Type.Request.VerificationType.SmsCode, Api.Auth.Type.Request.VerificationType.EmailCode -> {
+                                    VerificationCode()
+                                }
+
+                                Api.Auth.Type.Request.VerificationType.Password -> {
+                                    Password()
+                                }
+
+                                Api.Auth.Type.Request.VerificationType.QrCode, Api.Auth.Type.Request.VerificationType.Face -> {}
+                            }
+                            Otp()
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ForwardButton(requiredStep = step)
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+
+                    Done -> {}
                 }
             },
             additionalContent = {
@@ -313,13 +301,13 @@ fun SignInComponent.SignIn() {
 
 
 @Composable
-private fun SignInLayout(
+private fun SignInComponent.SignInLayout(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     scrollState: ScrollState = rememberScrollState(),
     additionalContentScrollState: ScrollState = rememberScrollState(),
     header: @Composable (PaddingValues) -> Unit,
-    content: @Composable (PaddingValues) -> Unit,
+    content: @Composable (PaddingValues, SignInComponent.Step) -> Unit,
     additionalContent: @Composable (PaddingValues) -> Unit,
 ) {
     var windowSizeClass: WindowWidthSizeClass? by remember { mutableStateOf(null) }
@@ -330,6 +318,9 @@ private fun SignInLayout(
         else -> null
     }
 
+    /**
+     * 用于正确放置位于屏幕底部的组件。
+     */
     val insetsWithoutIme = WindowInsets.safeDrawingWithoutIme
 
     var animatable: Animatable<Float, AnimationVector1D>? by remember { mutableStateOf(null) }
@@ -349,8 +340,19 @@ private fun SignInLayout(
         val contentPaddingVertical = contentPaddingTop + contentPaddingBottom
 
         // == Layout sizes ==
+        /**
+         * 布局的宽度，占满最大宽度。
+         */
         val width = constraints.maxWidth
+
+        /**
+         * 布局的高度，占满最大高度。
+         */
         val height = constraints.maxHeight
+
+        /**
+         * 安全的高度，不包括 contentPaddingVertical。
+         */
         val safeHeight = (height - contentPaddingVertical).coerceAtLeast(0f)
         windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(width.toDp(), height.toDp())).widthSizeClass
 
@@ -358,15 +360,25 @@ private fun SignInLayout(
         if (animatable == null && animationTargetValue != null) animatable = Animatable(animationTargetValue)
         if (animation == null) return@SubcomposeLayout layout(0, 0) {}
 
-        with(SignInLayoutScope(this, animation)) {
+        with(SignInLayoutScope(this, animation, this@SignInLayout)) {
+            // 由于边距由组件管理，所有 placeable 的尺寸都是包括边距的实际尺寸。
+
             // == Measure additional content ==
             val insetsBottom = insetsWithoutIme.getBottom(this@SubcomposeLayout)
 
-            val additionalContentWidth = (((width) animatedSecondStageTo (width * 2f / 9f))).roundToInt()
+            val additionalContentWidth = (width animatedSecondStageTo (width * 2f / 9f)).roundToInt()
+            val additionalContentConstraints = Constraints(
+                minWidth = additionalContentWidth,
+                maxWidth = additionalContentWidth,
+                minHeight = 0,
+                maxHeight = safeHeight.roundToInt().coerceAtLeast(0)
+            )
 
             val additionalContentMeasurable = subcompose(slotId = "additionalContent") {
                 Box(modifier = Modifier.verticalScroll(state = additionalContentScrollState)) {
                     additionalContent(
+                        // 该组件仅在小、中宽度时接触 contentPaddingLeft 和 contentPaddingBottom。顶部永远是内容。
+                        // 右侧永远是边缘，需要应用 contentPaddingRight。
                         PaddingValues(
                             start = (32.dpAsPx + contentPaddingLeft animatedSecondStageTo 16.dpAsPx).toDp(),
                             top = (8.dpAsPx animatedFirstStageTo 0).toDp(),
@@ -377,15 +389,16 @@ private fun SignInLayout(
                 }
             }.first()
 
-            val additionalContentConstraints = Constraints(
-                minWidth = additionalContentWidth,
-                maxWidth = additionalContentWidth,
-                minHeight = 0,
-                maxHeight = safeHeight.roundToInt().coerceAtLeast(0)
-            )
             val additionalContentPlaceable = additionalContentMeasurable.measure(additionalContentConstraints)
 
             // == Measure main ==
+            val mainWidth = (width animatedSecondStageTo (width * 7f / 9f)).coerceAtLeast(0f).roundToInt()
+            val mainConstraints = Constraints.fixed(width = mainWidth, height = height)
+
+            /**
+             * 在小、中宽度下，additionalContent 会放置在 mainContent 上方，且 additionalContent 已经应用了 contentPaddingBottom，
+             * 因此只需填充 additionalContent 的高度。而在大宽度下，additionalContent 会移动到屏幕右侧，因此需要应用 contentPaddingBottom。
+             */
             val mainPaddingBottom = additionalContentPlaceable.height animatedSecondStageTo contentPaddingBottom
 
             val mainMeasurable = subcompose("main") {
@@ -400,15 +413,19 @@ private fun SignInLayout(
                 )
             }.first()
 
-            val mainWidth = (width animatedSecondStageTo (width * 7f / 9f)).coerceAtLeast(0f).roundToInt()
-
-            val mainConstraints = Constraints.fixed(width = mainWidth, height = height)
             val mainPlaceable = mainMeasurable.measure(mainConstraints)
 
             // == Place ==
             val additionalContentX = 0 animatedSecondStageTo mainPlaceable.width
 
+            /**
+             * 使其放置在屏幕底部。
+             */
             val additionalContentCompatMediumY = height - additionalContentPlaceable.height
+
+            /**
+             * 使其垂直居中，同时应用 contentPaddingTop。
+             */
             val additionalContentExpandedY = (safeHeight - additionalContentPlaceable.height) / 2f + contentPaddingTop
             val additionalContentY = additionalContentCompatMediumY animatedSecondStageTo additionalContentExpandedY
 
@@ -418,9 +435,7 @@ private fun SignInLayout(
                     Spacer(
                         modifier = Modifier.fillMaxWidth().height(32.dp).background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent, backgroundColor
-                                )
+                                colors = listOf(Color.Transparent, backgroundColor)
                             )
                         )
                     )
@@ -428,9 +443,13 @@ private fun SignInLayout(
                 }
             }.first().measure(Constraints.fixed(width = width, height = additionalContentPlaceable.height))
 
+            /**
+             * 切换为大宽度时，additionContent 背后不再有其他内容，因此将背景向下移出屏幕。
+             */
             val additionalContentBackgroundY = additionalContentY animatedSecondStageTo height
 
             // == Scrollbars ==
+            // TODO: 滚动条可以添加进入和退出动画。
             val mainScrollbarHeight = (height - contentPaddingTop - mainPaddingBottom).roundToInt().coerceAtLeast(0)
 
             val mainScrollbarPlaceable = subcompose("mainScrollBar") {
@@ -496,19 +515,30 @@ private fun SignInLayoutScope.SignInMainLayout(
     contentPaddingRight: Float,
     contentPaddingBottom: Float,
     header: @Composable (PaddingValues) -> Unit,
-    mainContent: @Composable (PaddingValues) -> Unit,
+    mainContent: @Composable (PaddingValues, SignInComponent.Step) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val boxHeight = constraints.maxHeight
+        /**
+         * 组件实际拥有的高度，需要排除边距。
+         */
+        val containerHeight = constraints.maxHeight
 
-        SubcomposeLayout(modifier = Modifier.fillMaxSize().verticalScroll(state = scrollState)) { layoutConstraints ->
+        SubcomposeLayout(modifier = Modifier.fillMaxSize()/*.verticalScroll(state = scrollState)*/) { layoutConstraints ->
             // == Layout size ==
             val width = layoutConstraints.maxWidth
 
-            // == Header's padding and width ==
+            // == Measure header ==
             val headerPaddingLeft = 32.dpAsPx + contentPaddingLeft
             val headerPaddingTop = (24.dpAsPx animatedFirstStageTo 0) + contentPaddingTop
+
+            /**
+             * 在中、大宽度下，header 右侧是 mainContent，不再需要应用 contentPaddingRight。
+             */
             val headerPaddingRight = 32.dpAsPx + contentPaddingRight animatedFirstStageTo 16.dpAsPx
+
+            /**
+             * 在中、大宽度下，header 底部不再有内容，需要应用 contentPaddingBottom。
+             */
             val headerPaddingBottom = 8.dpAsPx animatedFirstStageTo contentPaddingBottom
 
             val headerCompatWidth = width.toFloat()
@@ -533,12 +563,10 @@ private fun SignInLayoutScope.SignInMainLayout(
                 )
             }.firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
 
-            // == Main content's padding and width ==
-            val mainContentPaddingLeft = 32.dpAsPx + contentPaddingLeft animatedFirstStageTo 16.dpAsPx
-            val mainContentPaddingTop = 8.dpAsPx animatedFirstStageTo 16.dpAsPx + contentPaddingTop
-            val mainContentPaddingRight = 32.dpAsPx + contentPaddingRight animatedSecondStageTo 16.dpAsPx
-            val mainContentPaddingBottom = 16.dpAsPx + contentPaddingBottom
+            val headerConstraints = Constraints(maxWidth = headerWidth.roundToInt().coerceAtLeast(0))
+            val headerPlaceable = headerMeasurable.measure(headerConstraints)
 
+            // == Measure main content ==
             val mainContentMaxWidth = 512.dpAsPx
             val mainContentCompatWidth = width.toFloat()
             val mainContentMediumWidth = width * 5f / 9f
@@ -551,51 +579,177 @@ private fun SignInLayoutScope.SignInMainLayout(
                 else -> mainContentExpandedWidth
             }
 
-            val mainContentMeasurable = subcompose("mainContent") {
-                mainContent(
-                    PaddingValues(
-                        start = mainContentPaddingLeft.toDp(),
-                        top = mainContentPaddingTop.toDp(),
-                        end = mainContentPaddingRight.toDp(),
-                        bottom = mainContentPaddingBottom.toDp()
-                    )
-                )
-            }.firstOrNull() ?: return@SubcomposeLayout layout(0, 0) {}
-
-            // == Measure header ==
-            val headerHeight = headerMeasurable.minIntrinsicHeight(headerWidth.roundToInt()).coerceAtLeast(0)
-
-            val headerConstraints = Constraints(
-                maxWidth = headerWidth.roundToInt().coerceAtLeast(0), maxHeight = headerHeight
-            )
-            val headerPlaceable = headerMeasurable.measure(headerConstraints)
-
-            // == Measure main content ==
             val mainContentConstraintWidth = mainContentWidth.coerceAtMost(mainContentMaxWidth).roundToInt()
-            val mainContentConstraints = Constraints(maxWidth = mainContentConstraintWidth.coerceAtLeast(0))
+
+            val mainContentMeasurable = subcompose("mainContent") {
+                SignInContent(
+                    containerWidth = mainContentConstraintWidth,
+                    containerHeight = containerHeight,
+                    scrollState = scrollState,
+                    contentPaddingLeft = 32.dpAsPx + contentPaddingLeft animatedFirstStageTo 16.dpAsPx,
+                    contentPaddingTop = 8.dpAsPx animatedFirstStageTo 16.dpAsPx + contentPaddingTop,
+                    contentPaddingRight = 32.dpAsPx + contentPaddingRight animatedSecondStageTo 16.dpAsPx,
+                    contentPaddingBottom = 16.dpAsPx + contentPaddingBottom,
+                    content = mainContent,
+                )
+            }.first()
+
+            val mainContentConstraints = Constraints(maxWidth = mainContentConstraintWidth)
             val mainContentPlaceable = mainContentMeasurable.measure(mainContentConstraints)
 
-            val requiredColumnHeight = headerPlaceable.height + mainContentPlaceable.height
-            val requiredRowHeight = max(headerPlaceable.height, mainContentPlaceable.height)
-            val requiredHeight = requiredColumnHeight animatedFirstStageTo requiredRowHeight
-            val requiredBoxHeight = max(boxHeight, requiredHeight.roundToInt())
+            // == Place ==
+            /**
+             * 内容在纵向布置时的高度。
+             */
+            val contentColumnHeight = headerPlaceable.height + mainContentPlaceable.height
 
+            /**
+             * 内容在横向布置时的高度。
+             */
+            val contentRowHeight = max(headerPlaceable.height, mainContentPlaceable.height)
+
+            /**
+             * 最终的内容高度。
+             */
+            val contentHeight = contentColumnHeight animatedFirstStageTo contentRowHeight
+
+            /**
+             * 布局的高度，取内容高度和 boxHeight 的最大值。
+             */
+            val layoutHeight = max(containerHeight, contentHeight.roundToInt())
+
+            /**
+             * 在中、大宽度下右对齐。
+             */
             val headerX = 0 animatedFirstStageTo headerWidth - headerPlaceable.width
-            val headerY = 0 animatedFirstStageTo (boxHeight - headerPlaceable.height) / 2f + scrollState.value
 
+            /**
+             * 在中、大宽度下垂直居中。
+             */
+            val headerY = 0 animatedFirstStageTo (containerHeight - headerPlaceable.height) / 2f + scrollState.value
+
+            /**
+             * 水平居中。在中、大宽度下移至 header 右侧。
+             */
             val mainContentX =
                 (0 animatedFirstStageTo headerWidth) + (mainContentWidth - mainContentConstraintWidth) / 2f
 
-            val mainContentCompatY =
-                (requiredBoxHeight - headerPlaceable.height - mainContentPlaceable.height) / 2f + headerPlaceable.height
-            val mainContentMediumExpandedY = (requiredBoxHeight - mainContentPlaceable.height) / 2f
-            val mainContentY = mainContentCompatY animatedFirstStageTo mainContentMediumExpandedY
+            /**
+             * 由 [SignInContent] 管理。
+             */
+            val mainContentY = headerPlaceable.height animatedFirstStageTo 0
 
-            layout(width, requiredBoxHeight) {
+            layout(width, layoutHeight) {
                 headerPlaceable.placeRelative(headerX.roundToInt(), headerY.roundToInt())
                 mainContentPlaceable.placeRelative(mainContentX.roundToInt(), mainContentY.roundToInt())
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun SignInLayoutScope.SignInContent(
+    containerWidth: Int,
+    containerHeight: Int,
+    scrollState: ScrollState,
+    contentPaddingLeft: Float,
+    contentPaddingTop: Float,
+    contentPaddingRight: Float,
+    contentPaddingBottom: Float,
+    content: @Composable (PaddingValues, SignInComponent.Step) -> Unit
+) {
+    val anchors = remember {
+        androidx.compose.foundation.gestures.DraggableAnchors {
+            SignInComponent.Step.entries.forEach { it at it.ordinal.toFloat() }
+        }
+    }
+    val anchoredDraggableState = remember {
+        androidx.compose.foundation.gestures.AnchoredDraggableState(
+            initialValue = step,
+            anchors = anchors,
+            positionalThreshold = { it / 2 },
+            velocityThreshold = { containerWidth / 2f },
+            animationSpec = spring(stiffness = Spring.StiffnessLow),
+        )
+    }
+//    val animatable = remember { Animatable(0f) }
+    val progress = anchoredDraggableState.progress
+
+    SubcomposeLayout(
+        modifier = Modifier.anchoredDraggable(
+            state = anchoredDraggableState,
+            orientation = Orientation.Horizontal,
+        )/*.draggable(
+            state = rememberDraggableState {
+                if (it >= 0) return@rememberDraggableState
+                componentScope.launch(Dispatchers.Main, start = CoroutineStart.UNDISPATCHED) {
+                    animatable.snapTo(animation + it)
+                }
+            },
+            orientation = Orientation.Horizontal,
+            onDragStopped = { velocity ->
+                if (-velocity > containerWidth / 2) {
+                    animatable.animateTo(floor(animation) - 1, animationSpec = spring(stiffness = Spring.StiffnessLow))
+                }
+            },
+        )*/
+    ) { constraints ->
+        val width = constraints.maxWidth
+
+        val previousStep = anchoredDraggableState.currentValue
+        val nextStep = anchoredDraggableState.targetValue
+
+        val previous = subcompose(previousStep) {
+            content(
+                PaddingValues(
+                    start = contentPaddingLeft.toDp(),
+                    top = contentPaddingTop.toDp(),
+                    end = contentPaddingRight.toDp(),
+                    bottom = contentPaddingBottom.toDp()
+                ), previousStep
+            )
+            Spacer(Modifier)
+        }.first().measure(Constraints.fixedWidth(width))
+
+        val next = if (previousStep != nextStep) {
+            subcompose(nextStep) {
+                content(
+                    PaddingValues(
+                        start = contentPaddingLeft.toDp(),
+                        top = contentPaddingTop.toDp(),
+                        end = contentPaddingRight.toDp(),
+                        bottom = contentPaddingBottom.toDp()
+                    ), nextStep
+                )
+                Spacer(Modifier)
+            }.first().measure(Constraints.fixedWidth(width))
+        } else subcompose("spacer") { Spacer(Modifier) }.first().measure(Constraints.fixedWidth(width))
+
+        val height = previous.height animateTo next.height animatedBy progress
+
+        val previousX = when {
+            previousStep == nextStep -> 0f
+            else -> 0 animateTo -width / 2 animatedBy progress
+        }
+        val nextY = when {
+            previousStep == nextStep -> 0f
+            else -> height / 2 animateTo 0 animatedBy progress
+        }
+
+        layout(width, height.roundToInt()) {
+            previous.placeRelative(previousX.roundToInt(), 0)
+            next.placeRelative(0, nextY.roundToInt())
+        }
+    }
+
+//    LaunchedEffect(step) {
+////        animatable.animateTo(step.ordinal.toFloat(), animationSpec = spring(stiffness = Spring.StiffnessLow))
+//        anchoredDraggableState.animateTo(step)
+//    }
+
+    LaunchedEffect(anchoredDraggableState.currentValue) {
+        step = anchoredDraggableState.currentValue
     }
 }
 
@@ -860,7 +1014,8 @@ private fun SignInComponent.ForwardButton(
  *
  * @see DensityScope
  */
-private class SignInLayoutScope(density: Density, val animation: Float) : DensityScope(density) {
+private class SignInLayoutScope(density: Density, val animation: Float, component: SignInComponent) :
+    DensityScope(density), SignInComponent by component {
     /**
      * 从 [animation] 中提取的第一阶段动画值。对应于从 [WindowWidthSizeClass.Compact] 到 [WindowWidthSizeClass.Medium] 的过渡。
      */
@@ -874,20 +1029,20 @@ private class SignInLayoutScope(density: Density, val animation: Float) : Densit
     /**
      * 将给定的 [AnimationValue] 应用于从 [WindowWidthSizeClass.Compact] 到 [WindowWidthSizeClass.Medium] 的过渡。
      *
-     * @see AnimationValue.animated
+     * @see AnimationValue.animatedBy
      */
     val AnimationValue.animatedFirstStage
-        get() = animated(animationFirstStage)
+        get() = animatedBy(animationFirstStage)
 
     infix fun Number.animatedFirstStageTo(target: Number) = (this animateTo target).animatedFirstStage
 
     /**
      * 将给定的 [AnimationValue] 应用于从 [WindowWidthSizeClass.Medium] 到 [WindowWidthSizeClass.Expanded] 的过渡。
      *
-     * @see AnimationValue.animated
+     * @see AnimationValue.animatedBy
      */
     val AnimationValue.animatedSecondStage
-        get() = animated(animationSecondStage)
+        get() = animatedBy(animationSecondStage)
 
     infix fun Number.animatedSecondStageTo(target: Number) = (this animateTo target).animatedSecondStage
 }

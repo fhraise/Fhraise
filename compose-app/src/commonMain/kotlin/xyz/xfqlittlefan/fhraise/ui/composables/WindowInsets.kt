@@ -24,5 +24,8 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
 
+/**
+ * [androidx.compose.foundation.layout.safeDrawing]，但不包括 [androidx.compose.foundation.layout.ime]。
+ */
 val WindowInsets.Companion.safeDrawingWithoutIme
     @Composable get() = systemBars.union(displayCutout)
