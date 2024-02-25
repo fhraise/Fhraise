@@ -144,11 +144,13 @@ android {
         versionCode = projectBuildNumber
         versionName = projectVersion
     }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
     signingConfigs {
         val store = file("key.jks")
         if (store.exists()) {
@@ -167,6 +169,7 @@ android {
             }
         }
     }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
@@ -183,6 +186,7 @@ android {
             }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8

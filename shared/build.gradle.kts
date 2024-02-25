@@ -24,6 +24,9 @@ plugins {
     alias(libs.plugins.androidLibrary)
 }
 
+val androidCompileSdk: String by project
+val androidMinSdk: String by project
+
 kotlin {
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
         browser()
@@ -81,20 +84,10 @@ kotlin {
     }
 }
 
-val androidCompileSdk: String by project
-val androidMinSdk: String by project
-
 android {
     namespace = "xyz.xfqlittlefan.fhraise.shared"
     compileSdk = androidCompileSdk.toInt()
     defaultConfig {
         minSdk = androidMinSdk.toInt()
-    }
-
-    splits {
-        abi {
-            isEnable = true
-            isUniversalApk = true
-        }
     }
 }

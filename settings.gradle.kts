@@ -40,4 +40,4 @@ dependencyResolutionManagement {
 include(":compose-app")
 include(":server")
 include(":shared")
-include("keycloak-spi")
+include(":keycloak-spi")
