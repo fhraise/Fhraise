@@ -19,7 +19,7 @@ exposed = "0.46.0"
 h2 = "2.2.224"
 bcrypt = "0.10.2"
 mail = "8.6.2"
-slf4j = "2.0.9"
+slf4j = "2.0.12"
 logback = "1.4.14"
 logback-android = "3.0.0"
 
