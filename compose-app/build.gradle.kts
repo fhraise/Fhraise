@@ -74,6 +74,7 @@ kotlin {
                 implementation(compose.components.uiToolingPreview)
                 implementation(libs.decompose)
                 implementation(libs.decompose.extensions.compose)
+                implementation(libs.constraintlayout.composeMultiplatform)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.resources)
                 implementation(libs.ktor.client.auth)

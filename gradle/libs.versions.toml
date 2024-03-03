@@ -11,6 +11,7 @@ androidx-browser = "1.7.0"
 androidx-datastore = "1.1.0-beta01"
 compose = "1.6.0"
 decompose = "3.0.0-alpha06"
+constraintlayout-composeMultiplatform = "0.3.0"
 ktor-client = "3.0.0-wasm2"
 ktor = "3.0.0-beta-1"
 keycloak = "23.0.6"
@@ -40,6 +41,7 @@ androidx-datastore-preferences-core = { module = "androidx.datastore:datastore-p
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
 decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
 decompose-extensions-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
+constraintlayout-composeMultiplatform = { module = "tech.annexflow.compose:constraintlayout-compose-multiplatform", version.ref = "constraintlayout-composeMultiplatform" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor-client" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor-client" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor-client" }
