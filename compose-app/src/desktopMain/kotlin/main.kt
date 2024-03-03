@@ -27,10 +27,11 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import fhraise.`compose-app`.generated.resources.Res
+import fhraise.`compose-app`.generated.resources.fhraise_logo
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import xyz.xfqlittlefan.fhraise.compositionLocals.LocalWindowSize
@@ -76,7 +77,7 @@ fun main() {
         }
 
         Tray(
-            icon = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
+            icon = painterResource(Res.drawable.fhraise_logo),
             state = trayState,
             tooltip = "Fhraise",
         )
@@ -87,7 +88,7 @@ fun main() {
             onCloseRequest = ::exitApplication,
             state = windowState,
             title = "Fhraise",
-            icon = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
+            icon = painterResource(Res.drawable.fhraise_logo),
         ) {
             CompositionLocalProvider(LocalWindowSize provides windowState.size) {
                 rootComponent.ThemedRoot()
