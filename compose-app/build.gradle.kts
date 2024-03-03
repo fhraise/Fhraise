@@ -133,10 +133,6 @@ android {
     namespace = "xyz.xfqlittlefan.fhraise"
     compileSdk = androidCompileSdk.toInt()
 
-    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
-    sourceSets["main"].res.srcDirs("src/androidMain/res")
-    sourceSets["main"].resources.srcDirs("src/commonMain/resources")
-
     defaultConfig {
         applicationId = "xyz.xfqlittlefan.fhraise"
         minSdk = androidMinSdk.toInt()

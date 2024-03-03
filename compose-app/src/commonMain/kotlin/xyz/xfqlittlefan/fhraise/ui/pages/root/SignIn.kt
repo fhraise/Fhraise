@@ -56,8 +56,9 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import fhraise.`compose-app`.generated.resources.Res
+import fhraise.`compose-app`.generated.resources.fhraise_logo
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
@@ -97,7 +98,7 @@ fun SignInComponent.SignIn() {
                                 listOf(Color.Magenta.copy(alpha = 0.8f), Color.Cyan.copy(alpha = 0.8f))
                             )
                         ),
-                        painter = painterResource(DrawableResource("drawable/fhraise_logo.xml")),
+                        painter = painterResource(Res.drawable.fhraise_logo),
                         contentDescription = "Fhraise Logo",
                     )
                 },
