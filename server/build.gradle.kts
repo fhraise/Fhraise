@@ -65,6 +65,4 @@ dependencies {
     implementation(libs.h2)
     implementation(libs.mail) // TODO: Remove
     implementation(libs.logback)
-    testImplementation(libs.kotlin.test.junit)
-    testImplementation(libs.ktor.server.tests)
 }

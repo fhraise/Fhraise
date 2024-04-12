@@ -60,6 +60,8 @@ kotlin {
 
     jvm("desktop")
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
         val commonMain by getting {
             dependencies {
