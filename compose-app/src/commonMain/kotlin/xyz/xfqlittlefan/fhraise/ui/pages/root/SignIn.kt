@@ -56,8 +56,8 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import fhraise.`compose-app`.generated.resources.Res
-import fhraise.`compose-app`.generated.resources.fhraise_logo
+import fhraise.compose_app.generated.resources.Res
+import fhraise.compose_app.generated.resources.fhraise_logo
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource

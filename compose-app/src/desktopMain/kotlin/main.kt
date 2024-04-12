@@ -27,8 +27,8 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
-import fhraise.`compose-app`.generated.resources.Res
-import fhraise.`compose-app`.generated.resources.fhraise_logo
+import fhraise.compose_app.generated.resources.Res
+import fhraise.compose_app.generated.resources.fhraise_logo
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking

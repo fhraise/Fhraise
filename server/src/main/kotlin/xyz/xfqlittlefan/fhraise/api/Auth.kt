@@ -159,7 +159,7 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
 
         when (req.type) {
             FhraiseToken, QrCode, SmsCode, EmailCode -> {
-                val code = appDatabase.queryOrGenerateVerificationCode(this, token.hashCode())
+                val code = appDatabase.queryOrGenerateVerificationCode(application, token.hashCode())
 
                 if (body.dry) {
                     call.respond(Api.Auth.Type.Request.ResponseBody.Success(token))
