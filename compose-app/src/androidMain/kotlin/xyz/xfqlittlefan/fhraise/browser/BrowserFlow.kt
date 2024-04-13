@@ -19,12 +19,11 @@
 package xyz.xfqlittlefan.fhraise.browser
 
 import android.content.Context
-import kotlinx.coroutines.flow.MutableSharedFlow
 import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
 import java.util.*
 
 val newBrowserFlowId get() = UUID.randomUUID().toString()
-val browserFlow = IdMessageFlow<String, BrowserMessage>(MutableSharedFlow(replay = 1, extraBufferCapacity = 1))
+val browserFlow = IdMessageFlow<String, BrowserMessage>(1, 1)
 
 sealed class BrowserMessage {
     data object Ready : BrowserMessage()

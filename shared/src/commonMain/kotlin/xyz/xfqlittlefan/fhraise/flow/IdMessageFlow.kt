@@ -18,11 +18,16 @@
 
 package xyz.xfqlittlefan.fhraise.flow
 
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 
 open class IdMessageFlow<I, V>(
     mutableSharedFlow: MutableSharedFlow<Pair<I, V>> = MutableSharedFlow()
 ) : MutableSharedFlow<Pair<I, V>> by mutableSharedFlow {
+    constructor(
+        replay: Int = 0, extraBufferCapacity: Int = 0, onBufferOverflow: BufferOverflow = BufferOverflow.SUSPEND
+    ) : this(MutableSharedFlow(replay, extraBufferCapacity, onBufferOverflow))
+
     suspend inline fun collect(id: I, block: FlowCollector<V>) =
         block.emitAll(filter { it.first == id }.map { it.second })
 
