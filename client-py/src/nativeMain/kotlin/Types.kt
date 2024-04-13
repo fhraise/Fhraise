@@ -16,30 +16,15 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-rootProject.name = "Fhraise"
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+package xyz.xfqlittlefan.fhraise.py
 
-pluginManagement {
-    repositories {
-        google()
-        gradlePluginPortal()
-        mavenCentral()
+import kotlinx.cinterop.*
+
+@ExperimentalForeignApi
+internal val String.cstrPtr: CPointer<ByteVar>
+    get() {
+        val cstr = cstr
+        val ptr = nativeHeap.allocArray<ByteVar>(cstr.size)
+        cstr.place(ptr)
+        return ptr
     }
-}
-
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/ktor/eap")
-    }
-}
-
-include(":shared")
-
-include(":compose-app")
-include(":server")
-include(":py")
-include(":client-py")
-
-include(":keycloak-spi")

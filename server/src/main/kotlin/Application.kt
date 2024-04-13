@@ -41,6 +41,7 @@ import xyz.xfqlittlefan.fhraise.api.registerAppCodeVerification
 import xyz.xfqlittlefan.fhraise.auth.cleanupUnverifiedUsersPreDay
 import xyz.xfqlittlefan.fhraise.models.cleanupVerificationCodes
 import xyz.xfqlittlefan.fhraise.proxy.proxyKeycloak
+import xyz.xfqlittlefan.fhraise.py.py
 
 fun main() {
     embeddedServer(CIO, port = defaultServerPort, host = "0.0.0.0", module = Application::module).start(wait = true)
@@ -72,6 +73,7 @@ fun Application.module() {
     cleanupVerificationCodes()
 
     routing {
+        py()
         proxyKeycloak()
         apiAuth()
         apiOAuth()

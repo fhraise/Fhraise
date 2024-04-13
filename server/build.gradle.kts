@@ -34,6 +34,7 @@ application {
 }
 
 dependencies {
+    implementation(project(":py"))
     implementation(projects.shared)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.ktor.server.core)
