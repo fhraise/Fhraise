@@ -23,8 +23,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
 import java.util.*
 
-val browserFlowId get() = UUID.randomUUID().toString()
-val browserFlow = IdMessageFlow<BrowserMessage>(MutableSharedFlow(replay = 1, extraBufferCapacity = 1))
+val newBrowserFlowId: UUID get() = UUID.randomUUID()
+val browserFlow = IdMessageFlow<UUID, BrowserMessage>(MutableSharedFlow(replay = 1, extraBufferCapacity = 1))
 
 sealed class BrowserMessage {
     data object Ready : BrowserMessage()

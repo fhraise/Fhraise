@@ -20,12 +20,12 @@ package xyz.xfqlittlefan.fhraise.flow
 
 import kotlinx.coroutines.flow.*
 
-open class IdMessageFlow<T>(
-    mutableSharedFlow: MutableSharedFlow<Pair<String, T>> = MutableSharedFlow()
-) : MutableSharedFlow<Pair<String, T>> by mutableSharedFlow {
-    suspend inline fun collect(id: String, block: FlowCollector<T>) =
+open class IdMessageFlow<I, V>(
+    mutableSharedFlow: MutableSharedFlow<Pair<I, V>> = MutableSharedFlow()
+) : MutableSharedFlow<Pair<I, V>> by mutableSharedFlow {
+    suspend inline fun collect(id: I, block: FlowCollector<V>) =
         block.emitAll(filter { it.first == id }.map { it.second })
 
-    suspend inline fun take(crossinline predicate: suspend (Pair<String, T>) -> Boolean): Pair<String, T> =
+    suspend inline fun take(crossinline predicate: suspend (Pair<I, V>) -> Boolean): Pair<I, V> =
         filter(predicate).first()
 }

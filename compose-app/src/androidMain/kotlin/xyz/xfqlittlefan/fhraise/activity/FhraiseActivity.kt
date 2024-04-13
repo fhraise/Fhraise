@@ -51,7 +51,7 @@ import xyz.xfqlittlefan.fhraise.R
 import xyz.xfqlittlefan.fhraise.browser.BrowserActivity
 import xyz.xfqlittlefan.fhraise.browser.BrowserMessage
 import xyz.xfqlittlefan.fhraise.browser.browserFlow
-import xyz.xfqlittlefan.fhraise.browser.browserFlowId
+import xyz.xfqlittlefan.fhraise.browser.newBrowserFlowId
 import xyz.xfqlittlefan.fhraise.compositionLocals.LocalActivity
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues
 import xyz.xfqlittlefan.fhraise.data.components.AppRootComponent
@@ -134,7 +134,7 @@ open class FhraiseActivity : ComponentActivity() {
         } ?: { true }
 
         AndroidUrlImpl.openInApp = { url, builder ->
-            val usedId = browserFlowId
+            val usedId = newBrowserFlowId
 
             val startActivity: (onReady: suspend CoroutineScope.() -> Unit) -> Unit = { onReady ->
                 lifecycleScope.launch(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) {
