@@ -38,7 +38,7 @@ jobs:
           java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v3
 
       - if: matrix.os == 'ubuntu-latest'
         name: Setup Android SDK
@@ -87,6 +87,12 @@ jobs:
         shell: bash
         run: |
           ./gradlew ciReleaseApp
+
+      - name: Upload ${{ matrix.platform }} app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }} app
+          path: build/assets/*
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Release
