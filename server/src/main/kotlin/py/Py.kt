@@ -20,10 +20,18 @@ package xyz.xfqlittlefan.fhraise.py
 
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
+import kotlinx.coroutines.launch
+import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
+
+val pyFlow = IdMessageFlow<String, Message>(3, 3)
 
 fun Route.py() {
     webSocket(pyWsPath) {
-        sendSerialized<Message>(Message.Register.Frame("id", "hello".encodeToByteArray()))
-        receiveDeserialized<Message>()
+        pyFlow.collect { (id, message) ->
+            launch {
+                sendSerialized<Message>(message)
+                pyFlow.emit(id to receiveDeserialized())
+            }
+        }
     }
 }
