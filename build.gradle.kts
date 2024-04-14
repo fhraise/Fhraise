@@ -217,7 +217,7 @@ tasks.register("releaseWebApp") {
     group = "project build"
     description = "Build the Web release"
 
-    dependsOn("compose-app:wasmJsBrowserProductionWebpack")
+    dependsOn("compose-app:wasmJsBrowserDistribution")
 
     doLast {
         logger.lifecycle("output directory: ${file(outputDirectoryOf("web")).absolutePath}")

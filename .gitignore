@@ -6,6 +6,9 @@
 .gradle
 captures
 
+# Kotlin
+.kotlin
+
 # Xcode files
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
