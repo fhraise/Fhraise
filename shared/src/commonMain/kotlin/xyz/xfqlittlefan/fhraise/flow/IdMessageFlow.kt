@@ -31,6 +31,5 @@ open class IdMessageFlow<I, V>(
     suspend inline fun collect(id: I, block: FlowCollector<V>) =
         block.emitAll(filter { it.first == id }.map { it.second })
 
-    suspend inline fun take(crossinline predicate: suspend (Pair<I, V>) -> Boolean): Pair<I, V> =
-        filter(predicate).first()
+    suspend inline fun take(id: I) = filter { it.first == id }.first().second
 }

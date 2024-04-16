@@ -34,6 +34,12 @@ import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import kotlinx.html.stream.appendHTML
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -48,6 +54,8 @@ import xyz.xfqlittlefan.fhraise.models.*
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.proxy.keycloakScheme
+import xyz.xfqlittlefan.fhraise.py.Message
+import xyz.xfqlittlefan.fhraise.py.sendMessageToPy
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType.*
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.Request.VerificationType.*
@@ -134,6 +142,7 @@ fun Route.apiAuth() = cborContentType {
     apiAuthVerify()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
     post<Api.Auth.Type.Request> { req ->
         val body = call.receive<Api.Auth.Type.Request.RequestBody>()
@@ -174,10 +183,22 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
             }
 
             Face -> {
-                // TODO
-                call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
-            }
+                application.launch(Dispatchers.IO) {
+                    select {
+                        launch {
+                            if (sendMessageToPy(message = Message.Ping.Request) is Message.Ping.Response) {
+                                call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
+                            } else {
+                                call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
+                            }
+                        }.onJoin
 
+                        onTimeout(5.seconds) {
+                            call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
+                        }
+                    }
+                }
+            }
 
             Password -> call.respondRequestResult(
                 Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
@@ -196,7 +217,7 @@ private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
 
     when (token.type) {
         FhraiseToken, QrCode, SmsCode, EmailCode -> call.respondCodeVerificationResult(token, req, body)
-        Face -> call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+        Face -> call.respondFaceVerificationResult(token, req, body)
         Password -> call.respondPasswordVerificationResult(token, req, body)
     }
 }
@@ -231,6 +252,13 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
     } else {
         respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
     }
+}
+
+private suspend fun RoutingCall.respondFaceVerificationResult(
+    token: AuthProcessToken, request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
+) {
+    // TODO
+    respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
 }
 
 private suspend fun RoutingCall.respondPasswordVerificationResult(

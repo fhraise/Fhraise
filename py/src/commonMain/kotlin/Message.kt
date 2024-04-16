@@ -49,6 +49,18 @@ sealed class Message {
         sealed class Result : Register() {
             @Serializable
             data object Success : Result()
+
+            @Serializable
+            data object LowResolution : Result()
         }
+    }
+
+    @Serializable
+    sealed class Ping : Message() {
+        @Serializable
+        data object Request : Ping()
+
+        @Serializable
+        data object Response : Ping()
     }
 }
