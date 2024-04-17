@@ -124,11 +124,12 @@ interface SignInComponent : AppComponentContext {
                 client.post(Api.Auth.Type.Request(credentialType, this)) {
                     contentType(ContentType.Application.Cbor)
                     setBody(Api.Auth.Type.Request.RequestBody(credential))
-                }.body<Api.Auth.Type.Request.ResponseBody.Success>()
+                }.body<Api.Auth.Type.Request.ResponseBody>()
             }.getOrElse {
                 it.printStackTrace()
                 null
             }?.let {
+                if (it !is Api.Auth.Type.Request.ResponseBody.Success) return@let false
                 verifyingToken = it.token
                 otp = if (it.otpNeeded) "" else null
                 true
@@ -146,11 +147,12 @@ interface SignInComponent : AppComponentContext {
                                 Api.Auth.Type.Verify.RequestBody.Verification(verification, otp)
                             )
                         )
-                    }.body<Api.Auth.Type.Verify.ResponseBody.Success>()
+                    }.body<Api.Auth.Type.Verify.ResponseBody>()
                 }.getOrElse {
                     it.printStackTrace()
                     null
                 }?.let {
+                    if (it !is Api.Auth.Type.Verify.ResponseBody.Success) return@let null
                     verifyingToken = null
                     it.tokenPair
                 }
