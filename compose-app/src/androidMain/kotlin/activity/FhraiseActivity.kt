@@ -46,6 +46,8 @@ import io.ktor.server.engine.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import xyz.xfqlittlefan.fhraise.R
 import xyz.xfqlittlefan.fhraise.browser.BrowserActivity
@@ -138,7 +140,7 @@ open class FhraiseActivity : ComponentActivity() {
 
             val startActivity: (onReady: suspend CoroutineScope.() -> Unit) -> Unit = { onReady ->
                 lifecycleScope.launch(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) {
-                    browserFlow.take { (id, message) -> id == usedId && message == BrowserMessage.Ready }
+                    browserFlow.filter { (id, message) -> id == usedId && message == BrowserMessage.Ready }.first()
                     onReady()
                 }
                 startActivity(Intent(this, BrowserActivity::class.java).apply {
