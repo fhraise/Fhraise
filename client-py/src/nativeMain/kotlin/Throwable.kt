@@ -21,7 +21,7 @@ package xyz.xfqlittlefan.fhraise.py
 import kotlinx.cinterop.*
 import kotlin.experimental.ExperimentalNativeApi
 
-@OptIn(ExperimentalForeignApi::class)
+@ExperimentalForeignApi
 class ThrowableVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
     @Suppress("DEPRECATION")
     companion object : Type(40, 8)
@@ -58,38 +58,42 @@ class ThrowableVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
 }
 
 @ExperimentalForeignApi
-internal class ThrowableWrapper(val throwable: CPointer<ThrowableVar>) : Throwable()
+internal class ThrowableWrapper(val throwable: ThrowableVar) : Throwable()
 
 @ExperimentalNativeApi
 @ExperimentalForeignApi
-internal fun Throwable.wrapToC(): CPointer<ThrowableVar> {
-    logger.debug("Wrapping throwable.")
-    logger.warn(getStackTrace().joinToString("\n"))
+internal inline fun <R> Throwable.wrapToC(block: (ThrowableVar) -> R): R {
+    val ref = StableRef.create(this)
 
-    val throwable = nativeHeap.alloc<ThrowableVar>()
-    throwable.type = this::class.qualifiedName?.cstrPtr
-    throwable.ref = StableRef.create(this).asCPointer()
-    throwable.message = this.message?.cstrPtr
-    val stacktraceList = mutableListOf<ByteVar>()
-    this.getStackTrace().forEach {
-        stacktraceList.add(it.cstrPtr.pointed)
+    return memScoped {
+        logger.debug("Wrapping throwable.")
+        logger.warn(getStackTrace().joinToString("\n"))
+
+        val throwable = alloc<ThrowableVar>()
+
+        throwable.type = this::class.qualifiedName?.cstrPtr(this)
+        throwable.ref = ref.asCPointer()
+        throwable.message = this@wrapToC.message?.cstrPtr(this)
+        val stacktraceList = mutableListOf<ByteVar>()
+        this@wrapToC.getStackTrace().forEach {
+            stacktraceList.add(it.cstrPtr(this).pointed)
+        }
+        val stacktraceArray = allocArrayOfPointersTo(stacktraceList)
+        throwable.stacktrace = stacktraceArray
+        throwable.stacktraceSize = stacktraceList.size
+        block(throwable)
     }
-    val stacktraceArray = nativeHeap.allocArrayOfPointersTo(stacktraceList)
-    throwable.stacktrace = stacktraceArray
-    throwable.stacktraceSize = stacktraceList.size
-    return throwable.ptr
 }
 
 @ExperimentalNativeApi
 @ExperimentalForeignApi
 internal inline fun <R> runCatching(
-    throwablePtr: CPointer<CPointerVar<ThrowableVar>>?, block: () -> R
+    onError: OnError, block: () -> R
 ) = runCatching(block).fold(onSuccess = {
     Result.success(it)
-}, onFailure = {
-    val throwableVarPtr = it.wrapToC()
-    if (throwablePtr != null && throwablePtr.rawValue != nativeNullPtr) {
-        throwablePtr.pointed.value = throwableVarPtr
+}, onFailure = { throwable ->
+    throwable.wrapToC {
+        onError(it)
+        Result.failure(ThrowableWrapper(it))
     }
-    Result.failure(ThrowableWrapper(throwableVarPtr))
 })

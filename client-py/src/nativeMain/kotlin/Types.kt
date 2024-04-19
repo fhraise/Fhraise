@@ -20,11 +20,11 @@ package xyz.xfqlittlefan.fhraise.py
 
 import kotlinx.cinterop.*
 
+
 @ExperimentalForeignApi
-internal val String.cstrPtr: CPointer<ByteVar>
-    get() {
-        val cstr = cstr
-        val ptr = nativeHeap.allocArray<ByteVar>(cstr.size)
-        cstr.place(ptr)
-        return ptr
-    }
+internal fun String.cstrPtr(scope: MemScope): CPointer<ByteVar>{
+    val cstr = cstr
+    val ptr = scope.allocArray<ByteVar>(cstr.size)
+    cstr.place(ptr)
+    return ptr
+}

@@ -34,7 +34,7 @@ class Client(private val host: String, private val port: UShort) {
     private val messageChannel = Channel<Message?>(3)
 
     @OptIn(ExperimentalForeignApi::class)
-    private val messageErrorChannel = Channel<CPointer<ThrowableVar>>(3)
+    private val messageErrorChannel = Channel<ThrowableVar>(3)
     private val resultChannel = Channel<Message>(3)
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -45,12 +45,12 @@ class Client(private val host: String, private val port: UShort) {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun connect(throwable: CPointer<CPointerVar<ThrowableVar>>?) = runBlocking {
+    fun connect(onError: OnError) = runBlocking {
         logger.debug("Connecting to $host:$port.")
         suspendCancellableCoroutine { continuation ->
             logger.debug("Launching coroutine.")
             scope.launch(Dispatchers.IO) {
-                runCatching(throwable) {
+                runCatching(onError) {
                     logger.debug("Starting connection.")
                     client.webSocket(host = host, port = port.toInt(), path = pyWsPath) {
                         continuation.resume(true)
@@ -58,7 +58,7 @@ class Client(private val host: String, private val port: UShort) {
                         while (true) {
                             logger.debug("Waiting for message...")
                             val receiveResult =
-                                runCatching(null) { messageChannel.send(receiveDeserialized<Message>()) }.onFailure {
+                                runCatching({}) { messageChannel.send(receiveDeserialized<Message>()) }.onFailure {
                                     logger.error("Failed to receive message.")
                                     it as ThrowableWrapper
                                     messageErrorChannel.send(it.throwable)
@@ -83,27 +83,25 @@ class Client(private val host: String, private val port: UShort) {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun receive(
-        type: CPointer<CPointerVar<ByteVar>>,
-        ref: CPointer<COpaquePointerVar>,
-        throwable: CPointer<CPointerVar<ThrowableVar>>?,
-        getResult: CPointer<CFunction<() -> CPointer<*>>>
-    ): Boolean {
+    fun receive(onResult: OnResult, onError: OnError): Boolean {
         val message = runBlocking { messageChannel.receive() }
 
         if (message == null) {
             return runBlocking {
-                throwable?.pointed?.value = messageErrorChannel.receive()
+                onError(messageErrorChannel.receive())
                 false
             }
         }
 
-        type.pointed.value = message::class.qualifiedName!!.cstrPtr
-        ref.pointed.value = StableRef.create(message).asCPointer()
-
         return runBlocking {
-            runCatching(throwable) {
-                resultChannel.send(getResult().asStableRef<Message>().get())
+            runCatching(onError) {
+                val type = message::class.qualifiedName!!.cstrPtr
+                val ref = StableRef.create(message)
+
+                resultChannel.send(onResult(type, ref.asCPointer()).asStableRef<Message>().get())
+
+                nativeHeap.free(type)
+                ref.dispose()
             }.isSuccess
         }
     }
