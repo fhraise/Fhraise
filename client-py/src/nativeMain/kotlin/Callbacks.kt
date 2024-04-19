@@ -21,7 +21,10 @@ package xyz.xfqlittlefan.fhraise.py
 import kotlinx.cinterop.*
 
 @ExperimentalForeignApi
-typealias OnError = CPointer<CFunction<(throwablePtr: ThrowableVar) -> Unit>>
+typealias OnError = CPointer<CFunction<(throwable: ThrowableVar) -> Unit>>
 
 @ExperimentalForeignApi
 typealias OnMessage = CPointer<CFunction<(type: CPointer<ByteVar>, ref: COpaquePointer) -> CPointer<*>>>
+
+@ExperimentalForeignApi
+typealias OnClose = CPointer<CFunction<() -> Unit>>

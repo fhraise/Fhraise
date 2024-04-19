@@ -59,27 +59,35 @@ class ThrowableVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
 
 @ExperimentalNativeApi
 @ExperimentalForeignApi
-internal inline fun <R> Throwable.sendToC(block: (ThrowableVar) -> R) = memScoped {
-    logger.debug("Wrapping throwable.")
-    logger.warn(getStackTrace().joinToString("\n"))
+internal inline fun <R> Throwable.cThrowable(block: (ThrowableVar) -> R) = memScoped {
+    this@cThrowable.logger.debug("Sending throwable to C.")
 
     val throwable = alloc<ThrowableVar>()
     val ref = StableRef.create(this)
 
     throwable.type = this::class.qualifiedName?.cstr?.ptr
     throwable.ref = ref.asCPointer()
-    throwable.message = this@sendToC.message?.cstr?.ptr
-    val stacktraceList = this@sendToC.getStackTrace().map { it.cstr.ptr.pointed }
+    throwable.message = this@cThrowable.message?.cstr?.ptr
+    val stacktraceList = this@cThrowable.getStackTrace().map { it.cstr.ptr.pointed }
     val stacktraceArray = allocArrayOfPointersTo(stacktraceList)
     throwable.stacktrace = stacktraceArray
     throwable.stacktraceSize = stacktraceList.size
-    block(throwable).also { ref.dispose() }
+    block(throwable).also {
+        ref.dispose()
+        this@cThrowable.logger.debug("Throwable sent.")
+    }
 }
 
 @ExperimentalNativeApi
 @ExperimentalForeignApi
-internal inline fun <R> runCatching(
-    onError: OnError, block: () -> R
+internal inline fun <E, R> runCatchingC(
+    onError: (ThrowableVar) -> E, block: () -> R
 ) = runCatching(block).onFailure { throwable ->
-    throwable.sendToC { onError(it) }
+    throwable.cThrowable(onError)
 }
+
+@ExperimentalNativeApi
+@ExperimentalForeignApi
+internal inline fun <R> runCatchingC(
+    onError: OnError, block: () -> R
+) = runCatchingC({ onError(it) }, block)

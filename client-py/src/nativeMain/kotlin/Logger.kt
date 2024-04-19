@@ -19,6 +19,8 @@
 package xyz.xfqlittlefan.fhraise.py
 
 import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class Logger internal constructor(private val tag: Any) {
     @Deprecated("This constructor is for calling from C code only.", level = DeprecationLevel.HIDDEN)
@@ -42,7 +44,7 @@ class Logger internal constructor(private val tag: Any) {
 
     private fun println(level: String, message: String) {
         message.split("\n").forEach {
-            println("${Clock.System.now()} [$tag] $level: $it")
+            println("${Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())} [$tag] $level: $it")
         }
     }
 }

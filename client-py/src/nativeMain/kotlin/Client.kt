@@ -31,10 +31,8 @@ import kotlin.experimental.ExperimentalNativeApi
 
 class Client(private val host: String, private val port: UShort) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val messageChannel = Channel<Message?>(3)
+    private val messageChannel = Channel<Message>(3)
 
-    @OptIn(ExperimentalForeignApi::class)
-    private val messageErrorChannel = Channel<ThrowableVar>(3)
     private val resultChannel = Channel<Message>(3)
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -45,20 +43,33 @@ class Client(private val host: String, private val port: UShort) {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun connect(onError: OnError) = runBlocking {
+    fun connect(onError: OnError, onClose: OnClose) = runBlocking {
         logger.debug("Connecting to $host:$port.")
         suspendCancellableCoroutine { continuation ->
             logger.debug("Launching coroutine.")
             scope.launch(Dispatchers.IO) {
-                runCatching(onError) {
+                runCatchingC(onError) {
                     logger.debug("Starting connection.")
                     client.webSocket(host = host, port = port.toInt(), path = pyWsPath) {
                         continuation.resume(true)
                         logger.debug("Connected.")
                         while (true) {
+                            if (!isActive) {
+                                logger.info("Connection closed.")
+                                onClose()
+                                break
+                            }
                             logger.debug("Waiting for message...")
-                            val receiveResult =
-                                runCatching(onError) { messageChannel.send(receiveDeserialized<Message>()) }
+                            val receiveResult = runCatching {
+                                val message = receiveDeserialized<Message>()
+                                logger.debug("Received message.")
+                                messageChannel.send(message)
+                            }.onFailure { throwable ->
+                                throwable.logger.debug("Caught throwable. Callback address: ${onError.rawValue}.")
+                                throwable.cThrowable {
+                                    onError(it)
+                                }
+                            }
                             if (receiveResult.isFailure) continue
                             logger.debug("Waiting for result...")
                             sendSerialized<Message>(resultChannel.receive())
@@ -80,21 +91,18 @@ class Client(private val host: String, private val port: UShort) {
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
     fun receive(onMessage: OnMessage, onError: OnError): Boolean {
         val message = runBlocking { messageChannel.receive() }
-        if (message == null) {
-            return false
-        }
+
+        logger.debug("Sending message to C.")
 
         return runBlocking {
-            runCatching(onError) {
+            val ref = StableRef.create(message)
+            runCatchingC(onError) {
                 memScoped {
                     val type = message::class.qualifiedName!!.cstr.ptr
-                    val ref = StableRef.create(message)
-
                     resultChannel.send(onMessage(type, ref.asCPointer()).asStableRef<Message>().get())
-
-                    ref.dispose()
+                    logger.debug("Received result from C.")
                 }
-            }.isSuccess
+            }.isSuccess.also { ref.dispose() }
         }
     }
 }
