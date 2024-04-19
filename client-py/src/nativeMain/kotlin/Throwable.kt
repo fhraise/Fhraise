@@ -80,4 +80,6 @@ internal inline fun <R> Throwable.sendToC(block: (ThrowableVar) -> R) = memScope
 @ExperimentalForeignApi
 internal inline fun <R> runCatching(
     onError: OnError, block: () -> R
-) = runCatching(block).onFailure { it.sendToC(onError) }
+) = runCatching(block).onFailure { throwable ->
+    throwable.sendToC { onError(it) }
+}
