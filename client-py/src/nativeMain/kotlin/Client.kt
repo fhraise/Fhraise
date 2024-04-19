@@ -78,7 +78,7 @@ class Client(private val host: String, private val port: UShort) {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun receive(onResult: OnResult, onError: OnError): Boolean {
+    fun receive(onMessage: OnMessage, onError: OnError): Boolean {
         val message = runBlocking { messageChannel.receive() }
         if (message == null) {
             return false
@@ -90,7 +90,7 @@ class Client(private val host: String, private val port: UShort) {
                     val type = message::class.qualifiedName!!.cstr.ptr
                     val ref = StableRef.create(message)
 
-                    resultChannel.send(onResult(type, ref.asCPointer()).asStableRef<Message>().get())
+                    resultChannel.send(onMessage(type, ref.asCPointer()).asStableRef<Message>().get())
 
                     ref.dispose()
                 }

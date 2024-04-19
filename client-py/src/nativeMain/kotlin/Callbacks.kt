@@ -24,4 +24,4 @@ import kotlinx.cinterop.*
 typealias OnError = CPointer<CFunction<(throwablePtr: ThrowableVar) -> Unit>>
 
 @ExperimentalForeignApi
-typealias OnResult = CPointer<CFunction<(type: CPointer<ByteVar>, ref: COpaquePointer) -> CPointer<*>>>
+typealias OnMessage = CPointer<CFunction<(type: CPointer<ByteVar>, ref: COpaquePointer) -> CPointer<*>>>
