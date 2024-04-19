@@ -58,12 +58,7 @@ class Client(private val host: String, private val port: UShort) {
                         while (true) {
                             logger.debug("Waiting for message...")
                             val receiveResult =
-                                runCatching({}) { messageChannel.send(receiveDeserialized<Message>()) }.onFailure {
-                                    logger.error("Failed to receive message.")
-                                    it as ThrowableWrapper
-                                    messageErrorChannel.send(it.throwable)
-                                    messageChannel.send(null)
-                                }
+                                runCatching(onError) { messageChannel.send(receiveDeserialized<Message>()) }
                             if (receiveResult.isFailure) continue
                             logger.debug("Waiting for result...")
                             sendSerialized<Message>(resultChannel.receive())
@@ -85,23 +80,20 @@ class Client(private val host: String, private val port: UShort) {
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
     fun receive(onResult: OnResult, onError: OnError): Boolean {
         val message = runBlocking { messageChannel.receive() }
-
         if (message == null) {
-            return runBlocking {
-                onError(messageErrorChannel.receive())
-                false
-            }
+            return false
         }
 
         return runBlocking {
             runCatching(onError) {
-                val type = message::class.qualifiedName!!.cstrPtr
-                val ref = StableRef.create(message)
+                memScoped {
+                    val type = message::class.qualifiedName!!.cstr.ptr
+                    val ref = StableRef.create(message)
 
-                resultChannel.send(onResult(type, ref.asCPointer()).asStableRef<Message>().get())
+                    resultChannel.send(onResult(type, ref.asCPointer()).asStableRef<Message>().get())
 
-                nativeHeap.free(type)
-                ref.dispose()
+                    ref.dispose()
+                }
             }.isSuccess
         }
     }

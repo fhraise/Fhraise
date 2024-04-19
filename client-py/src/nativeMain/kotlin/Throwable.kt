@@ -57,43 +57,27 @@ class ThrowableVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
         }
 }
 
-@ExperimentalForeignApi
-internal class ThrowableWrapper(val throwable: ThrowableVar) : Throwable()
-
 @ExperimentalNativeApi
 @ExperimentalForeignApi
-internal inline fun <R> Throwable.wrapToC(block: (ThrowableVar) -> R): R {
+internal inline fun <R> Throwable.sendToC(block: (ThrowableVar) -> R) = memScoped {
+    logger.debug("Wrapping throwable.")
+    logger.warn(getStackTrace().joinToString("\n"))
+
+    val throwable = alloc<ThrowableVar>()
     val ref = StableRef.create(this)
 
-    return memScoped {
-        logger.debug("Wrapping throwable.")
-        logger.warn(getStackTrace().joinToString("\n"))
-
-        val throwable = alloc<ThrowableVar>()
-
-        throwable.type = this::class.qualifiedName?.cstrPtr(this)
-        throwable.ref = ref.asCPointer()
-        throwable.message = this@wrapToC.message?.cstrPtr(this)
-        val stacktraceList = mutableListOf<ByteVar>()
-        this@wrapToC.getStackTrace().forEach {
-            stacktraceList.add(it.cstrPtr(this).pointed)
-        }
-        val stacktraceArray = allocArrayOfPointersTo(stacktraceList)
-        throwable.stacktrace = stacktraceArray
-        throwable.stacktraceSize = stacktraceList.size
-        block(throwable)
-    }
+    throwable.type = this::class.qualifiedName?.cstr?.ptr
+    throwable.ref = ref.asCPointer()
+    throwable.message = this@sendToC.message?.cstr?.ptr
+    val stacktraceList = this@sendToC.getStackTrace().map { it.cstr.ptr.pointed }
+    val stacktraceArray = allocArrayOfPointersTo(stacktraceList)
+    throwable.stacktrace = stacktraceArray
+    throwable.stacktraceSize = stacktraceList.size
+    block(throwable).also { ref.dispose() }
 }
 
 @ExperimentalNativeApi
 @ExperimentalForeignApi
 internal inline fun <R> runCatching(
     onError: OnError, block: () -> R
-) = runCatching(block).fold(onSuccess = {
-    Result.success(it)
-}, onFailure = { throwable ->
-    throwable.wrapToC {
-        onError(it)
-        Result.failure(ThrowableWrapper(it))
-    }
-})
+) = runCatching(block).onFailure { it.sendToC(onError) }

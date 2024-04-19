@@ -17,14 +17,3 @@
  */
 
 package xyz.xfqlittlefan.fhraise.py
-
-import kotlinx.cinterop.*
-
-
-@ExperimentalForeignApi
-internal fun String.cstrPtr(scope: MemScope): CPointer<ByteVar>{
-    val cstr = cstr
-    val ptr = scope.allocArray<ByteVar>(cstr.size)
-    cstr.place(ptr)
-    return ptr
-}
