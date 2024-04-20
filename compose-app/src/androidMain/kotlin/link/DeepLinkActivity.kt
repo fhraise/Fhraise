@@ -29,14 +29,14 @@ class DeepLinkActivity : FhraiseActivity() {
         handleDeepLink(intent)
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleDeepLink(intent)
     }
 
-    private fun handleDeepLink(intent: Intent?) {
-        val data = intent?.data
-        if (intent == null || data == null) {
+    private fun handleDeepLink(intent: Intent) {
+        val data = intent.data
+        if (data == null) {
             launchMain()
             return
         }

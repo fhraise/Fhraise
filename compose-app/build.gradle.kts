@@ -16,6 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -121,6 +122,10 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.logback)
             }
+
+            tasks.withType<Jar> {
+                exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+            }
         }
 
         val wasmJsMain by getting {
@@ -194,6 +199,7 @@ android {
         abi {
             isEnable = true
             isUniversalApk = true
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
     }
 }
@@ -234,7 +240,7 @@ compose.desktop {
         buildTypes {
             release {
                 proguard {
-                    version = "7.4.1"
+                    version = "7.4.2"
                     configurationFiles.from("compose-desktop.pro")
                     optimize = false
                 }
