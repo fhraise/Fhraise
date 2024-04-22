@@ -190,13 +190,13 @@ private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
     val body = call.receive<Api.Auth.Type.Verify.RequestBody>()
 
     val token = verifiedJwtOrNull(req.token)?.decodedPayloadOrNull<AuthProcessToken>() ?: run {
-        call.respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+        call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
         return@post
     }
 
     when (token.type) {
         FhraiseToken, QrCode, SmsCode, EmailCode -> call.respondCodeVerificationResult(token, req, body)
-        Face -> call.respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+        Face -> call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
         Password -> call.respondPasswordVerificationResult(token, req, body)
     }
 }
@@ -223,13 +223,13 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
                 if (userNeedsUpdate) user.update()
 
                 exchangeToken(user.id!!)?.let {
-                    respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Success(it))
-                } ?: respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+                    respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Success(it))
+                } ?: respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
             },
-            onFailure = { respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Failure) },
+            onFailure = { respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure) },
         )
     } else {
-        respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
     }
 }
 
@@ -237,7 +237,7 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
     token: AuthProcessToken, request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
 ) {
     val user = getUser(request.parent.credentialType provide token.credential) ?: run {
-        respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
         return
     }
 
@@ -246,8 +246,8 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
     }
 
     keycloakClient.getTokensByPassword(authClientId, authClientSecret, user.username!!, body.verification)?.let {
-        respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Success(JwtTokenPair(it.accessToken, it.refreshToken)))
-    } ?: respondVerifyResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Success(JwtTokenPair(it.accessToken, it.refreshToken)))
+    } ?: respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
 }
 
 private fun Api.Auth.Type.validate(credential: String) = when (credentialType) {
@@ -303,6 +303,6 @@ private suspend fun RoutingCall.respondRequestResult(result: Api.Auth.Type.Reque
     respond<Api.Auth.Type.Request.ResponseBody>(result)
 }
 
-private suspend fun RoutingCall.respondVerifyResult(result: Api.Auth.Type.Verify.ResponseBody) {
+private suspend fun RoutingCall.respondVerificationResult(result: Api.Auth.Type.Verify.ResponseBody) {
     respond<Api.Auth.Type.Verify.ResponseBody>(result)
 }
