@@ -23,7 +23,6 @@ import io.ktor.server.websocket.*
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
-import xyz.xfqlittlefan.fhraise.logger
 import java.util.*
 
 val pyFlow = IdMessageFlow<String, Message>(3, 3)
