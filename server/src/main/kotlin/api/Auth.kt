@@ -34,7 +34,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -274,7 +273,13 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
     }
 
     keycloakClient.getTokensByPassword(authClientId, authClientSecret, user.username!!, body.verification)?.let {
-        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Success(JwtTokenPair(it.accessToken, it.refreshToken)))
+        respondVerificationResult(
+            Api.Auth.Type.Verify.ResponseBody.Success(
+                JwtTokenPair(
+                    it.accessToken, it.refreshToken
+                )
+            )
+        )
     } ?: respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
 }
 
