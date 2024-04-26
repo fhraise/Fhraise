@@ -204,7 +204,7 @@ tasks.register("releaseDesktopApp") {
     group = "project build"
     description = "Build the desktop release"
 
-    dependsOn("releaseDesktopAppArchive", "releaseDesktopAppUberJar")
+    dependsOn("releaseDesktopAppAndArchive", "releaseDesktopAppUberJar")
 
     if (SystemEnvironment.isLinux) {
         dependsOn("compose-app:packageReleaseDeb", "compose-app:packageReleaseRpm", "releaseDesktopUberJarApp")
