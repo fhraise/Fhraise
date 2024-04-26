@@ -257,14 +257,14 @@ tasks.register("releaseClientPySharedLib") {
     group = "project build"
     description = "Build the client Py shared library"
 
-    if (SystemEnvironment.isLinux) {
+    if (operatingSystem.isLinux) {
         dependsOn("client-py:linkReleaseSharedLinuxArm64", "client-py:linkReleaseSharedLinuxX64")
-    } else if (SystemEnvironment.isWindows) {
+    } else if (operatingSystem.isWindows) {
         dependsOn("client-py:linkReleaseSharedMingwX64")
     }
 
     doLast {
-        logger.lifecycle("output directory: ${file(outputDirectoryOf("clientPy")).absolutePath}")
+        logger.lifecycle("output directory: ${file(outputDirectoryOf("client-py")).absolutePath}")
     }
 }
 
@@ -338,6 +338,10 @@ tasks.register<Tar>("ciReleaseLinuxClientPySharedLib") {
     group = "ci"
     description = "Build the client Py shared library"
 
+    if (!operatingSystem.isLinux) {
+        enabled = false
+    }
+
     dependsOn("releaseClientPySharedLib")
 
     archiveBaseName = "libfhraisepy"
@@ -347,12 +351,16 @@ tasks.register<Tar>("ciReleaseLinuxClientPySharedLib") {
     archiveExtension = "tar"
     compression = Compression.GZIP
     destinationDirectory = file(layout.buildDirectory.dir("assets"))
-    from(file(outputDirectoryOf("clientPy")))
+    from(file(outputDirectoryOf("client-py")))
 }
 
 tasks.register<Zip>("ciReleaseWindowsClientPySharedLib") {
     group = "ci"
     description = "Build the client Py shared library"
+
+    if (!operatingSystem.isWindows) {
+        enabled = false
+    }
 
     dependsOn("releaseClientPySharedLib")
 
@@ -362,7 +370,7 @@ tasks.register<Zip>("ciReleaseWindowsClientPySharedLib") {
     archiveClassifier = "multi-arch"
     archiveExtension = "zip"
     destinationDirectory = file(layout.buildDirectory.dir("assets"))
-    from(file(outputDirectoryOf("clientPy")))
+    from(file(outputDirectoryOf("client-py")))
 }
 
 tasks.register("ciReleaseApp") {
@@ -387,7 +395,14 @@ tasks.register("release") {
     group = "project build"
     description = "Create a new release"
 
-    dependsOn("versioning", "releaseAndroidApp", "releaseDesktopApp", "releaseWebApp", "releaseServer")
+    dependsOn(
+        "versioning",
+        "releaseAndroidApp",
+        "releaseDesktopApp",
+        "releaseWebApp",
+        "releaseServer",
+        "releaseClientPySharedLib"
+    )
 }
 
 tasks.register("cleanReleases") {
