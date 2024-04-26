@@ -20,8 +20,8 @@ package xyz.xfqlittlefan.fhraise.buildsrc
 
 import org.gradle.internal.os.OperatingSystem
 
+val operatingSystem: OperatingSystem = OperatingSystem.current()
+
 object SystemEnvironment {
-    val isLinux = OperatingSystem.current().isLinux
-    val isWindows = OperatingSystem.current().isWindows
     val arch: String = System.getProperty("os.arch")
 }
