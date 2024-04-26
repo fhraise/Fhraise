@@ -142,7 +142,7 @@ tasks.register("releaseDesktopAppUberJar") {
             ?.filter { it.name.contains("$projectDevVer.$projectReversion") && it.name.endsWith(".jar") }?.forEach {
                 val arch = Regex(".+?-.+?-(.+?)-.+").find(it.name)?.groupValues?.get(1) ?: return@forEach
                 it.copyTo(
-                    outputDir.resolve("fhraise-${SystemEnvironment.type}-$projectVersion.$projectBuildNumber-${arch}.jar"),
+                    outputDir.resolve("fhraise-${operatingSystem.familyName}-$projectVersion.$projectBuildNumber-${arch}.jar"),
                     overwrite = true
                 )
                 logger.lifecycle("output directory: ${outputDir.absolutePath}")
@@ -154,7 +154,7 @@ tasks.register<Tar>("releaseLinuxAppAndTar") {
     group = "project build"
     description = "Build the Linux release and create a tar archive"
 
-    if (!SystemEnvironment.isLinux) {
+    if (!operatingSystem.isLinux) {
         enabled = false
     }
 
@@ -174,7 +174,7 @@ tasks.register<Zip>("releaseWindowsAppAndZip") {
     group = "project build"
     description = "Build the Windows release and create a zip archive"
 
-    if (!SystemEnvironment.isWindows) {
+    if (!operatingSystem.isWindows) {
         enabled = false
     }
 
@@ -193,9 +193,9 @@ tasks.register("releaseDesktopAppAndArchive") {
     group = "project build"
     description = "Build the desktop release and create an archive"
 
-    if (SystemEnvironment.isLinux) {
+    if (operatingSystem.isLinux) {
         dependsOn("releaseLinuxAppAndTar")
-    } else if (SystemEnvironment.isWindows) {
+    } else if (operatingSystem.isWindows) {
         dependsOn("releaseWindowsAppAndZip")
     }
 }
@@ -206,9 +206,9 @@ tasks.register("releaseDesktopApp") {
 
     dependsOn("releaseDesktopAppAndArchive", "releaseDesktopAppUberJar")
 
-    if (SystemEnvironment.isLinux) {
-        dependsOn("compose-app:packageReleaseDeb", "compose-app:packageReleaseRpm", "releaseDesktopUberJarApp")
-    } else if (SystemEnvironment.isWindows) {
+    if (operatingSystem.isLinux) {
+        dependsOn("compose-app:packageReleaseDeb", "compose-app:packageReleaseRpm")
+    } else if (operatingSystem.isWindows) {
         dependsOn("compose-app:packageReleaseMsi")
     }
 }
@@ -270,7 +270,7 @@ tasks.register("ciReleaseLinuxApp") {
     group = "ci"
     description = "Build on the Linux platform"
 
-    if (!SystemEnvironment.isLinux) {
+    if (!operatingSystem.isLinux) {
         enabled = false
     }
 
@@ -303,7 +303,7 @@ tasks.register("ciReleaseWindowsApp") {
     group = "ci"
     description = "Build on the Windows platform"
 
-    if (!SystemEnvironment.isWindows) {
+    if (!operatingSystem.isWindows) {
         enabled = false
     }
 
@@ -323,9 +323,9 @@ tasks.register("ciReleaseApp") {
     group = "ci"
     description = "Build the release app"
 
-    if (SystemEnvironment.isLinux) {
+    if (operatingSystem.isLinux) {
         dependsOn("ciReleaseLinuxApp")
-    } else if (SystemEnvironment.isWindows) {
+    } else if (operatingSystem.isWindows) {
         dependsOn("ciReleaseWindowsApp")
     }
 
