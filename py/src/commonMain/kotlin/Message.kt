@@ -26,9 +26,6 @@ sealed class Message {
     sealed class Register : Message() {
         @Serializable
         data class Frame(val callId: String, val format: FrameFormat, val content: ByteArray) : Register() {
-            @Deprecated("This function is for calling from C code only.", level = DeprecationLevel.HIDDEN)
-            fun getFormatString() = format.toString()
-
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (other == null || this::class != other::class) return false
@@ -59,7 +56,7 @@ sealed class Message {
     }
 
     @Serializable
-    enum class FrameFormat { AndroidRgba8888 }
+    enum class FrameFormat { Rgb }
 
     @Serializable
     sealed class Ping : Message() {
