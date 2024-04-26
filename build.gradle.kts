@@ -123,33 +123,42 @@ tasks.register("releaseAndroidApp") {
     dependsOn("compose-app:assembleRelease")
 
     doLast {
-        val apkDir = file(project(":compose-app").layout.buildDirectory.dir("outputs/apk/release"))
+        val apkDir = file(project("compose-app").layout.buildDirectory.dir("outputs/apk/release"))
         val outputDir = file(outputDirectoryOf("android"))
         apkDir.copyRecursively(outputDir, overwrite = true)
         logger.lifecycle("output directory: ${outputDir.absolutePath}")
     }
 }
 
-tasks.register("releaseLinuxApp") {
+tasks.register("releaseDesktopAppUberJar") {
     group = "project build"
-    description = "Build the Linux release executable"
+    description = "Build the desktop release uber jar"
 
-    if (!SystemEnvironment.isLinux) {
-        enabled = false
+    dependsOn("compose-app:packageReleaseUberJarForCurrentOS")
+
+    doLast {
+        val outputDir = file(outputDirectoryOf("desktop-uber-jar"))
+        file(project("compose-app").layout.buildDirectory.dir("compose/jars")).listFiles()
+            ?.filter { it.name.contains("$projectDevVer.$projectReversion") && it.name.endsWith(".jar") }?.forEach {
+                val arch = Regex(".+?-.+?-(.+?)-.+").find(it.name)?.groupValues?.get(1) ?: return@forEach
+                it.copyTo(
+                    outputDir.resolve("fhraise-${SystemEnvironment.type}-$projectVersion.$projectBuildNumber-${arch}.jar"),
+                    overwrite = true
+                )
+                logger.lifecycle("output directory: ${outputDir.absolutePath}")
+            }
     }
-
-    dependsOn("compose-app:packageReleaseAppImage", "compose-app:packageReleaseDeb", "compose-app:packageReleaseRpm")
 }
 
-tasks.register<Tar>("releaseTarLinuxApp") {
+tasks.register<Tar>("releaseLinuxAppAndTar") {
     group = "project build"
-    description = "Build the Linux release tar"
+    description = "Build the Linux release and create a tar archive"
 
     if (!SystemEnvironment.isLinux) {
         enabled = false
     }
 
-    dependsOn("releaseLinuxApp")
+    dependsOn("compose-app:packageReleaseAppImage")
 
     archiveBaseName = "fhraise"
     archiveAppendix = "linux"
@@ -161,26 +170,15 @@ tasks.register<Tar>("releaseTarLinuxApp") {
     from(file(outputDirectoryOf("desktop/main-release/app/Fhraise")))
 }
 
-tasks.register("releaseWindowsApp") {
+tasks.register<Zip>("releaseWindowsAppAndZip") {
     group = "project build"
-    description = "Build the Windows release executable"
+    description = "Build the Windows release and create a zip archive"
 
     if (!SystemEnvironment.isWindows) {
         enabled = false
     }
 
-    dependsOn("compose-app:packageReleaseAppImage", "compose-app:packageReleaseMsi")
-}
-
-tasks.register<Zip>("releaseZipWindowsApp") {
-    group = "project build"
-    description = "Build the Windows release zip"
-
-    if (!SystemEnvironment.isWindows) {
-        enabled = false
-    }
-
-    dependsOn("releaseWindowsApp")
+    dependsOn("compose-app:packageReleaseAppImage")
 
     archiveBaseName = "fhraise"
     archiveAppendix = "windows"
@@ -191,25 +189,27 @@ tasks.register<Zip>("releaseZipWindowsApp") {
     from(file(outputDirectoryOf("desktop/main-release/app/Fhraise")))
 }
 
+tasks.register("releaseDesktopAppAndArchive") {
+    group = "project build"
+    description = "Build the desktop release and create an archive"
+
+    if (SystemEnvironment.isLinux) {
+        dependsOn("releaseLinuxAppAndTar")
+    } else if (SystemEnvironment.isWindows) {
+        dependsOn("releaseWindowsAppAndZip")
+    }
+}
+
 tasks.register("releaseDesktopApp") {
     group = "project build"
     description = "Build the desktop release"
 
-    if (SystemEnvironment.isLinux) {
-        dependsOn("releaseLinuxApp")
-    } else if (SystemEnvironment.isWindows) {
-        dependsOn("releaseWindowsApp")
-    }
-}
-
-tasks.register("releaseArchiveDesktopApp") {
-    group = "project build"
-    description = "Build the desktop release archive"
+    dependsOn("releaseDesktopAppArchive", "releaseDesktopAppUberJar")
 
     if (SystemEnvironment.isLinux) {
-        dependsOn("releaseTarLinuxApp")
+        dependsOn("compose-app:packageReleaseDeb", "compose-app:packageReleaseRpm", "releaseDesktopUberJarApp")
     } else if (SystemEnvironment.isWindows) {
-        dependsOn("releaseZipWindowsApp")
+        dependsOn("compose-app:packageReleaseMsi")
     }
 }
 
@@ -224,9 +224,9 @@ tasks.register("releaseWebApp") {
     }
 }
 
-tasks.register<Tar>("releaseTarWebApp") {
+tasks.register<Tar>("releaseWebAppAndTar") {
     group = "project build"
-    description = "Build the Web release tar"
+    description = "Build the Web release and create a tar archive"
 
     dependsOn("releaseWebApp")
 
@@ -246,7 +246,7 @@ tasks.register("releaseServer") {
     dependsOn("server:shadowJar")
 
     doLast {
-        val jar = file(project(":server").layout.buildDirectory.file("libs/server-all.jar"))
+        val jar = file(project("server").layout.buildDirectory.file("libs/server-all.jar"))
         val outputDir = file(outputDirectoryOf("server"))
         jar.copyTo(outputDir.resolve("fhraise-server-$projectVersion.$projectBuildNumber.jar"), overwrite = true)
         logger.lifecycle("output directory: ${outputDir.absolutePath}")
@@ -268,9 +268,13 @@ tasks.register("ciVersioning") {
 
 tasks.register("ciReleaseLinuxApp") {
     group = "ci"
-    description = "Build on the linux platform"
+    description = "Build on the Linux platform"
 
-    dependsOn("releaseAndroidApp", "releaseTarLinuxApp", "releaseTarWebApp", "releaseServer")
+    if (!SystemEnvironment.isLinux) {
+        enabled = false
+    }
+
+    dependsOn("releaseAndroidApp", "releaseDesktopApp", "releaseWebAppAndTar", "releaseServer")
 
     doLast {
         val assetsDir = file(layout.buildDirectory.dir("assets"))
@@ -297,9 +301,13 @@ tasks.register("ciReleaseLinuxApp") {
 
 tasks.register("ciReleaseWindowsApp") {
     group = "ci"
-    description = "Build on the windows platform"
+    description = "Build on the Windows platform"
 
-    dependsOn("releaseZipWindowsApp")
+    if (!SystemEnvironment.isWindows) {
+        enabled = false
+    }
+
+    dependsOn("releaseDesktopApp")
 
     doLast {
         val assetsDir = file(layout.buildDirectory.dir("assets"))
@@ -320,13 +328,18 @@ tasks.register("ciReleaseApp") {
     } else if (SystemEnvironment.isWindows) {
         dependsOn("ciReleaseWindowsApp")
     }
+
+    doLast {
+        val assetsDir = file(layout.buildDirectory.dir("assets"))
+        file(outputDirectoryOf("desktop-uber-jar")).copyRecursively(assetsDir, overwrite = true)
+    }
 }
 
 tasks.register("release") {
     group = "project build"
     description = "Create a new release"
 
-    dependsOn("versioning", "releaseAndroidApp", "releaseLinuxApp", "releaseWindowsApp", "releaseWebApp")
+    dependsOn("versioning", "releaseAndroidApp", "releaseDesktopApp", "releaseWebApp", "releaseServer")
 }
 
 tasks.register("cleanReleases") {
