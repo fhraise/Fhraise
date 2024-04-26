@@ -141,12 +141,12 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
         val requestId = call.callId
 
         if (requestId == null) {
-            call.respond(Api.Auth.Type.Request.ResponseBody.Failure)
+            call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
             return@post
         }
 
         if (!req.parent.validate(body.credential)) {
-            call.respond(Api.Auth.Type.Request.ResponseBody.InvalidCredential)
+            call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.InvalidCredential)
             return@post
         }
 
@@ -162,24 +162,24 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
                 val code = appDatabase.queryOrGenerateVerificationCode(application, token.hashCode())
 
                 if (body.dry) {
-                    call.respond(Api.Auth.Type.Request.ResponseBody.Success(token))
+                    call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
                     return@post
                 }
 
                 if (sendVerificationCode(req, user, code.code)) {
-                    call.respond(Api.Auth.Type.Request.ResponseBody.Success(token))
+                    call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
                 } else {
-                    call.respond(Api.Auth.Type.Request.ResponseBody.Failure)
+                    call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
                 }
             }
 
             Face -> {
                 // TODO
-                call.respond(Api.Auth.Type.Request.ResponseBody.Failure)
+                call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
             }
 
 
-            Password -> call.respond(
+            Password -> call.respondRequestResult(
                 Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
             )
         }
@@ -190,13 +190,13 @@ private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
     val body = call.receive<Api.Auth.Type.Verify.RequestBody>()
 
     val token = verifiedJwtOrNull(req.token)?.decodedPayloadOrNull<AuthProcessToken>() ?: run {
-        call.respond(Api.Auth.Type.Verify.ResponseBody.Failure)
+        call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
         return@post
     }
 
     when (token.type) {
         FhraiseToken, QrCode, SmsCode, EmailCode -> call.respondCodeVerificationResult(token, req, body)
-        Face -> call.respond(Api.Auth.Type.Verify.ResponseBody.Failure)
+        Face -> call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
         Password -> call.respondPasswordVerificationResult(token, req, body)
     }
 }
@@ -223,13 +223,13 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
                 if (userNeedsUpdate) user.update()
 
                 exchangeToken(user.id!!)?.let {
-                    respond(Api.Auth.Type.Verify.ResponseBody.Success(it))
-                } ?: respond(Api.Auth.Type.Verify.ResponseBody.Failure)
+                    respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Success(it))
+                } ?: respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
             },
-            onFailure = { respond(Api.Auth.Type.Verify.ResponseBody.Failure) },
+            onFailure = { respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure) },
         )
     } else {
-        respond(Api.Auth.Type.Verify.ResponseBody.Failure)
+        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
     }
 }
 
@@ -237,7 +237,7 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
     token: AuthProcessToken, request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
 ) {
     val user = getUser(request.parent.credentialType provide token.credential) ?: run {
-        respond(Api.Auth.Type.Verify.ResponseBody.Failure)
+        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
         return
     }
 
@@ -246,8 +246,8 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
     }
 
     keycloakClient.getTokensByPassword(authClientId, authClientSecret, user.username!!, body.verification)?.let {
-        respond(Api.Auth.Type.Verify.ResponseBody.Success(JwtTokenPair(it.accessToken, it.refreshToken)))
-    } ?: respond(Api.Auth.Type.Verify.ResponseBody.Failure)
+        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Success(JwtTokenPair(it.accessToken, it.refreshToken)))
+    } ?: respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
 }
 
 private fun Api.Auth.Type.validate(credential: String) = when (credentialType) {
@@ -298,3 +298,11 @@ private data class AuthProcessToken(
     @SerialName("typ") val type: Api.Auth.Type.Request.VerificationType,
     @SerialName("crd") val credential: String
 )
+
+private suspend fun RoutingCall.respondRequestResult(result: Api.Auth.Type.Request.ResponseBody) {
+    respond<Api.Auth.Type.Request.ResponseBody>(result)
+}
+
+private suspend fun RoutingCall.respondVerificationResult(result: Api.Auth.Type.Verify.ResponseBody) {
+    respond<Api.Auth.Type.Verify.ResponseBody>(result)
+}
