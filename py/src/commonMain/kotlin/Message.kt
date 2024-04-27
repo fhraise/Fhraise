@@ -53,6 +53,13 @@ sealed class Message {
 
             @Serializable
             data object LowResolution : Result()
+
+            /**
+             * 可能的原因：
+             * - 请求被分配到了一个错误的处理器
+             */
+            @Serializable
+            data object InternalError : Result()
         }
     }
 
