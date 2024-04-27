@@ -25,7 +25,8 @@ sealed class Message {
     @Serializable
     sealed class Register : Message() {
         @Serializable
-        data class Frame(val callId: String, val format: FrameFormat, val content: ByteArray) : Register() {
+        data class Frame(val callId: String, val format: FrameFormat, val width: Int, val content: ByteArray) :
+            Register() {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (other == null || this::class != other::class) return false
