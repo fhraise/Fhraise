@@ -120,6 +120,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(compose.desktop.currentOs)
+                implementation(libs.webcamCapture)
                 implementation(libs.logback)
             }
 
