@@ -47,6 +47,9 @@ sealed class Message {
         }
 
         @Serializable
+        data object Cancel : Register()
+
+        @Serializable
         sealed class Result : Register() {
             @Serializable
             data object Next : Result()
@@ -66,6 +69,9 @@ sealed class Message {
              */
             @Serializable
             data object InternalError : Result()
+
+            @Serializable
+            data object Cancelled : Result()
         }
     }
 
