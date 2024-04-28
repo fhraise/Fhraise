@@ -49,7 +49,13 @@ sealed class Message {
         @Serializable
         sealed class Result : Register() {
             @Serializable
+            data object Next : Result()
+
+            @Serializable
             data object Success : Result()
+
+            @Serializable
+            data object NoFace : Result()
 
             @Serializable
             data object LowResolution : Result()
