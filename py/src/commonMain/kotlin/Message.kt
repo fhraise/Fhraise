@@ -55,7 +55,7 @@ sealed class Message {
             data object Success : Result()
 
             @Serializable
-            data object NoFace : Result()
+            data object NoFaces : Result()
 
             @Serializable
             data object LowResolution : Result()
