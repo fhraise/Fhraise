@@ -251,7 +251,11 @@ fun SignInComponent.SignIn() {
                                         Password()
                                     }
 
-                                    Api.Auth.Type.Request.VerificationType.QrCode, Api.Auth.Type.Request.VerificationType.Face -> {}
+                                    Api.Auth.Type.Request.VerificationType.Face -> {
+                                        Face()
+                                    }
+
+                                    Api.Auth.Type.Request.VerificationType.QrCode -> {}
                                 }
                                 Otp()
                                 Spacer(modifier = Modifier.height(32.dp))
@@ -797,6 +801,39 @@ private fun SignInComponent.Password() {
             keyboardActions = KeyboardActions(onDone = enterAction),
             maxLines = 1,
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SignInComponent.Face() {
+    Column {
+        Box {
+            FilterChip(
+                selected = true,
+                onClick = { showCameraMenu = !showCameraMenu },
+                label = {
+                    Text(text = selectedCamera?.let { "使用 ${cameraList.getOrNull(it)?.name}" } ?: "选择摄像头")
+                },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "选择摄像头",
+                    )
+                },
+            )
+            DropdownMenu(
+                expanded = showCameraMenu,
+                onDismissRequest = { showCameraMenu = false },
+            ) {
+                cameraList.forEachIndexed { index, camera ->
+                    DropdownMenuItem(
+                        text = { Text(text = camera.name) },
+                        onClick = { selectedCamera = index; showCameraMenu = false },
+                    )
+                }
+            }
+        }
     }
 }
 

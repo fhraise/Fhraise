@@ -16,35 +16,11 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.platform
+package xyz.xfqlittlefan.fhraise.ui.composables
 
-expect class Camera {
-    companion object {
-        val list: List<Camera>
-    }
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import xyz.xfqlittlefan.fhraise.platform.Camera
 
-    val name: String
-    val facing: CameraFacing
-    val isStreamingAvailable: Boolean
-
-    fun open()
-
-    fun takePicture(): CameraImage
-    fun startStreaming(onImageAvailable: (CameraImage) -> Unit)
-    fun stopStreaming()
-    fun close()
-}
-
-enum class CameraFacing {
-    Front, Back, Unknown
-}
-
-data class CameraImage(
-    val format: FrameFormat,
-    val width: Int,
-    val content: ByteArray,
-)
-
-enum class FrameFormat {
-    AndroidRgba8888, RgbInt, ArgbInt
-}
+@Composable
+expect fun Camera.CameraPreview(modifier: Modifier = Modifier)

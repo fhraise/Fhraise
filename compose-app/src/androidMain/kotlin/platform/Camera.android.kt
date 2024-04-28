@@ -18,4 +18,29 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
-actual class Camera
+actual class Camera {
+    actual companion object {
+        actual val list: List<Camera>
+            get() = TODO("Not yet implemented")
+    }
+
+    actual val name: String
+        get() = TODO("Not yet implemented")
+    actual val facing: CameraFacing
+        get() = CameraFacing.Unknown
+    actual val isStreamingAvailable: Boolean
+        get() = TODO("Not yet implemented")
+
+    actual fun takePicture(): CameraImage {
+        TODO("Not yet implemented")
+    }
+
+    actual fun startStreaming(onImageAvailable: (CameraImage) -> Unit) {
+    }
+
+    actual fun stopStreaming() {
+    }
+
+    actual fun close() {
+    }
+}

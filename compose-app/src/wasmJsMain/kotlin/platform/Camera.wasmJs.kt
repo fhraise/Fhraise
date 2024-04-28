@@ -18,4 +18,29 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
-actual class Camera
+import org.w3c.dom.mediacapture.MediaDeviceInfo
+
+actual class Camera(private val mediaDeviceInfo: MediaDeviceInfo) {
+    actual companion object {
+        actual val list: List<Camera>
+            get() = TODO("Not yet implemented")
+    }
+
+    actual val name = mediaDeviceInfo.label
+    actual val facing = CameraFacing.Unknown
+    actual val isStreamingAvailable: Boolean
+        get() = TODO("Not yet implemented")
+
+    actual fun takePicture(): CameraImage {
+        TODO("Not yet implemented")
+    }
+
+    actual fun startStreaming(onImageAvailable: (CameraImage) -> Unit) {
+    }
+
+    actual fun stopStreaming() {
+    }
+
+    actual fun close() {
+    }
+}

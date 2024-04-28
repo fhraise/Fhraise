@@ -7,3 +7,4 @@
 -dontwarn jakarta.**
 -dontwarn org.codehaus.**
 -dontwarn org.slf4j.**
+-dontwarn org.osgi.framework.**

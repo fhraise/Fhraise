@@ -49,6 +49,7 @@ import xyz.xfqlittlefan.fhraise.oauth.oAuthSignIn
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.platform
+import xyz.xfqlittlefan.fhraise.platform.Camera
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.Request.VerificationType
@@ -67,6 +68,10 @@ interface SignInComponent : AppComponentContext {
     var otp: String?
 
     val credentialValid: Boolean
+
+    var cameraList: List<Camera>
+    var showCameraMenu: Boolean
+    var selectedCamera: Int?
 
     var showMoreSignInOptions: Boolean
 
@@ -256,6 +261,10 @@ class AppSignInComponent(
             CredentialType.PhoneNumber -> credential.matches(phoneNumberRegex)
             CredentialType.Email -> credential.matches(emailRegex)
         }
+
+    override var cameraList by mutableStateOf(Camera.list)
+    override var showCameraMenu by mutableStateOf(false)
+    override var selectedCamera: Int? by mutableStateOf(null)
 
     private val emailRegex = Regex("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+\$")
 

@@ -19,32 +19,53 @@
 package xyz.xfqlittlefan.fhraise.platform
 
 import com.github.sarxos.webcam.Webcam
+import com.github.sarxos.webcam.WebcamResolution
+import java.awt.Dimension
+import java.awt.image.BufferedImage
+import java.awt.image.DataBufferByte
 
-actual class Camera(private val webcam: Webcam) {
+actual class Camera(val webcam: Webcam) {
     actual companion object {
         actual val list
-            get() = Webcam.getWebcams().map { Camera(it) }
-    }
-
-    init {
-        webcam.open(true)
+            get() = Webcam.getWebcams().map {
+                Camera(it.apply {
+                    setCustomViewSizes(Dimension(4000, 3000), Dimension(1920, 1080), Dimension(1280, 720))
+                    viewSize = WebcamResolution.FHD.size
+                })
+            }
     }
 
     actual val name: String = webcam.name
-    actual val isStreamingAvailable: Boolean
-        get() = TODO("Not yet implemented")
+    actual val facing = CameraFacing.Unknown
+    actual val isStreamingAvailable = false
 
-    actual suspend fun takePicture(): CameraImage {
-        TODO("Not yet implemented")
+    actual fun open() {
+        webcam.open(true)
     }
+
+    actual fun takePicture() = webcam.image.toCameraImage()
 
     actual fun startStreaming(onImageAvailable: (CameraImage) -> Unit) {
+        throw NotImplementedError("Streaming is not supported on desktop.")
     }
 
-    actual fun stopStreaming() {
-    }
+    actual fun stopStreaming() {}
 
     actual fun close() {
         webcam.close()
+    }
+}
+
+fun BufferedImage.toCameraImage(): CameraImage {
+    return when (type) {
+        BufferedImage.TYPE_INT_RGB -> CameraImage(
+            FrameFormat.RgbInt, width, (raster.dataBuffer as DataBufferByte).data
+        )
+
+        BufferedImage.TYPE_INT_ARGB -> CameraImage(
+            FrameFormat.ArgbInt, width, (raster.dataBuffer as DataBufferByte).data
+        )
+
+        else -> error("Unsupported image type: $type")
     }
 }
