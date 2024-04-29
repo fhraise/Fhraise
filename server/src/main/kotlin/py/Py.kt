@@ -25,14 +25,15 @@ import kotlinx.coroutines.launch
 import xyz.xfqlittlefan.fhraise.flow.IdMessageFlow
 import java.util.*
 
-val pyFlow = IdMessageFlow<String, Message>(3, 3)
+val messageToPyFlow = IdMessageFlow<String, Message>(3, 3)
+val messageFromPyFlow = IdMessageFlow<String, Message>(3, 3)
 
 fun Route.py() {
     webSocket(pyWsPath) {
-        pyFlow.collect { (id, message) ->
+        messageToPyFlow.collect { (id, message) ->
             launch(start = CoroutineStart.UNDISPATCHED) {
                 sendSerialized<Message>(message)
-                pyFlow.emit(id to receiveDeserialized())
+                messageFromPyFlow.emit(id to receiveDeserialized())
             }
         }
     }
@@ -41,6 +42,6 @@ fun Route.py() {
 suspend fun sendMessageToPy(
     id: String = UUID.randomUUID().toString(), message: Message
 ): Message {
-    pyFlow.emit(id to message)
-    return pyFlow.take(id)
+    messageToPyFlow.emit(id to message)
+    return messageFromPyFlow.take(id)
 }
