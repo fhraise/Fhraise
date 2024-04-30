@@ -34,7 +34,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.onTimeout
@@ -170,38 +169,47 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
                 val code = appDatabase.queryOrGenerateVerificationCode(application, token.hashCode())
 
                 if (body.dry) {
+                    logger.debug("Responding code dry request with success.")
                     call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
                     return@post
                 }
 
                 if (sendVerificationCode(req, user, code.code)) {
+                    logger.debug("Responding code request with success.")
                     call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
                 } else {
+                    logger.debug("Responding code request with failure.")
                     call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
                 }
             }
 
             Face -> {
-                application.launch(Dispatchers.IO) {
-                    select {
-                        launch {
-                            if (sendMessageToPy(message = Message.Ping.Request) is Message.Ping.Response) {
-                                call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
-                            } else {
-                                call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
-                            }
-                        }.onJoin
-
-                        onTimeout(5.seconds) {
+                select {
+                    application.launch {
+                        if (sendMessageToPy(message = Message.Ping.Request) is Message.Ping.Response) {
+                            logger.debug("Responding face request with success.")
+                            call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
+                        } else {
+                            logger.debug("Responding face request with failure.")
                             call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
                         }
+                    }.onJoin {
+                        logger.debug("Face request completed.")
+                    }
+
+                    onTimeout(5.seconds) {
+                        logger.debug("Face request timed out.")
+                        call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
                     }
                 }
             }
 
-            Password -> call.respondRequestResult(
-                Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
-            )
+            Password -> {
+                logger.debug("Responding password request with success.")
+                call.respondRequestResult(
+                    Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
+                )
+            }
         }
     }
 }
