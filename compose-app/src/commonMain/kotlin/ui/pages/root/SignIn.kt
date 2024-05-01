@@ -42,16 +42,12 @@ import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusEvent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
@@ -59,7 +55,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import fhraise.compose_app.generated.resources.Res
 import fhraise.compose_app.generated.resources.fhraise_logo
 import kotlinx.coroutines.launch
@@ -853,25 +852,22 @@ private fun SignInComponent.Face() {
         }
 
         selectedCamera?.let {
-            CameraPreview(
-                camera = it, onDispose = { componentScope.launch { it.close() } },
-                modifier = Modifier.clip(object : Shape {
-                    override fun createOutline(
-                        size: Size, layoutDirection: LayoutDirection, density: Density
-                    ): Outline {
-                        val squareSize = min(size.width, size.height)
-                        return Outline.Rectangle(
-                            Rect(
-                                offset = Offset(
-                                    (size.width - squareSize) / 2, (size.height - squareSize) / 2
-                                ),
-                                size = Size(squareSize, squareSize),
+            Box(modifier = Modifier.clip(CircleShape)) {
+                CameraPreview(
+                    camera = it, onDispose = { componentScope.launch { it.close() } },
+                    modifier = Modifier.layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val size = min(placeable.width, placeable.height)
+                        layout(size, size) {
+                            placeable.placeRelative(
+                                x = (size - placeable.width) / 2,
+                                y = (size - placeable.height) / 2,
                             )
-                        )
-                    }
-                }).clip(CircleShape),
-                flipHorizontally = true,
-            )
+                        }
+                    },
+                    flipHorizontally = true,
+                )
+            }
         }
     }
 }

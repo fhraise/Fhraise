@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import xyz.xfqlittlefan.fhraise.platform.Camera
 
@@ -54,16 +53,14 @@ fun CameraPreview(
         camera = camera, onStateChange = { ready = it }, onDispose = onDispose,
         frame = { bitmap ->
             Box {
-                with(LocalDensity.current) {
-                    bitmap?.let {
-                        Image(
-                            bitmap = it,
-                            contentDescription = "相机预览",
-                            modifier = Modifier.graphicsLayer {
-                                if (flipHorizontally) scaleX = -1f
-                            }.blur(blurRadius).then(modifier),
-                        )
-                    }
+                bitmap?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = "相机预览",
+                        modifier = Modifier.graphicsLayer {
+                            if (flipHorizontally) scaleX = -1f
+                        }.blur(blurRadius).then(modifier),
+                    )
                 }
                 AnimatedVisibility(
                     visible = !ready, modifier = Modifier.matchParentSize(), enter = fadeIn(), exit = fadeOut()
