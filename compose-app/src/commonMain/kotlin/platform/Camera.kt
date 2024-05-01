@@ -18,6 +18,10 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
+
 expect class Camera {
     companion object {
         val list: List<Camera>
@@ -25,14 +29,23 @@ expect class Camera {
 
     val name: String
     val facing: CameraFacing
+    val width: Int
+    val height: Int
+
     val isStreamingAvailable: Boolean
 
-    fun open()
+    val scope: CoroutineScope
+    var streamingJob: Job?
+        private set
+    val frameFlow: StateFlow<CameraImage?>
 
-    fun takePicture(): CameraImage
-    fun startStreaming(onImageAvailable: (CameraImage) -> Unit)
+    suspend fun open()
+
+    suspend fun takePicture(): CameraImage
+    fun startStreaming()
     fun stopStreaming()
-    fun close()
+
+    suspend fun close()
 }
 
 enum class CameraFacing {
@@ -42,9 +55,10 @@ enum class CameraFacing {
 data class CameraImage(
     val format: FrameFormat,
     val width: Int,
+    val height: Int,
     val content: ByteArray,
 )
 
 enum class FrameFormat {
-    AndroidRgba8888, RgbInt, ArgbInt
+    AndroidRgba8888, RgbInt, ArgbInt, Bgr
 }

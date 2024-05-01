@@ -41,7 +41,7 @@ server/docs/
 *secret*
 
 # Datastore
-datastore/
+*.preferences_pb
 
 # Keycloak
 server/keycloak*/

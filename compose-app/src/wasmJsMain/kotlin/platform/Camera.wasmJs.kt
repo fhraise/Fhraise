@@ -18,6 +18,7 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
+import kotlinx.coroutines.CoroutineScope
 import org.w3c.dom.mediacapture.MediaDeviceInfo
 
 actual class Camera(private val mediaDeviceInfo: MediaDeviceInfo) {
@@ -42,5 +43,11 @@ actual class Camera(private val mediaDeviceInfo: MediaDeviceInfo) {
     }
 
     actual fun close() {
+    }
+
+    actual fun open() {
+    }
+
+    actual fun asyncClose(scope: CoroutineScope) {
     }
 }

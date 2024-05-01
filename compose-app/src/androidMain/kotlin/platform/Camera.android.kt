@@ -18,6 +18,8 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
+import kotlinx.coroutines.CoroutineScope
+
 actual class Camera {
     actual companion object {
         actual val list: List<Camera>
@@ -42,5 +44,11 @@ actual class Camera {
     }
 
     actual fun close() {
+    }
+
+    actual fun open() {
+    }
+
+    actual fun asyncClose(scope: CoroutineScope) {
     }
 }

@@ -16,17 +16,14 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.ui.composables
+package xyz.xfqlittlefan.fhraise.js
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.ImageBitmap
-import xyz.xfqlittlefan.fhraise.platform.Camera
 
-@Composable
-actual fun CameraPreview(
-    camera: Camera,
-    onStateChange: (ready: Boolean) -> Unit,
-    onDispose: () -> Unit,
-    frame: @Composable (bitmap: ImageBitmap?) -> Unit
-) {
+external interface Console {
+    fun debug(message: String)
+    fun info(message: String)
+    fun warn(message: String)
+    fun error(message: String)
 }
+
+external val console: Console

@@ -12,7 +12,7 @@ androidx-browser = "1.8.0"
 androidx-datastore = "1.1.0"
 compose = "1.6.10-beta01"
 decompose = "3.0.0-beta01"
-webcamCapture = "0.3.12"
+javaCv = "1.5.10"
 ktor = "3.0.0-beta-2-eap-930"
 ktor-plugin = "3.0.0-beta-1"
 keycloak = "23.0.6"
@@ -42,7 +42,7 @@ androidx-datastore-preferences-core = { module = "androidx.datastore:datastore-p
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
 decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
 decompose-extensions-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
-webcamCapture = { module = "com.github.sarxos:webcam-capture", version.ref = "webcamCapture" }
+javaCv = { module = "org.bytedeco:javacv-platform", version.ref = "javaCv" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }

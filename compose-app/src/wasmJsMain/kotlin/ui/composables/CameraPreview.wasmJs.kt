@@ -19,9 +19,14 @@
 package xyz.xfqlittlefan.fhraise.ui.composables
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import xyz.xfqlittlefan.fhraise.platform.Camera
 
 @Composable
-actual fun Camera.CameraPreview(modifier: Modifier) {
+actual fun CameraPreview(
+    camera: Camera,
+    onStateChange: (ready: Boolean) -> Unit,
+    onDispose: () -> Unit,
+    frame: @Composable (bitmap: ImageBitmap?) -> Unit
+) {
 }

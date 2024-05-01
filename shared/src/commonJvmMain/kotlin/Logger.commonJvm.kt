@@ -18,7 +18,14 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-val Any.logger: Logger get() = LoggerFactory.getLogger(this::class.java)
+actual class Logger actual constructor(actual val name: String) {
+    private val logger = LoggerFactory.getLogger(name)
+
+    actual fun trace(message: Any, throwable: Throwable?) = logger.trace(message.toString(), throwable)
+    actual fun debug(message: Any, throwable: Throwable?) = logger.debug(message.toString(), throwable)
+    actual fun info(message: Any, throwable: Throwable?) = logger.info(message.toString(), throwable)
+    actual fun warn(message: Any, throwable: Throwable?) = logger.warn(message.toString(), throwable)
+    actual fun error(message: Any, throwable: Throwable?) = logger.error(message.toString(), throwable)
+}

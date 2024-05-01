@@ -18,54 +18,129 @@
 
 package xyz.xfqlittlefan.fhraise.platform
 
-import com.github.sarxos.webcam.Webcam
-import com.github.sarxos.webcam.WebcamResolution
-import java.awt.Dimension
-import java.awt.image.BufferedImage
-import java.awt.image.DataBufferByte
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import org.bytedeco.javacv.Frame
+import org.bytedeco.javacv.VideoInputFrameGrabber
+import xyz.xfqlittlefan.fhraise.logger
+import java.nio.ByteBuffer
 
-actual class Camera(val webcam: Webcam) {
+
+actual class Camera(private val deviceId: Int, actual val name: String) {
     actual companion object {
-        actual val list
-            get() = Webcam.getWebcams().map {
-                Camera(it.apply {
-                    setCustomViewSizes(Dimension(4000, 3000), Dimension(1920, 1080), Dimension(1280, 720))
-                    viewSize = WebcamResolution.FHD.size
-                })
+        actual val list: List<Camera>
+            get() {
+                logger.debug("Getting camera list.")
+                return VideoInputFrameGrabber.getDeviceDescriptions().mapIndexed { index, name ->
+                    logger.debug("Camera $index: $name")
+                    Camera(index, name)
+                }
             }
     }
 
-    actual val name: String = webcam.name
+    private val grabber = VideoInputFrameGrabber(deviceId)
+
+    actual val width: Int
+        get() = grabber.imageWidth
+
+    actual val height: Int
+        get() = grabber.imageHeight
+
     actual val facing = CameraFacing.Unknown
-    actual val isStreamingAvailable = false
+    actual val isStreamingAvailable = true
 
-    actual fun open() {
-        webcam.open(true)
+    actual val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var rawStreamingJob: Job? = null
+    actual var streamingJob: Job? = null
+    val rawFlow = MutableStateFlow<Frame?>(null)
+    actual val frameFlow: StateFlow<CameraImage?> = MutableStateFlow(null)
+
+    var previewCount = 0
+        set(value) {
+            if (value > 0) {
+                field = value
+                startRawStreaming()
+            } else {
+                field = 0
+                rawStreamingJob?.cancel()
+            }
+            logger.debug("Preview count updated: $field.")
+        }
+
+    actual suspend fun open() {
+        logger.debug("Opening camera $name.")
+        grabber.start()
+        logger.debug("Camera $name opened.")
     }
 
-    actual fun takePicture() = webcam.image.toCameraImage()
-
-    actual fun startStreaming(onImageAvailable: (CameraImage) -> Unit) {
-        throw NotImplementedError("Streaming is not supported on desktop.")
+    actual suspend fun takePicture() = grabber.grabCameraImage().also {
+        (frameFlow as? MutableStateFlow)?.emit(it)
+        logger.debug("Picture taken.")
     }
 
-    actual fun stopStreaming() {}
+    actual fun startStreaming() {
+        logger.debug("Starting streaming.")
+        if (streamingJob?.isActive == true) {
+            logger.debug("Streaming already started.")
+            return
+        }
+        if (rawStreamingJob?.isActive != true) {
+            logger.debug("Raw streaming not started. Starting.")
+            startRawStreaming()
+        }
 
-    actual fun close() {
-        webcam.close()
+        streamingJob = scope.launch(Dispatchers.IO) {
+            logger.debug("Streaming started.")
+            rawFlow.collect { cvFrame ->
+                cvFrame?.toCameraImage()?.let { (frameFlow as? MutableStateFlow)?.emit(it) }
+            }
+        }
+    }
+
+    actual fun stopStreaming() {
+        logger.debug("Stopping streaming.")
+        streamingJob?.cancel()
+        streamingJob = null
+
+        if (previewCount == 0) {
+            rawStreamingJob?.cancel()
+            rawStreamingJob = null
+        }
+    }
+
+    actual suspend fun close() {
+        logger.debug("Closing camera $name.")
+        previewCount = 0
+        stopStreaming()
+        grabber.close()
+    }
+
+    private fun startRawStreaming() {
+        logger.debug("Starting raw streaming.")
+        if (rawStreamingJob?.isActive == true) {
+            logger.debug("Raw streaming already started.")
+            return
+        }
+
+        rawStreamingJob = scope.launch(Dispatchers.IO) {
+            logger.debug("Raw streaming started.")
+            while (true) {
+                rawFlow.emit(grabber.grab())
+            }
+        }
     }
 }
 
-fun BufferedImage.toCameraImage(): CameraImage {
-    return when (type) {
-        BufferedImage.TYPE_INT_RGB -> CameraImage(
-            FrameFormat.RgbInt, width, (raster.dataBuffer as DataBufferByte).data
-        )
+private fun Frame.toCameraImage() = CameraImage(
+    FrameFormat.Bgr,
+    imageWidth,
+    imageHeight,
+    image.fold(ByteArray(imageWidth * imageHeight * 3)) { acc, bytes ->
+        bytes as ByteBuffer
+        bytes.get(acc)
+        acc
+    },
+)
 
-        BufferedImage.TYPE_INT_ARGB -> CameraImage(
-            FrameFormat.ArgbInt, width, (raster.dataBuffer as DataBufferByte).data
-        )
-
-        else -> error("Unsupported image type: $type")
-    }
-}
+fun VideoInputFrameGrabber.grabCameraImage() = grab().toCameraImage()

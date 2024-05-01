@@ -18,21 +18,44 @@
 
 package xyz.xfqlittlefan.fhraise.ui.composables
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.SwingPanel
-import com.github.sarxos.webcam.WebcamPanel
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import org.bytedeco.javacv.Java2DFrameConverter
+import xyz.xfqlittlefan.fhraise.logger
 import xyz.xfqlittlefan.fhraise.platform.Camera
 
 @Composable
-actual fun Camera.CameraPreview(modifier: Modifier) {
-    SwingPanel(
-        factory = {
-            WebcamPanel(webcam).apply {
-                isMirrored = true
-                drawMode
-            }
-        },
-        modifier = modifier,
-    )
+actual fun CameraPreview(
+    camera: Camera,
+    onStateChange: (ready: Boolean) -> Unit,
+    onDispose: () -> Unit,
+    frame: @Composable (bitmap: ImageBitmap?) -> Unit
+) {
+    val converter = remember { Java2DFrameConverter() }
+    val image by camera.rawFlow.map { converter.convert(it)?.toComposeImageBitmap() }.collectAsState(null)
+
+    frame(image)
+
+    LaunchedEffect(camera) {
+        withContext(Dispatchers.IO) {
+            logger.debug("Opening camera preview.")
+            runCatching { camera.open() }.onFailure { logger.error("Failed to open camera preview.", it) }
+            camera.previewCount += 1
+            onStateChange(true)
+        }
+    }
+
+    DisposableEffect(camera) {
+        onDispose {
+            logger.debug("Disposing camera preview.")
+            onStateChange(false)
+            camera.previewCount -= 1
+            onDispose()
+            logger.debug("Camera preview disposed.")
+        }
+    }
 }

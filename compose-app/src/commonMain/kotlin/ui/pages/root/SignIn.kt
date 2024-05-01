@@ -24,6 +24,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -39,9 +40,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.AutofillNode
 import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.boundsInWindow
@@ -52,10 +59,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.*
 import fhraise.compose_app.generated.resources.Res
 import fhraise.compose_app.generated.resources.fhraise_logo
 import kotlinx.coroutines.launch
@@ -73,11 +77,13 @@ import xyz.xfqlittlefan.fhraise.icon.Microsoft
 import xyz.xfqlittlefan.fhraise.rememberMutableState
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.ui.*
+import xyz.xfqlittlefan.fhraise.ui.composables.CameraPreview
 import xyz.xfqlittlefan.fhraise.ui.composables.TypeWriter
 import xyz.xfqlittlefan.fhraise.ui.composables.VerticalScrollbar
 import xyz.xfqlittlefan.fhraise.ui.composables.safeDrawingWithoutIme
 import xyz.xfqlittlefan.fhraise.ui.modifiers.applyBrush
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalLayoutApi::class)
@@ -804,35 +810,68 @@ private fun SignInComponent.Password() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SignInComponent.Face() {
     Column {
-        Box {
-            FilterChip(
-                selected = true,
-                onClick = { showCameraMenu = !showCameraMenu },
-                label = {
-                    Text(text = selectedCamera?.let { "使用 ${cameraList.getOrNull(it)?.name}" } ?: "选择摄像头")
-                },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "选择摄像头",
-                    )
-                },
-            )
-            DropdownMenu(
-                expanded = showCameraMenu,
-                onDismissRequest = { showCameraMenu = false },
-            ) {
-                cameraList.forEachIndexed { index, camera ->
-                    DropdownMenuItem(
-                        text = { Text(text = camera.name) },
-                        onClick = { selectedCamera = index; showCameraMenu = false },
-                    )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box {
+                FilterChip(
+                    selected = true,
+                    onClick = ::switchShowCameraMenu,
+                    label = {
+                        Text(text = selectedCamera?.let { "使用摄像头：${it.name}" } ?: "选择摄像头")
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "选择摄像头",
+                        )
+                    },
+                )
+                DropdownMenu(
+                    expanded = showCameraMenu,
+                    onDismissRequest = { showCameraMenu = false },
+                ) {
+                    cameraList.forEach {
+                        DropdownMenuItem(
+                            text = { Text(text = it.name) },
+                            onClick = { selectCamera(it) },
+                        )
+                    }
                 }
             }
+            IconButton(
+                onClick = ::refreshCameraList,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "刷新摄像头列表",
+                )
+            }
+        }
+
+        selectedCamera?.let {
+            CameraPreview(
+                camera = it, onDispose = { componentScope.launch { it.close() } },
+                modifier = Modifier.clip(object : Shape {
+                    override fun createOutline(
+                        size: Size, layoutDirection: LayoutDirection, density: Density
+                    ): Outline {
+                        val squareSize = min(size.width, size.height)
+                        return Outline.Rectangle(
+                            Rect(
+                                offset = Offset(
+                                    (size.width - squareSize) / 2, (size.height - squareSize) / 2
+                                ),
+                                size = Size(squareSize, squareSize),
+                            )
+                        )
+                    }
+                }).clip(CircleShape),
+                flipHorizontally = true,
+            )
         }
     }
 }
