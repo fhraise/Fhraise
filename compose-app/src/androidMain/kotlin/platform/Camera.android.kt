@@ -19,6 +19,8 @@
 package xyz.xfqlittlefan.fhraise.platform
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
 
 actual class Camera {
     actual companion object {
@@ -29,26 +31,34 @@ actual class Camera {
     actual val name: String
         get() = TODO("Not yet implemented")
     actual val facing: CameraFacing
-        get() = CameraFacing.Unknown
+        get() = TODO("Not yet implemented")
+    actual val width: Int
+        get() = TODO("Not yet implemented")
+    actual val height: Int
+        get() = TODO("Not yet implemented")
     actual val isStreamingAvailable: Boolean
         get() = TODO("Not yet implemented")
+    actual val scope: CoroutineScope
+        get() = TODO("Not yet implemented")
+    actual var streamingJob: Job?
+        get() = TODO("Not yet implemented")
+        set(value) {}
+    actual val frameFlow: StateFlow<CameraImage?>
+        get() = TODO("Not yet implemented")
 
-    actual fun takePicture(): CameraImage {
+    actual suspend fun open() {
+    }
+
+    actual suspend fun takePicture(): CameraImage {
         TODO("Not yet implemented")
     }
 
-    actual fun startStreaming(onImageAvailable: (CameraImage) -> Unit) {
+    actual fun startStreaming() {
     }
 
     actual fun stopStreaming() {
     }
 
-    actual fun close() {
-    }
-
-    actual fun open() {
-    }
-
-    actual fun asyncClose(scope: CoroutineScope) {
+    actual suspend fun close() {
     }
 }

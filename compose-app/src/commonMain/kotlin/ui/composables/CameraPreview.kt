@@ -56,7 +56,7 @@ fun CameraPreview(
                 bitmap?.let {
                     Image(
                         bitmap = it,
-                        contentDescription = "相机预览",
+                        contentDescription = "摄像头预览",
                         modifier = Modifier.graphicsLayer {
                             if (flipHorizontally) scaleX = -1f
                         }.blur(blurRadius).then(modifier),

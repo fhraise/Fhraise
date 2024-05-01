@@ -72,12 +72,14 @@ interface SignInComponent : AppComponentContext {
     var cameraList: List<Camera>
     var showCameraMenu: Boolean
     var selectedCamera: Camera?
+    var flipCameraPreview: Boolean
 
     fun refreshCameraList() {
         cameraList = Camera.list
     }
 
     fun switchShowCameraMenu() {
+        refreshCameraList()
         showCameraMenu = !showCameraMenu
     }
 
@@ -94,6 +96,10 @@ interface SignInComponent : AppComponentContext {
                 }
             }
         }
+    }
+
+    fun switchFlipCameraPreview() {
+        flipCameraPreview = !flipCameraPreview
     }
 
     var showMoreSignInOptions: Boolean
@@ -290,6 +296,7 @@ class AppSignInComponent(
     override var cameraList by mutableStateOf(Camera.list)
     override var showCameraMenu by mutableStateOf(false)
     override var selectedCamera: Camera? by mutableStateOf(cameraList.firstOrNull())
+    override var flipCameraPreview by mutableStateOf(true)
 
     private val emailRegex = Regex("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+\$")
 

@@ -831,7 +831,7 @@ private fun SignInComponent.Face() {
                 )
                 DropdownMenu(
                     expanded = showCameraMenu,
-                    onDismissRequest = { showCameraMenu = false },
+                    onDismissRequest = ::switchShowCameraMenu,
                 ) {
                     cameraList.forEach {
                         DropdownMenuItem(
@@ -842,11 +842,11 @@ private fun SignInComponent.Face() {
                 }
             }
             IconButton(
-                onClick = ::refreshCameraList,
+                onClick = ::switchFlipCameraPreview,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "刷新摄像头列表",
+                    imageVector = Icons.Default.Flip,
+                    contentDescription = "镜像摄像头预览",
                 )
             }
         }
@@ -865,7 +865,7 @@ private fun SignInComponent.Face() {
                             )
                         }
                     },
-                    flipHorizontally = true,
+                    flipHorizontally = flipCameraPreview,
                 )
             }
         }
