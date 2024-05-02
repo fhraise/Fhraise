@@ -30,7 +30,7 @@ project.version = projectVersion
 
 kotlin {
     val defaultSharedLibConfigure: SharedLibrary.() -> Unit = {
-        export(project(":py"))
+        export(project(":py-common"))
     }
 
     linuxArm64 {
@@ -68,7 +68,8 @@ kotlin {
     sourceSets {
         val nativeMain by getting {
             dependencies {
-                api(project(":py"))
+                api(projects.pyCommon)
+                api(projects.pyInternal)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.websockets)

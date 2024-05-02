@@ -34,8 +34,9 @@ application {
 }
 
 dependencies {
-    implementation(project(":py"))
     implementation(projects.shared)
+    implementation(projects.pyCommon)
+    implementation(projects.pyInternal)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)

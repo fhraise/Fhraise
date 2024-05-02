@@ -16,31 +16,33 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-rootProject.name = "Fhraise"
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
 
-pluginManagement {
-    repositories {
-        google()
-        gradlePluginPortal()
-        mavenCentral()
-    }
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
 }
 
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/ktor/eap")
+group = "xyz.xfqlittlefan.fhraise"
+project.version = projectVersion
+
+kotlin {
+    jvm()
+
+    linuxArm64()
+    linuxX64()
+    mingwX64()
+
+    @OptIn(ExperimentalWasmDsl::class) wasmJs()
+
+    applyDefaultHierarchyTemplate()
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.serialization.core)
+            }
+        }
     }
 }
-
-include(":shared")
-
-include(":compose-app")
-include(":server")
-include(":py-common")
-include(":py-internal")
-include(":client-py")
-
-include(":keycloak-spi")

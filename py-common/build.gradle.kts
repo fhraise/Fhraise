@@ -16,6 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
 
 plugins {
@@ -32,6 +33,8 @@ kotlin {
     linuxArm64()
     linuxX64()
     mingwX64()
+
+    @OptIn(ExperimentalWasmDsl::class) wasmJs()
 
     applyDefaultHierarchyTemplate()
 

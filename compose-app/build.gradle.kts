@@ -67,6 +67,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(projects.shared)
+                implementation(projects.pyCommon)
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.animation)
@@ -107,6 +108,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.reflect)
                 implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.androidx.camera)
                 implementation(libs.androidx.core.splashscreen)
                 implementation(libs.androidx.window)
                 implementation(libs.androidx.activity.compose)
