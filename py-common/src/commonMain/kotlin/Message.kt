@@ -44,6 +44,8 @@ sealed class Message {
                 result = 31 * result + content.contentHashCode()
                 return result
             }
+
+            internal companion object
         }
 
         @Serializable
@@ -72,11 +74,19 @@ sealed class Message {
 
             @Serializable
             data object Cancelled : Result()
+
+            internal companion object
         }
+
+        internal companion object
     }
 
     @Serializable
-    enum class FrameFormat { Rgb }
+    enum class FrameFormat {
+        Rgb;
+
+        internal companion object
+    }
 
     @Serializable
     sealed class Ping : Message() {
@@ -85,5 +95,9 @@ sealed class Message {
 
         @Serializable
         data object Response : Ping()
+
+        internal companion object
     }
+
+    internal companion object
 }
