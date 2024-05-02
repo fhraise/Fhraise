@@ -19,7 +19,7 @@
 package xyz.xfqlittlefan.fhraise.py
 
 class Logger(tag: String) {
-    private val delegate = xyz.xfqlittlefan.fhraise.Logger("<From C> $tag")
+    private val delegate = xyz.xfqlittlefan.fhraise.Logger("<From Python> $tag")
 
     fun trace(message: String) = delegate.trace(message)
     fun debug(message: String) = delegate.debug(message)

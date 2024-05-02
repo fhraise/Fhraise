@@ -34,7 +34,9 @@ kotlin {
     linuxX64()
     mingwX64()
 
-    @OptIn(ExperimentalWasmDsl::class) wasmJs()
+    @OptIn(ExperimentalWasmDsl::class) wasmJs {
+        browser()
+    }
 
     applyDefaultHierarchyTemplate()
 

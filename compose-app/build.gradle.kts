@@ -40,6 +40,14 @@ val androidMinSdk: String by project
 val androidTargetSdk: String by project
 
 kotlin {
+    androidTarget {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class) compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+
+    jvm("desktop")
+
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
         moduleName = "fhraise"
         browser {
@@ -53,19 +61,12 @@ kotlin {
         binaries.executable()
     }
 
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class) compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
-
-    jvm("desktop")
-
     applyDefaultHierarchyTemplate()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
+                implementation(projects.shared)
                 implementation(projects.sharedApp)
                 implementation(projects.pyCommon)
                 implementation(compose.runtime)

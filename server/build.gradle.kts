@@ -34,6 +34,7 @@ application {
 }
 
 dependencies {
+    implementation(projects.shared)
     implementation(projects.sharedApp)
     implementation(projects.pyCommon)
     implementation(projects.pyInternal)

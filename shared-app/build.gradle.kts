@@ -77,10 +77,6 @@ kotlin {
         val jvmMain by getting {
             dependsOn(commonJvmMain)
         }
-
-        val wasmJsMain by getting {
-            dependencies {}
-        }
     }
 }
 
