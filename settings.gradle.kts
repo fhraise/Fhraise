@@ -36,6 +36,7 @@ dependencyResolutionManagement {
 }
 
 include(":shared")
+include(":shared-app")
 
 include(":compose-app")
 include(":server")

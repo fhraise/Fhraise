@@ -18,26 +18,24 @@
 
 package xyz.xfqlittlefan.fhraise
 
-import xyz.xfqlittlefan.fhraise.js.console
-
 actual class Logger actual constructor(actual val name: String) : MyLogger {
     actual fun trace(message: Any, throwable: Throwable?) {
-        getMessage("TRACE", message, throwable, true).forEach { console.debug(it) }
+        getMessage("TRACE", message, throwable, true).forEach { println(it) }
     }
 
     actual fun debug(message: Any, throwable: Throwable?) {
-        getMessage("DEBUG", message, throwable, true).forEach { console.debug(it) }
+        getMessage("DEBUG", message, throwable, true).forEach { println(it) }
     }
 
     actual fun info(message: Any, throwable: Throwable?) {
-        getMessage("INFO", message, throwable).forEach { console.info(it) }
+        getMessage("INFO", message, throwable).forEach { println(it) }
     }
 
     actual fun warn(message: Any, throwable: Throwable?) {
-        getMessage("WARN", message, throwable).forEach { console.warn(it) }
+        getMessage("WARN", message, throwable).forEach { println(it) }
     }
 
     actual fun error(message: Any, throwable: Throwable?) {
-        getMessage("ERROR", message, throwable).forEach { console.error(it) }
+        getMessage("ERROR", message, throwable).forEach { println(it) }
     }
 }

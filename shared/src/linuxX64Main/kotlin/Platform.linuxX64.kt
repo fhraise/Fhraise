@@ -16,4 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.py
+package xyz.xfqlittlefan.fhraise
+
+actual val platform: Platform = NativePlatform.LinuxX64

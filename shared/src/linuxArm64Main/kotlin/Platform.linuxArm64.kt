@@ -18,25 +18,4 @@
 
 package xyz.xfqlittlefan.fhraise
 
-interface Platform {
-    val name: String
-}
-
-expect val platform: Platform
-
-interface JvmPlatform : Platform
-
-interface AndroidPlatform : JvmPlatform
-
-sealed interface DesktopPlatform : JvmPlatform {
-    interface Linux : DesktopPlatform
-    interface Windows : DesktopPlatform
-    interface MacOs : DesktopPlatform
-    interface Unknown : DesktopPlatform
-
-    companion object
-}
-
-object WasmPlatform : Platform {
-    override val name: String = "Web with Kotlin/Wasm"
-}
+actual val platform: Platform = NativePlatform.LinuxArm64

@@ -16,14 +16,6 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.py
+package xyz.xfqlittlefan.fhraise
 
-class Logger(tag: String) {
-    private val delegate = xyz.xfqlittlefan.fhraise.Logger("<From C> $tag")
-
-    fun trace(message: String) = delegate.trace(message)
-    fun debug(message: String) = delegate.debug(message)
-    fun info(message: String) = delegate.info(message)
-    fun warn(message: String) = delegate.warn(message)
-    fun error(message: String) = delegate.error(message)
-}
+actual val platform: Platform = NativePlatform.WindowsX64

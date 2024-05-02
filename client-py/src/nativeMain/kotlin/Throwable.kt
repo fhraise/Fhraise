@@ -19,6 +19,7 @@
 package xyz.xfqlittlefan.fhraise.py
 
 import kotlinx.cinterop.*
+import xyz.xfqlittlefan.fhraise.logger
 import kotlin.experimental.ExperimentalNativeApi
 
 @ExperimentalForeignApi

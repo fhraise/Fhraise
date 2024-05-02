@@ -68,6 +68,7 @@ kotlin {
     sourceSets {
         val nativeMain by getting {
             dependencies {
+                implementation(projects.shared)
                 api(projects.pyCommon)
                 api(projects.pyInternal)
                 implementation(libs.kotlinx.datetime)

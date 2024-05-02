@@ -66,7 +66,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(projects.shared)
+                implementation(projects.sharedApp)
                 implementation(projects.pyCommon)
                 implementation(compose.runtime)
                 implementation(compose.foundation)

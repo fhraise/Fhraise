@@ -39,50 +39,47 @@ kotlin {
         browser()
     }
 
-    linuxArm64()
-    linuxX64()
-    mingwX64()
-
     applyDefaultHierarchyTemplate()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
+                implementation(projects.shared)
+                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.http)
+                implementation(libs.ktor.resources)
             }
         }
 
         val commonJvmMain by creating {
             dependsOn(commonMain)
             dependencies {
-                implementation(libs.slf4j.api)
+                implementation(libs.androidx.datastore.core)
+                implementation(libs.androidx.datastore.preferences.core)
+                implementation(libs.ktor.server.core)
+                implementation(libs.ktor.server.resources)
+            }
+
+            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
+                exclude("androidx/datastore/**")
             }
         }
 
         val androidMain by getting {
             dependsOn(commonJvmMain)
             dependencies {
-                implementation(libs.logback.android)
+                implementation(libs.androidx.datastore.preferences)
             }
         }
 
         val jvmMain by getting {
             dependsOn(commonJvmMain)
-            dependencies {
-                implementation(libs.logback)
-            }
-        }
-
-        val notJvmMain by creating {
-            dependsOn(commonMain)
         }
 
         val wasmJsMain by getting {
-            dependsOn(notJvmMain)
-        }
-
-        val nativeMain by getting {
-            dependsOn(notJvmMain)
+            dependencies {}
         }
     }
 }
@@ -91,12 +88,11 @@ val androidCompileSdk: String by project
 val androidMinSdk: String by project
 
 android {
-    namespace = "xyz.xfqlittlefan.fhraise.shared"
+    namespace = "xyz.xfqlittlefan.fhraise.sharedapp"
     compileSdk = androidCompileSdk.toInt()
 
     defaultConfig {
         minSdk = androidMinSdk.toInt()
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     compileOptions {

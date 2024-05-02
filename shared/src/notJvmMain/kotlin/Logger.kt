@@ -16,14 +16,26 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package xyz.xfqlittlefan.fhraise.py
+package xyz.xfqlittlefan.fhraise
 
-class Logger(tag: String) {
-    private val delegate = xyz.xfqlittlefan.fhraise.Logger("<From C> $tag")
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
-    fun trace(message: String) = delegate.trace(message)
-    fun debug(message: String) = delegate.debug(message)
-    fun info(message: String) = delegate.info(message)
-    fun warn(message: String) = delegate.warn(message)
-    fun error(message: String) = delegate.error(message)
+interface MyLogger {
+    fun Logger.getMessage(
+        level: String, message: Any, throwable: Throwable?, stackTrace: Boolean = false
+    ): List<String> {
+        var result = message.toString()
+        if (throwable != null) {
+            result += "\n$throwable"
+            if (stackTrace) {
+                result += "\n" + throwable.stackTraceToString()
+            }
+        }
+
+        return result.split("\n").map {
+            "${Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())} [$name] $level: $it"
+        }
+    }
 }

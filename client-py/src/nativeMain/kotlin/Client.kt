@@ -26,6 +26,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
+import xyz.xfqlittlefan.fhraise.logger
 import kotlin.coroutines.resume
 import kotlin.experimental.ExperimentalNativeApi
 
