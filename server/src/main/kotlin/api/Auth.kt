@@ -194,7 +194,7 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
             Face -> {
                 select {
                     application.launch {
-                        if (sendMessageToPy(message = Message.Ping.Request) is Message.Ping.Response) {
+                        if (sendMessageToPy(Message.Ping.Request) is Message.Ping.Response) {
                             logger.debug("Responding face request with success.")
                             call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
                         } else {
@@ -232,43 +232,82 @@ private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
 
     when (token.verificationType) {
         FhraiseToken, QrCode, SmsCode, EmailCode -> call.respondCodeVerificationResult(token, req, body)
-        Face -> call.respondFaceVerificationResult(token, req, body)
+        Face -> call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure) // 人脸验证使用 WebSocket
         Password -> call.respondPasswordVerificationResult(token, req, body)
     }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
+    suspend fun close(message: String, reason: CloseReason.Codes = CloseReason.Codes.VIOLATED_POLICY) =
+        close(CloseReason(reason, message))
+
     val handshakeRequest = select {
         async {
             runCatching { receiveDeserialized<Api.Auth.Face.Handshake.Request>() }.getOrElse {
                 sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
-                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid handshake request."))
+                close("Invalid handshake request.")
                 logger.error("Client sent invalid handshake request.", it)
                 error("Client sent invalid handshake request.")
             }
-        }.onAwait {
-            it.also { sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Success) }
-        }
+        }.onAwait { it }
         onTimeout(5.seconds) {
             sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
-            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Handshake timed out."))
+            close("Handshake timed out.")
             error("Client did not send handshake request.")
         }
     }
 
     val token = verifiedJwtOrNull(handshakeRequest.token)?.decodedPayloadOrNull<AuthProcessToken>() ?: run {
-        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid token."))
-        return@webSocket
+        sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+        return@webSocket close("Invalid token.")
     }
 
     if (token.verificationType != Face) {
-        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid token type."))
-        return@webSocket
+        sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+        return@webSocket close("Invalid token type.")
+    }
+
+    val pyHandshakeResult = sendMessageToPy(Message.Handshake.Request(token.userId))
+
+    if (pyHandshakeResult !is Message.Handshake.Response.Success) {
+        sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+        return@webSocket close("Handshake failed.")
     }
 
     while (true) {
+        val clientMessage = runCatching { receiveDeserialized<Message.Client>() }.getOrElse {
+            logger.error("Client sent invalid message.", it)
+            return@webSocket close("Invalid message.")
+        }
 
+        if (clientMessage is Message.Client.Cancel) {
+            close("Client cancelled.", CloseReason.Codes.NORMAL)
+            sendMessageToPy(clientMessage)
+            return@webSocket
+        }
+
+        val pyResult = sendMessageToPy(clientMessage)
+
+        if (pyResult !is Message.Result) {
+            close("Internal error.", CloseReason.Codes.INTERNAL_ERROR)
+            sendMessageToPy(Message.Client.Cancel)
+            return@webSocket
+        }
+
+        sendSerialized<Message.Result>(pyResult)
+
+        when (pyResult) {
+            is Message.Result.InternalError, is Message.Result.Cancelled -> {
+                return@webSocket close("Internal error.", CloseReason.Codes.INTERNAL_ERROR)
+            }
+
+            is Message.Result.Success -> {
+                return@webSocket close("Success.", CloseReason.Codes.NORMAL)
+            }
+
+            else -> {}
+        }
     }
 }
 
@@ -303,13 +342,6 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
     } else {
         respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
     }
-}
-
-private suspend fun RoutingCall.respondFaceVerificationResult(
-    token: AuthProcessToken, request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
-) {
-    // TODO
-    respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
 }
 
 private suspend fun RoutingCall.respondPasswordVerificationResult(

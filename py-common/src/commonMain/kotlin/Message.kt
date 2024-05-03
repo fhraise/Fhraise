@@ -25,14 +25,7 @@ sealed class Message {
     @Serializable
     sealed class Handshake : Message() {
         @Serializable
-        data class Request(val userId: String, val mode: Mode) : Handshake() {
-            @Serializable
-            enum class Mode {
-                Register, Verify;
-
-                internal companion object
-            }
-
+        data class Request(val userId: String) : Handshake() {
             internal companion object
         }
 
@@ -51,37 +44,43 @@ sealed class Message {
     }
 
     @Serializable
-    data class Frame(val userId: String, val format: FrameFormat, val width: Int, val content: ByteArray) : Message() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null || this::class != other::class) return false
-
-            other as Frame
-
-            if (userId != other.userId) return false
-            if (!content.contentEquals(other.content)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = userId.hashCode()
-            result = 31 * result + content.contentHashCode()
-            return result
-        }
-
+    sealed class Client : Message() {
         @Serializable
-        enum class FrameFormat {
-            Rgb;
+        data class Frame(val userId: String, val format: FrameFormat, val width: Int, val content: ByteArray) :
+            Client() {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (other == null || this::class != other::class) return false
+
+                other as Frame
+
+                if (userId != other.userId) return false
+                if (!content.contentEquals(other.content)) return false
+
+                return true
+            }
+
+            override fun hashCode(): Int {
+                var result = userId.hashCode()
+                result = 31 * result + content.contentHashCode()
+                return result
+            }
+
+            @Serializable
+            enum class FrameFormat {
+                Rgb;
+
+                internal companion object
+            }
 
             internal companion object
         }
 
+        @Serializable
+        data object Cancel : Client()
+
         internal companion object
     }
-
-    @Serializable
-    data object Cancel : Message()
 
     @Serializable
     sealed class Result : Message() {

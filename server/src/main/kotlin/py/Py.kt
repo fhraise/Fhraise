@@ -40,7 +40,7 @@ fun Route.py() {
 }
 
 suspend fun sendMessageToPy(
-    id: String = UUID.randomUUID().toString(), message: Message
+    message: Message, id: String = UUID.randomUUID().toString()
 ): Message {
     messageToPyFlow.emit(id to message)
     return messageFromPyFlow.take(id)
