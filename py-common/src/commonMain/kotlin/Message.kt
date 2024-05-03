@@ -46,31 +46,32 @@ sealed class Message {
     @Serializable
     sealed class Client : Message() {
         @Serializable
-        data class Frame(val userId: String, val format: FrameFormat, val width: Int, val content: ByteArray) :
-            Client() {
+        data class Frame(val format: FrameFormat, val width: Int, val content: ByteArray) : Client() {
+            @Serializable
+            enum class FrameFormat {
+                Rgb;
+
+                internal companion object
+            }
+
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (other == null || this::class != other::class) return false
 
                 other as Frame
 
-                if (userId != other.userId) return false
+                if (format != other.format) return false
+                if (width != other.width) return false
                 if (!content.contentEquals(other.content)) return false
 
                 return true
             }
 
             override fun hashCode(): Int {
-                var result = userId.hashCode()
+                var result = format.hashCode()
+                result = 31 * result + width
                 result = 31 * result + content.contentHashCode()
                 return result
-            }
-
-            @Serializable
-            enum class FrameFormat {
-                Rgb;
-
-                internal companion object
             }
 
             internal companion object
