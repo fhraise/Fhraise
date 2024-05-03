@@ -93,15 +93,16 @@ class Client(private val host: String, private val port: UShort) {
     fun receive(onMessage: OnMessage, onError: OnError): Boolean {
         val message = runBlocking { messageChannel.receive() }
 
-        logger.debug("Sending message to C.")
+        logger.debug("Sending message to Python.")
 
         return runBlocking {
             val ref = StableRef.create(message)
             runCatchingC(onError) {
                 memScoped {
                     val type = message::class.qualifiedName!!.cstr.ptr
-                    resultChannel.send(onMessage(type, ref.asCPointer()).asStableRef<Message>().get())
-                    logger.debug("Received result from C.")
+                    val received = onMessage(type, ref.asCPointer()).asStableRef<Message>().get()
+                    resultChannel.send(received)
+                    logger.debug("Received result from Python: ${received::class.qualifiedName}.")
                 }
             }.isSuccess.also { ref.dispose() }
         }

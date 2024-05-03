@@ -58,7 +58,6 @@ import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.platform
 import xyz.xfqlittlefan.fhraise.platform.Camera
-import xyz.xfqlittlefan.fhraise.platform.FrameFormat
 import xyz.xfqlittlefan.fhraise.py.Message
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType
@@ -566,12 +565,11 @@ class AppSignInComponent(
 
                                 logger.debug("Frame received. (${frame.width}x${frame.height})")
 
-                                val format = when (frame.format) {
-                                    FrameFormat.Bgr -> Message.Client.Frame.FrameFormat.Rgb // TODO: Test only
-                                    else -> continue
-                                }
-
-                                sendSerialized<Message.Client>(Message.Client.Frame(format, frame.width, frame.content))
+                                sendSerialized<Message.Client>(
+                                    Message.Client.Frame(
+                                        frame.format.name, frame.width, frame.content
+                                    )
+                                )
                                 val frameResult = receiveDeserialized<Message.Result>()
 
                                 if (frameResult is Message.Result.Success) {

@@ -60,5 +60,5 @@ data class CameraImage(
 )
 
 enum class FrameFormat {
-    AndroidRgba8888, RgbInt, ArgbInt, Bgr
+    AndroidRgba8888, Rgb, Bgr, RgbInt, ArgbInt
 }

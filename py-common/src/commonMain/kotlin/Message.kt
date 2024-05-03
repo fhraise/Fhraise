@@ -46,14 +46,7 @@ sealed class Message {
     @Serializable
     sealed class Client : Message() {
         @Serializable
-        data class Frame(val format: FrameFormat, val width: Int, val content: ByteArray) : Client() {
-            @Serializable
-            enum class FrameFormat {
-                Rgb, Bgr;
-
-                internal companion object
-            }
-
+        data class Frame(val format: String, val width: Int, val content: ByteArray) : Client() {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (other == null || this::class != other::class) return false
