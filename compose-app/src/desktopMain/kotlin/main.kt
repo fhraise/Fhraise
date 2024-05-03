@@ -16,6 +16,8 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
+package xyz.xfqlittlefan.fhraise
+
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.DpSize

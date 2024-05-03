@@ -26,15 +26,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
+import xyz.xfqlittlefan.fhraise.logger
 import kotlin.coroutines.resume
 import kotlin.experimental.ExperimentalNativeApi
 
 class Client(private val host: String, private val port: UShort) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val messageChannel = Channel<Message?>(3)
+    private val messageChannel = Channel<Message>(3)
 
-    @OptIn(ExperimentalForeignApi::class)
-    private val messageErrorChannel = Channel<CPointer<ThrowableVar>>(3)
     private val resultChannel = Channel<Message>(3)
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -45,25 +44,33 @@ class Client(private val host: String, private val port: UShort) {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun connect(throwable: CPointer<CPointerVar<ThrowableVar>>?) = runBlocking {
+    fun connect(onError: OnError, onClose: OnClose) = runBlocking {
         logger.debug("Connecting to $host:$port.")
         suspendCancellableCoroutine { continuation ->
             logger.debug("Launching coroutine.")
             scope.launch(Dispatchers.IO) {
-                runCatching(throwable) {
+                runCatchingC(onError) {
                     logger.debug("Starting connection.")
                     client.webSocket(host = host, port = port.toInt(), path = pyWsPath) {
                         continuation.resume(true)
                         logger.debug("Connected.")
                         while (true) {
+                            if (!isActive) {
+                                logger.info("Connection closed.")
+                                onClose()
+                                break
+                            }
                             logger.debug("Waiting for message...")
-                            val receiveResult =
-                                runCatching(null) { messageChannel.send(receiveDeserialized<Message>()) }.onFailure {
-                                    logger.error("Failed to receive message.")
-                                    it as ThrowableWrapper
-                                    messageErrorChannel.send(it.throwable)
-                                    messageChannel.send(null)
+                            val receiveResult = runCatching {
+                                val message = receiveDeserialized<Message>()
+                                logger.debug("Received message.")
+                                messageChannel.send(message)
+                            }.onFailure { throwable ->
+                                throwable.logger.debug("Caught throwable. Callback address: ${onError.rawValue}.")
+                                throwable.cThrowable {
+                                    onError(it)
                                 }
+                            }
                             if (receiveResult.isFailure) continue
                             logger.debug("Waiting for result...")
                             sendSerialized<Message>(resultChannel.receive())
@@ -83,28 +90,20 @@ class Client(private val host: String, private val port: UShort) {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun receive(
-        type: CPointer<CPointerVar<ByteVar>>,
-        ref: CPointer<COpaquePointerVar>,
-        throwable: CPointer<CPointerVar<ThrowableVar>>?,
-        getResult: CPointer<CFunction<() -> CPointer<*>>>
-    ): Boolean {
+    fun receive(onMessage: OnMessage, onError: OnError): Boolean {
         val message = runBlocking { messageChannel.receive() }
 
-        if (message == null) {
-            return runBlocking {
-                throwable?.pointed?.value = messageErrorChannel.receive()
-                false
-            }
-        }
-
-        type.pointed.value = message::class.qualifiedName!!.cstrPtr
-        ref.pointed.value = StableRef.create(message).asCPointer()
+        logger.debug("Sending message to C.")
 
         return runBlocking {
-            runCatching(throwable) {
-                resultChannel.send(getResult().asStableRef<Message>().get())
-            }.isSuccess
+            val ref = StableRef.create(message)
+            runCatchingC(onError) {
+                memScoped {
+                    val type = message::class.qualifiedName!!.cstr.ptr
+                    resultChannel.send(onMessage(type, ref.asCPointer()).asStableRef<Message>().get())
+                    logger.debug("Received result from C.")
+                }
+            }.isSuccess.also { ref.dispose() }
         }
     }
 }

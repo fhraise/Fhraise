@@ -32,8 +32,15 @@ import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
+import io.ktor.server.websocket.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import kotlinx.html.stream.appendHTML
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -48,6 +55,8 @@ import xyz.xfqlittlefan.fhraise.models.*
 import xyz.xfqlittlefan.fhraise.pattern.phoneNumberRegex
 import xyz.xfqlittlefan.fhraise.pattern.usernameRegex
 import xyz.xfqlittlefan.fhraise.proxy.keycloakScheme
+import xyz.xfqlittlefan.fhraise.py.Message
+import xyz.xfqlittlefan.fhraise.py.sendMessageToPy
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType.*
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.Request.VerificationType.*
@@ -132,8 +141,10 @@ fun Route.requireAppAuth(block: Route.() -> Unit) = authenticate(authName, build
 fun Route.apiAuth() = cborContentType {
     apiAuthRequest()
     apiAuthVerify()
+    apiAuthFace()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
     post<Api.Auth.Type.Request> { req ->
         val body = call.receive<Api.Auth.Type.Request.RequestBody>()
@@ -150,38 +161,63 @@ private fun Route.apiAuthRequest() = rateLimit(rateLimitName) {
             return@post
         }
 
+        val user = getOrCreateUser(req.credentialType equals body.credential).getOrThrow()
+
         val token = jwt {
             withExpiresIn(appAuthTimeout)
-            withPayload(AuthProcessToken(requestId, req.type, body.credential))
+            withPayload(
+                AuthProcessToken(
+                    requestId, user.id!!, body.credential, req.credentialType, req.verificationType
+                )
+            )
         }
 
-        val user = getOrCreateUser(req.parent.credentialType provide body.credential).getOrThrow()
-
-        when (req.type) {
+        when (req.verificationType) {
             FhraiseToken, QrCode, SmsCode, EmailCode -> {
                 val code = appDatabase.queryOrGenerateVerificationCode(application, token.hashCode())
 
                 if (body.dry) {
+                    logger.debug("Responding code dry request with success.")
                     call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
                     return@post
                 }
 
                 if (sendVerificationCode(req, user, code.code)) {
+                    logger.debug("Responding code request with success.")
                     call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
                 } else {
+                    logger.debug("Responding code request with failure.")
                     call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
                 }
             }
 
             Face -> {
-                // TODO
-                call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
+                select {
+                    application.launch {
+                        if (sendMessageToPy(Message.Ping.Request) is Message.Ping.Response) {
+                            logger.debug("Responding face request with success.")
+                            call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Success(token))
+                        } else {
+                            logger.debug("Responding face request with failure.")
+                            call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
+                        }
+                    }.onJoin {
+                        logger.debug("Face request completed.")
+                    }
+
+                    onTimeout(5.seconds) {
+                        logger.debug("Face request timed out.")
+                        call.respondRequestResult(Api.Auth.Type.Request.ResponseBody.Failure)
+                    }
+                }
             }
 
-
-            Password -> call.respondRequestResult(
-                Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
-            )
+            Password -> {
+                logger.debug("Responding password request with success.")
+                call.respondRequestResult(
+                    Api.Auth.Type.Request.ResponseBody.Success(token, user.totp == true)
+                )
+            }
         }
     }
 }
@@ -194,10 +230,84 @@ private fun Route.apiAuthVerify() = post<Api.Auth.Type.Verify> { req ->
         return@post
     }
 
-    when (token.type) {
+    when (token.verificationType) {
         FhraiseToken, QrCode, SmsCode, EmailCode -> call.respondCodeVerificationResult(token, req, body)
-        Face -> call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
+        Face -> call.respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure) // 人脸验证使用 WebSocket
         Password -> call.respondPasswordVerificationResult(token, req, body)
+    }
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
+private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
+    suspend fun close(message: String, reason: CloseReason.Codes = CloseReason.Codes.VIOLATED_POLICY) =
+        close(CloseReason(reason, message))
+
+    val handshakeRequest = select {
+        async {
+            runCatching { receiveDeserialized<Api.Auth.Face.Handshake.Request>() }.getOrElse {
+                sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+                close("Invalid handshake request.")
+                logger.error("Client sent invalid handshake request.", it)
+                error("Client sent invalid handshake request.")
+            }
+        }.onAwait { it }
+        onTimeout(5.seconds) {
+            sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+            close("Handshake timed out.")
+            error("Client did not send handshake request.")
+        }
+    }
+
+    val token = verifiedJwtOrNull(handshakeRequest.token)?.decodedPayloadOrNull<AuthProcessToken>() ?: run {
+        sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+        return@webSocket close("Invalid token.")
+    }
+
+    if (token.verificationType != Face) {
+        sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+        return@webSocket close("Invalid token type.")
+    }
+
+    val pyHandshakeResult = sendMessageToPy(Message.Handshake.Request(token.userId))
+
+    if (pyHandshakeResult !is Message.Handshake.Response.Success) {
+        sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+        return@webSocket close("Handshake failed.")
+    }
+
+    while (true) {
+        val clientMessage = runCatching { receiveDeserialized<Message.Client>() }.getOrElse {
+            logger.error("Client sent invalid message.", it)
+            return@webSocket close("Invalid message.")
+        }
+
+        if (clientMessage is Message.Client.Cancel) {
+            close("Client cancelled.", CloseReason.Codes.NORMAL)
+            sendMessageToPy(clientMessage)
+            return@webSocket
+        }
+
+        val pyResult = sendMessageToPy(clientMessage)
+
+        if (pyResult !is Message.Result) {
+            close("Internal error.", CloseReason.Codes.INTERNAL_ERROR)
+            sendMessageToPy(Message.Client.Cancel)
+            return@webSocket
+        }
+
+        sendSerialized<Message.Result>(pyResult)
+
+        when (pyResult) {
+            is Message.Result.InternalError, is Message.Result.Cancelled -> {
+                return@webSocket close("Internal error.", CloseReason.Codes.INTERNAL_ERROR)
+            }
+
+            is Message.Result.Success -> {
+                return@webSocket close("Success.", CloseReason.Codes.NORMAL)
+            }
+
+            else -> {}
+        }
     }
 }
 
@@ -207,7 +317,8 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
     val verificationValid = appDatabase.verifyCode(request.token.hashCode(), body.verification.value)
 
     if (verificationValid) {
-        getOrCreateUser(request.parent.credentialType provide token.credential).fold(
+        // TODO: 别再创建了
+        getOrCreateUser(request.credentialType equals token.credential).fold(
             onSuccess = { user ->
                 var userNeedsUpdate = false
 
@@ -215,7 +326,7 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
                     user.enabled = true
                     userNeedsUpdate = true
                 }
-                if (request.parent.credentialType == Email && user.emailVerified != true) {
+                if (request.credentialType == Email && user.emailVerified != true) {
                     user.emailVerified = true
                     userNeedsUpdate = true
                 }
@@ -236,7 +347,7 @@ private suspend fun RoutingCall.respondCodeVerificationResult(
 private suspend fun RoutingCall.respondPasswordVerificationResult(
     token: AuthProcessToken, request: Api.Auth.Type.Verify, body: Api.Auth.Type.Verify.RequestBody
 ) {
-    val user = getUser(request.parent.credentialType provide token.credential) ?: run {
+    val user = getUser(request.credentialType equals token.credential) ?: run {
         respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
         return
     }
@@ -246,7 +357,13 @@ private suspend fun RoutingCall.respondPasswordVerificationResult(
     }
 
     keycloakClient.getTokensByPassword(authClientId, authClientSecret, user.username!!, body.verification)?.let {
-        respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Success(JwtTokenPair(it.accessToken, it.refreshToken)))
+        respondVerificationResult(
+            Api.Auth.Type.Verify.ResponseBody.Success(
+                JwtTokenPair(
+                    it.accessToken, it.refreshToken
+                )
+            )
+        )
     } ?: respondVerificationResult(Api.Auth.Type.Verify.ResponseBody.Failure)
 }
 
@@ -257,7 +374,7 @@ private fun Api.Auth.Type.validate(credential: String) = when (credentialType) {
 }
 
 private fun sendVerificationCode(request: Api.Auth.Type.Request, user: UserRepresentation, code: String) =
-    when (request.type) {
+    when (request.verificationType) {
         FhraiseToken -> false
         QrCode -> false
         SmsCode -> false
@@ -295,8 +412,10 @@ private fun sendEmailVerificationCode(emailAddress: String, code: String): Boole
 @Serializable
 private data class AuthProcessToken(
     @SerialName("rid") val requestId: String,
-    @SerialName("typ") val type: Api.Auth.Type.Request.VerificationType,
-    @SerialName("crd") val credential: String
+    @SerialName("uid") val userId: String,
+    @SerialName("crd") val credential: String,
+    @SerialName("crt") val credentialType: Api.Auth.Type.CredentialType,
+    @SerialName("vrt") val verificationType: Api.Auth.Type.Request.VerificationType
 )
 
 private suspend fun RoutingCall.respondRequestResult(result: Api.Auth.Type.Request.ResponseBody) {

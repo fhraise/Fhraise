@@ -40,6 +40,14 @@ val androidMinSdk: String by project
 val androidTargetSdk: String by project
 
 kotlin {
+    androidTarget {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class) compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+
+    jvm("desktop")
+
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
         moduleName = "fhraise"
         browser {
@@ -53,20 +61,14 @@ kotlin {
         binaries.executable()
     }
 
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class) compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
-
-    jvm("desktop")
-
     applyDefaultHierarchyTemplate()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
                 implementation(projects.shared)
+                implementation(projects.sharedApp)
+                implementation(projects.pyCommon)
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.animation)
@@ -98,7 +100,6 @@ kotlin {
                 implementation(libs.ktor.server.resources)
                 implementation(libs.ktor.server.contentNegotiation)
                 implementation(libs.ktor.client.cio)
-                implementation(libs.slf4j.api)
             }
         }
 
@@ -107,11 +108,11 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.reflect)
                 implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.androidx.camera)
                 implementation(libs.androidx.core.splashscreen)
                 implementation(libs.androidx.window)
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.browser)
-                implementation(libs.logback.android)
             }
         }
 
@@ -120,7 +121,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(compose.desktop.currentOs)
-                implementation(libs.logback)
+                implementation(libs.javaCv)
             }
 
             tasks.withType<Jar> {
@@ -206,7 +207,7 @@ android {
 
 compose.desktop {
     application {
-        mainClass = "MainKt"
+        mainClass = "xyz.xfqlittlefan.fhraise.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Msi)

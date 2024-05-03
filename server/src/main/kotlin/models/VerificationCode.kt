@@ -34,6 +34,7 @@ import xyz.xfqlittlefan.fhraise.AppDatabase
 import xyz.xfqlittlefan.fhraise.api.appAuthTimeout
 import xyz.xfqlittlefan.fhraise.appDatabase
 import xyz.xfqlittlefan.fhraise.appSecret
+import kotlin.random.Random
 
 val smtpServer = appSecret.propertyOrNull("auth.email.smtp.server")?.getString()
 val smtpPort = smtpServer?.let { appSecret.propertyOrNull("auth.email.smtp.port")?.getString()?.toIntOrNull() }
@@ -65,7 +66,7 @@ suspend fun AppDatabase.queryOrGenerateVerificationCode(scope: CoroutineScope, t
 } ?: dbQuery {
     VerificationCode.new {
         this.tokenHash = tokenHash
-        code = (0 until 6).map { (0..9).random() }.joinToString("")
+        code = (0 until 6).map { (0..9).random(Random(tokenHash)) }.joinToString("")
         createdAt = Clock.System.now()
     }
 }.also {

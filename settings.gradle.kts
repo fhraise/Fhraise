@@ -36,10 +36,12 @@ dependencyResolutionManagement {
 }
 
 include(":shared")
+include(":shared-app")
 
 include(":compose-app")
 include(":server")
-include(":py")
+include(":py-common")
+include(":py-internal")
 include(":client-py")
 
 include(":keycloak-spi")

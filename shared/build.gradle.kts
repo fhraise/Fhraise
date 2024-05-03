@@ -27,10 +27,6 @@ plugins {
 }
 
 kotlin {
-    @OptIn(ExperimentalWasmDsl::class) wasmJs {
-        browser()
-    }
-
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class) compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
@@ -39,46 +35,54 @@ kotlin {
 
     jvm()
 
+    @OptIn(ExperimentalWasmDsl::class) wasmJs {
+        browser()
+    }
+
+    linuxArm64()
+    linuxX64()
+    mingwX64()
+
     applyDefaultHierarchyTemplate()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
-                implementation(libs.ktor.client.core)
-                implementation(libs.ktor.http)
-                implementation(libs.ktor.resources)
             }
         }
 
         val commonJvmMain by creating {
             dependsOn(commonMain)
             dependencies {
-                implementation(libs.androidx.datastore.core)
-                implementation(libs.androidx.datastore.preferences.core)
-                implementation(libs.ktor.server.core)
-                implementation(libs.ktor.server.resources)
-            }
-
-            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java) {
-                exclude("androidx/datastore/**")
+                implementation(libs.slf4j.api)
             }
         }
 
         val androidMain by getting {
             dependsOn(commonJvmMain)
             dependencies {
-                implementation(libs.androidx.datastore.preferences)
+                implementation(libs.logback.android)
             }
         }
 
         val jvmMain by getting {
             dependsOn(commonJvmMain)
+            dependencies {
+                implementation(libs.logback)
+            }
+        }
+
+        val notJvmMain by creating {
+            dependsOn(commonMain)
         }
 
         val wasmJsMain by getting {
-            dependencies {}
+            dependsOn(notJvmMain)
+        }
+
+        val nativeMain by getting {
+            dependsOn(notJvmMain)
         }
     }
 }
@@ -92,6 +96,7 @@ android {
 
     defaultConfig {
         minSdk = androidMinSdk.toInt()
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     compileOptions {

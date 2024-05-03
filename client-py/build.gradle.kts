@@ -16,8 +16,8 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.SharedLibrary
+import xyz.xfqlittlefan.fhraise.buildsrc.outputDirectoryOf
 import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
 
 plugins {
@@ -29,31 +29,35 @@ group = "xyz.xfqlittlefan.fhraise"
 project.version = projectVersion
 
 kotlin {
-    val linuxTargets = mutableListOf<KotlinNativeTarget>()
-    val mingwTargets = mutableListOf<KotlinNativeTarget>()
-
-    linuxTargets += linuxArm64()
-    linuxTargets += linuxX64()
-
-    mingwTargets += mingwX64()
-
     val defaultSharedLibConfigure: SharedLibrary.() -> Unit = {
-        export(project(":py"))
+        export(project(":py-common"))
     }
 
-    configure(linuxTargets) {
+    linuxArm64 {
         binaries {
             sharedLib {
                 baseName = "fhraisepy"
+                outputDirectoryProperty.set(outputDirectoryOf("clientPy/linuxArm64"))
                 defaultSharedLibConfigure()
             }
         }
     }
 
-    configure(mingwTargets) {
+    linuxX64 {
+        binaries {
+            sharedLib {
+                baseName = "fhraisepy"
+                outputDirectoryProperty.set(outputDirectoryOf("clientPy/linuxX64"))
+                defaultSharedLibConfigure()
+            }
+        }
+    }
+
+    mingwX64 {
         binaries {
             sharedLib {
                 baseName = "libfhraisepy"
+                outputDirectoryProperty.set(outputDirectoryOf("clientPy/mingwX64"))
                 defaultSharedLibConfigure()
             }
         }
@@ -64,7 +68,9 @@ kotlin {
     sourceSets {
         val nativeMain by getting {
             dependencies {
-                api(project(":py"))
+                implementation(projects.shared)
+                api(projects.pyCommon)
+                api(projects.pyInternal)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.websockets)

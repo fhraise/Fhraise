@@ -253,6 +253,21 @@ tasks.register("releaseServer") {
     }
 }
 
+tasks.register("releaseClientPySharedLib") {
+    group = "project build"
+    description = "Build the client Py shared library"
+
+    if (operatingSystem.isLinux) {
+        dependsOn("client-py:linkReleaseSharedLinuxArm64", "client-py:linkReleaseSharedLinuxX64")
+    } else if (operatingSystem.isWindows) {
+        dependsOn("client-py:linkReleaseSharedMingwX64")
+    }
+
+    doLast {
+        logger.lifecycle("output directory: ${file(outputDirectoryOf("client-py")).absolutePath}")
+    }
+}
+
 tasks.register("ciVersioning") {
     group = "ci"
     description = "Update the version and output it"
@@ -319,14 +334,55 @@ tasks.register("ciReleaseWindowsApp") {
     }
 }
 
+tasks.register<Tar>("ciReleaseLinuxClientPySharedLib") {
+    group = "ci"
+    description = "Build the client Py shared library"
+
+    if (!operatingSystem.isLinux) {
+        enabled = false
+    }
+
+    dependsOn("releaseClientPySharedLib")
+
+    archiveBaseName = "libfhraisepy"
+    archiveAppendix = "linux"
+    archiveVersion = "$projectVersion.$projectBuildNumber"
+    archiveClassifier = "multi-arch"
+    archiveExtension = "tar"
+    compression = Compression.GZIP
+    destinationDirectory = file(layout.buildDirectory.dir("assets"))
+    from(file(outputDirectoryOf("client-py")))
+}
+
+tasks.register<Zip>("ciReleaseWindowsClientPySharedLib") {
+    group = "ci"
+    description = "Build the client Py shared library"
+
+    if (!operatingSystem.isWindows) {
+        enabled = false
+    }
+
+    dependsOn("releaseClientPySharedLib")
+
+    archiveBaseName = "libfhraisepy"
+    archiveAppendix = "windows"
+    archiveVersion = "$projectVersion.$projectBuildNumber"
+    archiveClassifier = "multi-arch"
+    archiveExtension = "zip"
+    destinationDirectory = file(layout.buildDirectory.dir("assets"))
+    from(file(outputDirectoryOf("client-py")))
+}
+
 tasks.register("ciReleaseApp") {
     group = "ci"
     description = "Build the release app"
 
     if (operatingSystem.isLinux) {
         dependsOn("ciReleaseLinuxApp")
+        dependsOn("ciReleaseLinuxClientPySharedLib")
     } else if (operatingSystem.isWindows) {
         dependsOn("ciReleaseWindowsApp")
+        dependsOn("ciReleaseWindowsClientPySharedLib")
     }
 
     doLast {
@@ -339,7 +395,14 @@ tasks.register("release") {
     group = "project build"
     description = "Create a new release"
 
-    dependsOn("versioning", "releaseAndroidApp", "releaseDesktopApp", "releaseWebApp", "releaseServer")
+    dependsOn(
+        "versioning",
+        "releaseAndroidApp",
+        "releaseDesktopApp",
+        "releaseWebApp",
+        "releaseServer",
+        "releaseClientPySharedLib"
+    )
 }
 
 tasks.register("cleanReleases") {

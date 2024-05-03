@@ -19,9 +19,10 @@
 package xyz.xfqlittlefan.fhraise.py
 
 import kotlinx.cinterop.*
+import xyz.xfqlittlefan.fhraise.logger
 import kotlin.experimental.ExperimentalNativeApi
 
-@OptIn(ExperimentalForeignApi::class)
+@ExperimentalForeignApi
 class ThrowableVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
     @Suppress("DEPRECATION")
     companion object : Type(40, 8)
@@ -57,39 +58,37 @@ class ThrowableVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
         }
 }
 
-@ExperimentalForeignApi
-internal class ThrowableWrapper(val throwable: CPointer<ThrowableVar>) : Throwable()
-
 @ExperimentalNativeApi
 @ExperimentalForeignApi
-internal fun Throwable.wrapToC(): CPointer<ThrowableVar> {
-    logger.debug("Wrapping throwable.")
-    logger.warn(getStackTrace().joinToString("\n"))
+internal inline fun <R> Throwable.cThrowable(block: (ThrowableVar) -> R) = memScoped {
+    this@cThrowable.logger.debug("Sending throwable to C.")
 
-    val throwable = nativeHeap.alloc<ThrowableVar>()
-    throwable.type = this::class.qualifiedName?.cstrPtr
-    throwable.ref = StableRef.create(this).asCPointer()
-    throwable.message = this.message?.cstrPtr
-    val stacktraceList = mutableListOf<ByteVar>()
-    this.getStackTrace().forEach {
-        stacktraceList.add(it.cstrPtr.pointed)
-    }
-    val stacktraceArray = nativeHeap.allocArrayOfPointersTo(stacktraceList)
+    val throwable = alloc<ThrowableVar>()
+    val ref = StableRef.create(this)
+
+    throwable.type = this::class.qualifiedName?.cstr?.ptr
+    throwable.ref = ref.asCPointer()
+    throwable.message = this@cThrowable.message?.cstr?.ptr
+    val stacktraceList = this@cThrowable.getStackTrace().map { it.cstr.ptr.pointed }
+    val stacktraceArray = allocArrayOfPointersTo(stacktraceList)
     throwable.stacktrace = stacktraceArray
     throwable.stacktraceSize = stacktraceList.size
-    return throwable.ptr
+    block(throwable).also {
+        ref.dispose()
+        this@cThrowable.logger.debug("Throwable sent.")
+    }
 }
 
 @ExperimentalNativeApi
 @ExperimentalForeignApi
-internal inline fun <R> runCatching(
-    throwablePtr: CPointer<CPointerVar<ThrowableVar>>?, block: () -> R
-) = runCatching(block).fold(onSuccess = {
-    Result.success(it)
-}, onFailure = {
-    val throwableVarPtr = it.wrapToC()
-    if (throwablePtr != null && throwablePtr.rawValue != nativeNullPtr) {
-        throwablePtr.pointed.value = throwableVarPtr
-    }
-    Result.failure(ThrowableWrapper(throwableVarPtr))
-})
+internal inline fun <E, R> runCatchingC(
+    onError: (ThrowableVar) -> E, block: () -> R
+) = runCatching(block).onFailure { throwable ->
+    throwable.cThrowable(onError)
+}
+
+@ExperimentalNativeApi
+@ExperimentalForeignApi
+internal inline fun <R> runCatchingC(
+    onError: OnError, block: () -> R
+) = runCatchingC({ onError(it) }, block)

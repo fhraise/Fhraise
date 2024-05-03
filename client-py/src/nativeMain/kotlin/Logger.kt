@@ -18,33 +18,12 @@
 
 package xyz.xfqlittlefan.fhraise.py
 
-import kotlinx.datetime.Clock
+class Logger(tag: String) {
+    private val delegate = xyz.xfqlittlefan.fhraise.Logger("<From Python> $tag")
 
-class Logger internal constructor(private val tag: Any) {
-    @Deprecated("This constructor is for calling from C code only.", level = DeprecationLevel.HIDDEN)
-    constructor(tag: String) : this("<From C> $tag" as Any)
-
-    fun debug(message: String) {
-        println("Debug", message)
-    }
-
-    fun info(message: String) {
-        println("Info", message)
-    }
-
-    fun warn(message: String) {
-        println("Warn", message)
-    }
-
-    fun error(message: String) {
-        println("Error", message)
-    }
-
-    private fun println(level: String, message: String) {
-        message.split("\n").forEach {
-            println("${Clock.System.now()} [$tag] $level: $it")
-        }
-    }
+    fun trace(message: String) = delegate.trace(message)
+    fun debug(message: String) = delegate.debug(message)
+    fun info(message: String) = delegate.info(message)
+    fun warn(message: String) = delegate.warn(message)
+    fun error(message: String) = delegate.error(message)
 }
-
-internal val Any.logger: Logger get() = Logger(this::class.let { it.qualifiedName ?: it })
