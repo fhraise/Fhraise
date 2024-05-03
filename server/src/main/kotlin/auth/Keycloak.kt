@@ -219,8 +219,8 @@ private suspend fun getUnverifiedUsers(first: Int = 0): List<UserRepresentation>
     if (size == 100) getUnverifiedUsers(first + 100)?.plus(this) else this
 }
 
-infix fun Api.Auth.Type.CredentialType.provide(credential: String): UserQuery.() -> Unit = {
-    when (this@provide) {
+infix fun Api.Auth.Type.CredentialType.equals(credential: String): UserQuery.() -> Unit = {
+    when (this@equals) {
         Api.Auth.Type.CredentialType.Username -> username = credential
         Api.Auth.Type.CredentialType.PhoneNumber -> phoneNumber = credential
         Api.Auth.Type.CredentialType.Email -> email = credential

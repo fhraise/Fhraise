@@ -100,7 +100,6 @@ kotlin {
                 implementation(libs.ktor.server.resources)
                 implementation(libs.ktor.server.contentNegotiation)
                 implementation(libs.ktor.client.cio)
-                implementation(libs.slf4j.api)
             }
         }
 
@@ -114,7 +113,6 @@ kotlin {
                 implementation(libs.androidx.window)
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.browser)
-                implementation(libs.logback.android)
             }
         }
 
@@ -124,7 +122,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(compose.desktop.currentOs)
                 implementation(libs.javaCv)
-                implementation(libs.logback)
             }
 
             tasks.withType<Jar> {

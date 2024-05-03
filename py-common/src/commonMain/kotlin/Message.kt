@@ -23,57 +23,26 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class Message {
     @Serializable
-    sealed class Register : Message() {
+    sealed class Handshake : Message() {
         @Serializable
-        data class Frame(val callId: String, val format: FrameFormat, val width: Int, val content: ByteArray) :
-            Register() {
-            override fun equals(other: Any?): Boolean {
-                if (this === other) return true
-                if (other == null || this::class != other::class) return false
+        data class Request(val userId: String, val mode: Mode) : Handshake() {
+            @Serializable
+            enum class Mode {
+                Register, Verify;
 
-                other as Frame
-
-                if (callId != other.callId) return false
-                if (!content.contentEquals(other.content)) return false
-
-                return true
-            }
-
-            override fun hashCode(): Int {
-                var result = callId.hashCode()
-                result = 31 * result + content.contentHashCode()
-                return result
+                internal companion object
             }
 
             internal companion object
         }
 
         @Serializable
-        data object Cancel : Register()
-
-        @Serializable
-        sealed class Result : Register() {
+        sealed class Response : Handshake() {
             @Serializable
-            data object Next : Result()
+            data object Success : Response()
 
             @Serializable
-            data object Success : Result()
-
-            @Serializable
-            data object NoFaces : Result()
-
-            @Serializable
-            data object LowResolution : Result()
-
-            /**
-             * 可能的原因：
-             * - 请求被分配到了一个错误的处理器
-             */
-            @Serializable
-            data object InternalError : Result()
-
-            @Serializable
-            data object Cancelled : Result()
+            data object Failure : Response()
 
             internal companion object
         }
@@ -82,8 +51,84 @@ sealed class Message {
     }
 
     @Serializable
-    enum class FrameFormat {
-        Rgb;
+    data class Frame(val userId: String, val format: FrameFormat, val width: Int, val content: ByteArray) : Message() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || this::class != other::class) return false
+
+            other as Frame
+
+            if (userId != other.userId) return false
+            if (!content.contentEquals(other.content)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = userId.hashCode()
+            result = 31 * result + content.contentHashCode()
+            return result
+        }
+
+        @Serializable
+        enum class FrameFormat {
+            Rgb;
+
+            internal companion object
+        }
+
+        internal companion object
+    }
+
+    @Serializable
+    data object Cancel : Message()
+
+    @Serializable
+    sealed class Result : Message() {
+        /**
+         * 指示客户端应该发送下一帧。
+         *
+         * 在注册模式和验证模式下，这个结果代表的含义不同。
+         *
+         * - 在注册模式下，这个结果代表先前的帧已被正确处理，客户端应该发送下一帧。
+         * - 在验证模式下，这个结果代表先前的帧中检测到人脸，但是与目标人脸的差异过大，客户端应该发送下一帧。
+         */
+        @Serializable
+        data object Next : Result()
+
+        /**
+         * 人脸已被成功注册或验证。
+         */
+        @Serializable
+        data object Success : Result()
+
+        /**
+         * 在先前的帧中未检测到人脸。
+         */
+        @Serializable
+        data object NoFaces : Result()
+
+        /**
+         * 先前的帧的分辨率过低或人脸置信度过低。
+         */
+        @Serializable
+        data object LowResolution : Result()
+
+        /**
+         * Python 处理器发生了内部错误。
+         *
+         * 可能的原因：
+         *
+         * - 请求被分配到了一个错误的处理器。
+         */
+        @Serializable
+        data object InternalError : Result()
+
+        /**
+         * 用户取消了注册或验证。
+         */
+        @Serializable
+        data object Cancelled : Result()
 
         internal companion object
     }

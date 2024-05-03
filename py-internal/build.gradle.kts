@@ -38,11 +38,5 @@ kotlin {
 
     applyDefaultHierarchyTemplate()
 
-    sourceSets {
-        val commonMain by getting {
-            dependencies {
-                implementation(libs.kotlinx.serialization.core)
-            }
-        }
-    }
+    sourceSets {}
 }

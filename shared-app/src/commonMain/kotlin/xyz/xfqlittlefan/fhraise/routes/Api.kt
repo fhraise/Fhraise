@@ -29,7 +29,7 @@ class Api {
         @Resource("{credentialType}")
         class Type(val parent: Auth = Auth(), val credentialType: CredentialType) {
             @Resource("request")
-            class Request(val parent: Type, val type: VerificationType) {
+            class Request(val parent: Type, val verificationType: VerificationType) {
                 constructor(credentialType: CredentialType, verificationType: VerificationType) : this(
                     Type(credentialType = credentialType), verificationType
                 )
@@ -51,6 +51,11 @@ class Api {
 
                 @Serializable
                 enum class VerificationType { FhraiseToken, QrCode, SmsCode, EmailCode, Password, Face }
+
+                /**
+                 * `parent.credentialType` 的别名。
+                 */
+                val credentialType = parent.credentialType
             }
 
             @Resource("verify")
@@ -73,10 +78,34 @@ class Api {
                     @Serializable
                     data object Failure : ResponseBody()
                 }
+
+                /**
+                 * `parent.credentialType` 的别名。
+                 */
+                val credentialType = parent.credentialType
             }
 
             @Serializable
             enum class CredentialType { Username, PhoneNumber, Email }
+        }
+
+        data object Face {
+            const val PATH = "/api/auth/face"
+
+            @Serializable
+            sealed class Handshake {
+                @Serializable
+                data class Request(val credentialType: Type.CredentialType, val token: String) : Handshake()
+
+                @Serializable
+                sealed class Response : Handshake() {
+                    @Serializable
+                    data object Success : Response()
+
+                    @Serializable
+                    data object Failure : Response()
+                }
+            }
         }
     }
 
