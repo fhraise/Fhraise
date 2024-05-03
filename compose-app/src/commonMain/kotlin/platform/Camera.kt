@@ -20,7 +20,7 @@ package xyz.xfqlittlefan.fhraise.platform
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 expect class Camera {
     companion object {
@@ -37,7 +37,7 @@ expect class Camera {
     val scope: CoroutineScope
     var streamingJob: Job?
         private set
-    val frameFlow: StateFlow<CameraImage?>
+    val frameFlow: SharedFlow<CameraImage?>
 
     suspend fun open()
 

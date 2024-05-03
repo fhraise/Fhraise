@@ -55,7 +55,7 @@ class Api {
                 /**
                  * `parent.credentialType` 的别名。
                  */
-                val credentialType = parent.credentialType
+                val credentialType get() = parent.credentialType
             }
 
             @Resource("verify")

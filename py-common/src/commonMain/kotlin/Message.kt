@@ -49,7 +49,7 @@ sealed class Message {
         data class Frame(val format: FrameFormat, val width: Int, val content: ByteArray) : Client() {
             @Serializable
             enum class FrameFormat {
-                Rgb;
+                Rgb, Bgr;
 
                 internal companion object
             }

@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import xyz.xfqlittlefan.fhraise.platform.Camera
 
@@ -47,19 +48,20 @@ fun CameraPreview(
     camera: Camera, onDispose: () -> Unit = {}, modifier: Modifier = Modifier, flipHorizontally: Boolean = false
 ) {
     var ready by remember { mutableStateOf(false) }
-    val blurRadius by animateDpAsState(if (ready) 0.dp else 4.dp)
+    val blurRadius by animateDpAsState(if (ready) 0.dp else 8.dp)
 
     CameraPreview(
         camera = camera, onStateChange = { ready = it }, onDispose = onDispose,
         frame = { bitmap ->
-            Box {
+            Box(modifier = modifier) {
                 bitmap?.let {
                     Image(
                         bitmap = it,
                         contentDescription = "摄像头预览",
-                        modifier = Modifier.graphicsLayer {
+                        modifier = Modifier.matchParentSize().graphicsLayer {
                             if (flipHorizontally) scaleX = -1f
-                        }.blur(blurRadius).then(modifier),
+                        }.blur(blurRadius),
+                        contentScale = ContentScale.Crop,
                     )
                 }
                 AnimatedVisibility(

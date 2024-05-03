@@ -138,9 +138,11 @@ fun AuthenticationConfig.appAuth() {
 @KtorDsl
 fun Route.requireAppAuth(block: Route.() -> Unit) = authenticate(authName, build = block)
 
-fun Route.apiAuth() = cborContentType {
-    apiAuthRequest()
-    apiAuthVerify()
+fun Route.apiAuth() {
+    cborContentType {
+        apiAuthRequest()
+        apiAuthVerify()
+    }
     apiAuthFace()
 }
 
@@ -247,7 +249,7 @@ private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
             runCatching { receiveDeserialized<Api.Auth.Face.Handshake.Request>() }.getOrElse {
                 sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
                 close("Invalid handshake request.")
-                logger.error("Client sent invalid handshake request.", it)
+                logger.warn("Client sent invalid handshake request.", it)
                 error("Client sent invalid handshake request.")
             }
         }.onAwait { it }
@@ -258,8 +260,11 @@ private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
         }
     }
 
+    logger.debug("Received handshake request.")
+
     val token = verifiedJwtOrNull(handshakeRequest.token)?.decodedPayloadOrNull<AuthProcessToken>() ?: run {
         sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
+        logger.warn("Client sent invalid token.")
         return@webSocket close("Invalid token.")
     }
 
@@ -277,23 +282,30 @@ private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
 
     while (true) {
         val clientMessage = runCatching { receiveDeserialized<Message.Client>() }.getOrElse {
-            logger.error("Client sent invalid message.", it)
+            sendMessageToPy(Message.Client.Cancel)
+            logger.warn("Client sent invalid message.", it)
             return@webSocket close("Invalid message.")
         }
 
         if (clientMessage is Message.Client.Cancel) {
             close("Client cancelled.", CloseReason.Codes.NORMAL)
             sendMessageToPy(clientMessage)
+            logger.debug("Client cancelled face verification.")
             return@webSocket
         }
+
+        logger.debug("Sending client message to Python.")
 
         val pyResult = sendMessageToPy(clientMessage)
 
         if (pyResult !is Message.Result) {
             close("Internal error.", CloseReason.Codes.INTERNAL_ERROR)
             sendMessageToPy(Message.Client.Cancel)
+            logger.error("Python returned invalid result.")
             return@webSocket
         }
+
+        logger.debug("Sending Python result to client.")
 
         sendSerialized<Message.Result>(pyResult)
 
@@ -303,6 +315,9 @@ private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
             }
 
             is Message.Result.Success -> {
+                exchangeToken(token.userId)?.let {
+                    sendSerialized<Api.Auth.Type.Verify.ResponseBody>(Api.Auth.Type.Verify.ResponseBody.Success(it))
+                } ?: sendSerialized<Api.Auth.Type.Verify.ResponseBody>(Api.Auth.Type.Verify.ResponseBody.Failure)
                 return@webSocket close("Success.", CloseReason.Codes.NORMAL)
             }
 

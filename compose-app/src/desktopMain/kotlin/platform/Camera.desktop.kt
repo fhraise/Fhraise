@@ -19,8 +19,8 @@
 package xyz.xfqlittlefan.fhraise.platform
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import org.bytedeco.javacv.Frame
 import org.bytedeco.javacv.VideoInputFrameGrabber
 import xyz.xfqlittlefan.fhraise.logger
@@ -53,8 +53,8 @@ actual class Camera(private val deviceId: Int, actual val name: String) {
     actual val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var rawStreamingJob: Job? = null
     actual var streamingJob: Job? = null
-    val rawFlow = MutableStateFlow<Frame?>(null)
-    actual val frameFlow: StateFlow<CameraImage?> = MutableStateFlow(null)
+    val rawFlow = MutableSharedFlow<Frame?>(1)
+    actual val frameFlow: SharedFlow<CameraImage?> = MutableSharedFlow(1)
 
     var previewCount = 0
         set(value) {
@@ -75,7 +75,7 @@ actual class Camera(private val deviceId: Int, actual val name: String) {
     }
 
     actual suspend fun takePicture() = grabber.grabCameraImage().also {
-        (frameFlow as? MutableStateFlow)?.emit(it)
+        (frameFlow as? MutableSharedFlow)?.emit(it)
         logger.debug("Picture taken.")
     }
 
@@ -93,7 +93,11 @@ actual class Camera(private val deviceId: Int, actual val name: String) {
         streamingJob = scope.launch(Dispatchers.IO) {
             logger.debug("Streaming started.")
             rawFlow.collect { cvFrame ->
-                cvFrame?.toCameraImage()?.let { (frameFlow as? MutableStateFlow)?.emit(it) }
+                runCatching {
+                    cvFrame?.toCameraImageOrNull()?.let { (frameFlow as? MutableSharedFlow)?.emit(it) }
+                }.onFailure {
+                    logger.error("Failed to stream CameraImage.", it)
+                }
             }
         }
     }
@@ -126,7 +130,7 @@ actual class Camera(private val deviceId: Int, actual val name: String) {
         rawStreamingJob = scope.launch(Dispatchers.IO) {
             logger.debug("Raw streaming started.")
             while (true) {
-                rawFlow.emit(grabber.grab())
+                runCatching { rawFlow.emit(grabber.grab()) }
             }
         }
     }
@@ -136,11 +140,12 @@ private fun Frame.toCameraImage() = CameraImage(
     FrameFormat.Bgr,
     imageWidth,
     imageHeight,
-    image.fold(ByteArray(imageWidth * imageHeight * 3)) { acc, bytes ->
-        bytes as ByteBuffer
-        bytes.get(acc)
-        acc
+    ByteArray(imageWidth * imageHeight * 3).apply {
+        val buffer = image[0] as ByteBuffer
+        buffer.get(this)
     },
 )
+
+private fun Frame.toCameraImageOrNull() = runCatching { toCameraImage() }.getOrNull()
 
 fun VideoInputFrameGrabber.grabCameraImage() = grab().toCameraImage()

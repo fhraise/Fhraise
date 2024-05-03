@@ -47,10 +47,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -82,7 +82,6 @@ import xyz.xfqlittlefan.fhraise.ui.composables.VerticalScrollbar
 import xyz.xfqlittlefan.fhraise.ui.composables.safeDrawingWithoutIme
 import xyz.xfqlittlefan.fhraise.ui.modifiers.applyBrush
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalLayoutApi::class)
@@ -717,13 +716,13 @@ private fun SignInComponent.Credential() {
         autofillTypes = listOf(
             AutofillType.Username, AutofillType.NewUsername, AutofillType.EmailAddress, AutofillType.PhoneNumber
         ),
-        onFill = ::credential::set,
+        onFill = ::changeCredential,
     ).let { node ->
         LocalAutofillTree.current += node
         val autofill = LocalAutofill.current
         OutlinedTextField(
             value = credential,
-            onValueChange = ::credential::set,
+            onValueChange = ::changeCredential,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).onGloballyPositioned {
                 node.boundingBox = it.boundsInWindow()
             }.onFocusEvent {
@@ -759,7 +758,7 @@ private fun SignInComponent.Credential() {
 private fun SignInComponent.VerificationCode() {
     OutlinedTextField(
         value = verification,
-        onValueChange = ::verification::set,
+        onValueChange = ::changeVerification,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         label = { Text(text = "验证码") },
         keyboardOptions = KeyboardOptions(
@@ -775,13 +774,13 @@ private fun SignInComponent.VerificationCode() {
 private fun SignInComponent.Password() {
     AutofillNode(
         autofillTypes = listOf(AutofillType.Password, AutofillType.NewPassword),
-        onFill = ::verification::set,
+        onFill = ::changeVerification,
     ).let { node ->
         LocalAutofillTree.current += node
         val autofill = LocalAutofill.current
         OutlinedTextField(
             value = verification,
-            onValueChange = ::verification::set,
+            onValueChange = ::changeVerification,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).onGloballyPositioned {
                 node.boundingBox = it.boundsInWindow()
             }.onFocusEvent {
@@ -811,14 +810,17 @@ private fun SignInComponent.Password() {
 
 @Composable
 private fun SignInComponent.Face() {
-    Column {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box {
                 FilterChip(
                     selected = true,
-                    onClick = ::switchShowCameraMenu,
+                    onClick = ::showCameraMenu,
                     label = {
                         Text(text = selectedCamera?.let { "使用摄像头：${it.name}" } ?: "选择摄像头")
                     },
@@ -831,7 +833,7 @@ private fun SignInComponent.Face() {
                 )
                 DropdownMenu(
                     expanded = showCameraMenu,
-                    onDismissRequest = ::switchShowCameraMenu,
+                    onDismissRequest = ::hideCameraMenu,
                 ) {
                     cameraList.forEach {
                         DropdownMenuItem(
@@ -851,22 +853,22 @@ private fun SignInComponent.Face() {
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
         selectedCamera?.let {
-            Box(modifier = Modifier.clip(CircleShape)) {
-                CameraPreview(
-                    camera = it, onDispose = { componentScope.launch { it.close() } },
-                    modifier = Modifier.layout { measurable, constraints ->
-                        val placeable = measurable.measure(constraints)
-                        val size = min(placeable.width, placeable.height)
-                        layout(size, size) {
-                            placeable.placeRelative(
-                                x = (size - placeable.width) / 2,
-                                y = (size - placeable.height) / 2,
-                            )
-                        }
-                    },
-                    flipHorizontally = flipCameraPreview,
-                )
+            BoxWithConstraints(modifier = Modifier.clip(CircleShape)) {
+                with(LocalDensity.current) {
+                    CameraPreview(
+                        camera = it, onDispose = { componentScope.launch { it.close() } },
+                        modifier = Modifier.size(constraints.maxWidth.toDp() * 3 / 4),
+                        flipHorizontally = flipCameraPreview,
+                    )
+
+                    DisposableEffect(selectedCamera) {
+                        selectedCamera?.startStreaming()
+                        onDispose { selectedCamera?.stopStreaming() }
+                    }
+                }
             }
         }
     }
@@ -879,7 +881,7 @@ private fun SignInComponent.Otp() {
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = it,
-                onValueChange = ::otp::set,
+                onValueChange = ::changeOtp,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 label = { Text(text = "一次性验证码") },
                 keyboardOptions = KeyboardOptions(
