@@ -93,11 +93,7 @@ actual class Camera(private val deviceId: Int, actual val name: String) {
         streamingJob = scope.launch(Dispatchers.IO) {
             logger.debug("Streaming started.")
             rawFlow.collect { cvFrame ->
-                runCatching {
-                    cvFrame?.toCameraImageOrNull()?.let { (frameFlow as? MutableSharedFlow)?.emit(it) }
-                }.onFailure {
-                    logger.error("Failed to stream CameraImage.", it)
-                }
+                runCatching { cvFrame?.toCameraImageOrNull()?.let { (frameFlow as? MutableSharedFlow)?.emit(it) } }
             }
         }
     }

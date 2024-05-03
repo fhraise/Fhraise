@@ -260,8 +260,6 @@ private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
         }
     }
 
-    logger.debug("Received handshake request.")
-
     val token = verifiedJwtOrNull(handshakeRequest.token)?.decodedPayloadOrNull<AuthProcessToken>() ?: run {
         sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
         logger.warn("Client sent invalid token.")
@@ -279,6 +277,10 @@ private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
         sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Failure)
         return@webSocket close("Handshake failed.")
     }
+
+    sendSerialized<Api.Auth.Face.Handshake.Response>(Api.Auth.Face.Handshake.Response.Success)
+
+    logger.debug("Handshake successful.")
 
     while (true) {
         val clientMessage = runCatching { receiveDeserialized<Message.Client>() }.getOrElse {

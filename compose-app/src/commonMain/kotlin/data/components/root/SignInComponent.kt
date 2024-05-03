@@ -39,7 +39,8 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.serialization.kotlinx.cbor.*
-import kotlinx.coroutines.flow.singleOrNull
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
@@ -62,7 +63,6 @@ import xyz.xfqlittlefan.fhraise.py.Message
 import xyz.xfqlittlefan.fhraise.routes.Api
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.CredentialType
 import xyz.xfqlittlefan.fhraise.routes.Api.Auth.Type.Request.VerificationType
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.js.JsName
@@ -549,43 +549,43 @@ class AppSignInComponent(
             }
 
             VerificationType.Face -> { client, _ ->
-                var continuation: Continuation<JwtTokenPair?>? = null
+                suspendCoroutine { continuation ->
+                    faceVerificationWebsocketJob = componentScope.launch {
+                        client.ws(path = Api.Auth.Face.PATH) {
+                            sendSerialized<Api.Auth.Face.Handshake.Request>(
+                                Api.Auth.Face.Handshake.Request(credentialType, verifyingToken!!)
+                            )
 
-                client.ws(path = Api.Auth.Face.PATH) {
-                    sendSerialized<Api.Auth.Face.Handshake.Request>(
-                        Api.Auth.Face.Handshake.Request(credentialType, verifyingToken!!)
-                    )
+                            val handshakeResult = receiveDeserialized<Api.Auth.Face.Handshake.Response>()
+                            if (handshakeResult !is Api.Auth.Face.Handshake.Response.Success) return@ws
 
-                    val handshakeResult = receiveDeserialized<Api.Auth.Face.Handshake.Response>()
-                    if (handshakeResult !is Api.Auth.Face.Handshake.Response.Success) return@ws
+                            logger.debug("Face verification started.")
 
-                    logger.debug("Face verification started.")
+                            while (true) {
+                                val frame = selectedCamera?.frameFlow?.firstOrNull() ?: continue
 
-                    while (true) {
-                        val frame = selectedCamera?.frameFlow?.singleOrNull() ?: continue
+                                logger.debug("Frame received. (${frame.width}x${frame.height})")
 
-                        logger.debug("Frame received. (${frame.width}x${frame.height})")
+                                val format = when (frame.format) {
+                                    FrameFormat.Bgr -> Message.Client.Frame.FrameFormat.Rgb // TODO: Test only
+                                    else -> continue
+                                }
 
-                        val format = when (frame.format) {
-                            FrameFormat.Bgr -> Message.Client.Frame.FrameFormat.Rgb // TODO: Test only
-                            else -> continue
-                        }
+                                sendSerialized<Message.Client>(Message.Client.Frame(format, frame.width, frame.content))
+                                val frameResult = receiveDeserialized<Message.Result>()
 
-                        sendSerialized<Message.Client>(Message.Client.Frame(format, frame.width, frame.content))
-                        val frameResult = receiveDeserialized<Message.Result>()
-
-                        if (frameResult is Message.Result.Success) {
-                            val tokenPairResult = receiveDeserialized<Api.Auth.Type.Verify.ResponseBody>()
-                            if (tokenPairResult is Api.Auth.Type.Verify.ResponseBody.Success) {
-                                continuation?.resume(tokenPairResult.tokenPair)
-                            } else {
-                                continuation?.resume(null)
+                                if (frameResult is Message.Result.Success) {
+                                    val tokenPairResult = receiveDeserialized<Api.Auth.Type.Verify.ResponseBody>()
+                                    if (tokenPairResult is Api.Auth.Type.Verify.ResponseBody.Success) {
+                                        continuation.resume(tokenPairResult.tokenPair)
+                                    } else {
+                                        continuation.resume(null)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-
-                suspendCoroutine { continuation = it }
             }
 
             VerificationType.QrCode -> { _, _ -> null }
@@ -601,8 +601,16 @@ class AppSignInComponent(
             verificationType = this
         }
 
+    private var faceVerificationWebsocketJob: Job? = null
+
+    private fun changeStepHook() {
+        faceVerificationWebsocketJob?.cancel()
+        faceVerificationWebsocketJob = null
+    }
+
     override fun back() {
         step--
+        changeStepHook()
     }
 
     override fun forward() {
@@ -611,6 +619,7 @@ class AppSignInComponent(
         } else {
             enter()
         }
+        changeStepHook()
     }
 
     override val forwardAction: KeyboardActionScope.() -> Unit
