@@ -312,7 +312,13 @@ private fun Route.apiAuthFace() = webSocket(Api.Auth.Face.PATH) {
         sendSerialized<Message.Result>(pyResult)
 
         when (pyResult) {
-            is Message.Result.InternalError, is Message.Result.Cancelled -> {
+            is Message.Result.InternalError -> {
+                close("Internal error.", CloseReason.Codes.INTERNAL_ERROR)
+                sendMessageToPy(Message.Client.Cancel)
+                return@webSocket
+            }
+
+            is Message.Result.Cancelled -> {
                 return@webSocket close("Internal error.", CloseReason.Codes.INTERNAL_ERROR)
             }
 
