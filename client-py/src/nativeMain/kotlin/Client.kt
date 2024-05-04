@@ -23,18 +23,26 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.serialization.kotlinx.*
 import kotlinx.cinterop.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import xyz.xfqlittlefan.fhraise.logger
-import kotlin.coroutines.resume
 import kotlin.experimental.ExperimentalNativeApi
 
+@ExperimentalForeignApi
+typealias OnConnect = CPointer<CFunction<() -> Unit>>
+
+@ExperimentalForeignApi
+typealias OnMessage = CPointer<CFunction<(type: CPointer<ByteVar>, ref: COpaquePointer) -> CPointer<*>>>
+
+@ExperimentalForeignApi
+typealias OnClose = CPointer<CFunction<() -> Unit>>
+
+@OptIn(ExperimentalForeignApi::class)
 class Client(private val host: String, private val port: UShort) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val messageChannel = Channel<Message>(3)
-
-    private val resultChannel = Channel<Message>(3)
+    private val messageFlow = MutableSharedFlow<Message>(1)
+    private val resultFlow = MutableSharedFlow<Message>(1)
 
     @OptIn(ExperimentalSerializationApi::class)
     private val client = HttpClient {
@@ -44,67 +52,81 @@ class Client(private val host: String, private val port: UShort) {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun connect(onError: OnError, onClose: OnClose) = runBlocking {
-        logger.debug("Connecting to $host:$port.")
-        suspendCancellableCoroutine { continuation ->
-            logger.debug("Launching coroutine.")
-            scope.launch(Dispatchers.IO) {
-                runCatchingC(onError) {
-                    logger.debug("Starting connection.")
-                    client.webSocket(host = host, port = port.toInt(), path = pyWsPath) {
-                        continuation.resume(true)
-                        logger.debug("Connected.")
+    fun connect(onConnect: OnConnect, onError: OnError, onClose: OnClose) {
+        runBlocking {
+            logger.debug("Connecting to $host:$port.")
+            runCatchingC(onError) {
+                logger.debug("Starting connection.")
+                client.webSocket(host = host, port = port.toInt(), path = pyWsPath) {
+                    logger.debug("Connected.")
+
+                    val jobList = mutableListOf<Job>()
+
+                    val handler = CoroutineExceptionHandler { context, throwable ->
+                        context.logger.trace("Caught exception: $throwable.")
+                        throwable.cThrowable { onError(it) }
+                    }
+
+                    jobList += scope.launch(handler + Dispatchers.IO) {
+                        logger.trace("Listening for close.")
+                        val reason = closeReason.await()
+                        logger.debug("Connection closed, reason: $reason.")
+                        onClose()
+                        jobList.forEach { it.cancel() }
+                        scope.cancel()
+                        this@runBlocking.cancel()
+                    }
+
+                    jobList += scope.launch(handler + Dispatchers.IO) {
+                        onConnect()
+                    }
+
+                    jobList += scope.launch(handler + Dispatchers.IO) {
                         while (true) {
-                            if (!isActive) {
-                                logger.info("Connection closed.")
-                                onClose()
-                                break
-                            }
-                            logger.debug("Waiting for message...")
-                            val receiveResult = runCatching {
-                                val message = receiveDeserialized<Message>()
-                                logger.debug("Received message.")
-                                messageChannel.send(message)
-                            }.onFailure { throwable ->
-                                throwable.logger.debug("Caught throwable. Callback address: ${onError.rawValue}.")
-                                throwable.cThrowable {
-                                    onError(it)
-                                }
-                            }
-                            if (receiveResult.isFailure) continue
-                            logger.debug("Waiting for result...")
-                            sendSerialized<Message>(resultChannel.receive())
+                            logger.debug("Waiting for message.")
+                            messageFlow.emit(receiveDeserialized<Message>())
+                            logger.trace("Received message.")
                         }
                     }
-                }.onFailure {
-                    if (continuation.isActive) {
-                        logger.error("Failed to connect.")
-                        continuation.resume(false)
-                    } else {
-                        logger.error("Uncaught error in $this.")
-                        throw it
+
+                    jobList += scope.launch(handler + Dispatchers.IO) {
+                        while (true) {
+                            resultFlow.collect {
+                                logger.debug("Sending result.")
+                                sendSerialized(it)
+                            }
+                        }
                     }
+
+                    jobList.joinAll()
                 }
+                logger.trace("Code reached end of runCatchingC.")
+            }.onFailure {
+                logger.error("Connection error: $it.")
             }
+            logger.trace("Code reached end of runBlocking.")
         }
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-    fun receive(onMessage: OnMessage, onError: OnError): Boolean {
-        val message = runBlocking { messageChannel.receive() }
+    fun receive(onMessage: OnMessage, onError: OnError) {
+        runBlocking {
+            messageFlow.collect { message ->
+                logger.debug("Sending message to Python.")
 
-        logger.debug("Sending message to Python.")
+                val ref = StableRef.create(message)
 
-        return runBlocking {
-            val ref = StableRef.create(message)
-            runCatchingC(onError) {
-                memScoped {
-                    val type = message::class.qualifiedName!!.cstr.ptr
-                    val received = onMessage(type, ref.asCPointer()).asStableRef<Message>().get()
-                    resultChannel.send(received)
-                    logger.debug("Received result from Python: ${received::class.qualifiedName}.")
+                runCatchingC(onError) {
+                    memScoped {
+                        val type = message::class.qualifiedName!!.cstr.ptr
+                        val received = onMessage(type, ref.asCPointer()).asStableRef<Message>().get()
+                        resultFlow.emit(received)
+                        logger.debug("Received result from Python: ${received::class.qualifiedName}.")
+                    }
                 }
-            }.isSuccess.also { ref.dispose() }
+
+                ref.dispose()
+            }
         }
     }
 }

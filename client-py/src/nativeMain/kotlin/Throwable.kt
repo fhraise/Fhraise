@@ -61,12 +61,12 @@ class ThrowableVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
 @ExperimentalNativeApi
 @ExperimentalForeignApi
 internal inline fun <R> Throwable.cThrowable(block: (ThrowableVar) -> R) = memScoped {
-    this@cThrowable.logger.debug("Sending throwable to C.")
+    logger.trace("Sending throwable to Python: ${this@cThrowable}")
 
     val throwable = alloc<ThrowableVar>()
     val ref = StableRef.create(this)
 
-    throwable.type = this::class.qualifiedName?.cstr?.ptr
+    throwable.type = this@cThrowable::class.qualifiedName?.cstr?.ptr
     throwable.ref = ref.asCPointer()
     throwable.message = this@cThrowable.message?.cstr?.ptr
     val stacktraceList = this@cThrowable.getStackTrace().map { it.cstr.ptr.pointed }
@@ -75,7 +75,7 @@ internal inline fun <R> Throwable.cThrowable(block: (ThrowableVar) -> R) = memSc
     throwable.stacktraceSize = stacktraceList.size
     block(throwable).also {
         ref.dispose()
-        this@cThrowable.logger.debug("Throwable sent.")
+        logger.trace("Throwable sent.")
     }
 }
 
