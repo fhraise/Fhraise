@@ -57,7 +57,29 @@ data class CameraImage(
     val width: Int,
     val height: Int,
     val content: ByteArray,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as CameraImage
+
+        if (format != other.format) return false
+        if (width != other.width) return false
+        if (height != other.height) return false
+        if (!content.contentEquals(other.content)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = format.hashCode()
+        result = 31 * result + width
+        result = 31 * result + height
+        result = 31 * result + content.contentHashCode()
+        return result
+    }
+}
 
 enum class FrameFormat {
     AndroidRgba8888, Rgb, Bgr, RgbInt, ArgbInt

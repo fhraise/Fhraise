@@ -20,7 +20,7 @@ package xyz.xfqlittlefan.fhraise.platform
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 actual class Camera {
     actual companion object {
@@ -43,7 +43,7 @@ actual class Camera {
     actual var streamingJob: Job?
         get() = TODO("Not yet implemented")
         set(value) {}
-    actual val frameFlow: StateFlow<CameraImage?>
+    actual val frameFlow: SharedFlow<CameraImage?>
         get() = TODO("Not yet implemented")
 
     actual suspend fun open() {
