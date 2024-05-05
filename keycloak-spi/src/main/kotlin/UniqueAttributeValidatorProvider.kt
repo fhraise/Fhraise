@@ -29,6 +29,7 @@ import org.keycloak.validate.ValidationError
 import org.keycloak.validate.ValidatorConfig
 import java.util.stream.Stream
 
+
 class UniqueAttributeValidatorProvider : AbstractStringValidator(), ConfiguredProvider {
     companion object {
         private const val ID = "unique-attribute-validator"
