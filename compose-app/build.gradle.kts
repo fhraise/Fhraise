@@ -31,8 +31,9 @@ import java.util.*
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
+    alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.androidApplication)
 }
 
 val androidCompileSdk: String by project
@@ -248,8 +249,4 @@ compose.desktop {
             }
         }
     }
-}
-
-compose.experimental {
-    web.application {}
 }
