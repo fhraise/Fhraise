@@ -62,7 +62,6 @@ import androidx.compose.ui.unit.dp
 import fhraise.compose_app.generated.resources.Res
 import fhraise.compose_app.generated.resources.fhraise_logo
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import xyz.xfqlittlefan.fhraise.data.AppComponentContextValues.ColorMode.*
 import xyz.xfqlittlefan.fhraise.data.componentScope
@@ -84,7 +83,7 @@ import xyz.xfqlittlefan.fhraise.ui.modifiers.applyBrush
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SignInComponent.SignIn() {
     val colorMode by settings.colorMode.collectAsState()
