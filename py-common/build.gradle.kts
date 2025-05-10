@@ -1,6 +1,6 @@
 /*
  * This file is part of Fhraise.
- * Copyright (c) 2024 HSAS Foodies. All Rights Reserved.
+ * Copyright (c) 2024-2025 HSAS Foodies. All Rights Reserved.
  *
  * Fhraise is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free
@@ -16,7 +16,7 @@
  * with Fhraise. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
 
 plugins {
