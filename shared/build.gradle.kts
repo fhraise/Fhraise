@@ -1,6 +1,6 @@
 /*
  * This file is part of Fhraise.
- * Copyright (c) 2024 HSAS Foodies. All Rights Reserved.
+ * Copyright (c) 2024-2025 HSAS Foodies. All Rights Reserved.
  *
  * Fhraise is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free
@@ -17,8 +17,8 @@
  */
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)

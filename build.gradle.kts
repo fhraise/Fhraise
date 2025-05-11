@@ -1,6 +1,6 @@
 /*
  * This file is part of Fhraise.
- * Copyright (c) 2024 HSAS Foodies. All Rights Reserved.
+ * Copyright (c) 2024-2025 HSAS Foodies. All Rights Reserved.
  *
  * Fhraise is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free
@@ -23,20 +23,11 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.kotlinJvm) apply false
     alias(libs.plugins.kotlinSerialization) apply false
+    alias(libs.plugins.kotlinxAtomicfu) apply false
     alias(libs.plugins.jetbrainsCompose) apply false
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
-}
-
-buildscript {
-    dependencies {
-        classpath(libs.kotlinx.atomicfu)
-    }
-}
-
-allprojects {
-    apply(plugin = "kotlinx-atomicfu")
 }
 
 RootProject.project = rootProject

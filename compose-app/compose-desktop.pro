@@ -9,6 +9,7 @@
 -dontwarn com.jogamp.common.os.Platform
 -dontwarn com.jogamp.opencl.**
 -dontwarn com.jogamp.opengl.**
+-dontwarn io.ktor.**
 -dontwarn jakarta.**
 -dontwarn javafx.scene.**
 -dontwarn org.apache.maven.**

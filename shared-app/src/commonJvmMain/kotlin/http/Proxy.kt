@@ -1,6 +1,6 @@
 /*
  * This file is part of Fhraise.
- * Copyright (c) 2024 HSAS Foodies. All Rights Reserved.
+ * Copyright (c) 2024-2025 HSAS Foodies. All Rights Reserved.
  *
  * Fhraise is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free
@@ -72,7 +72,7 @@ fun Route.reverseProxy(
                         }
 
                         override suspend fun writeTo(channel: ByteWriteChannel) {
-                            response.content.copyAndClose(channel)
+                            response.rawContent.copyAndClose(channel)
                         }
                     })
                 }.onFailure { onResponseError(it) }

@@ -1,6 +1,6 @@
 /*
  * This file is part of Fhraise.
- * Copyright (c) 2024 HSAS Foodies. All Rights Reserved.
+ * Copyright (c) 2024-2025 HSAS Foodies. All Rights Reserved.
  *
  * Fhraise is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free
@@ -19,9 +19,9 @@
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 import xyz.xfqlittlefan.fhraise.buildsrc.outputDirectoryOf
 import xyz.xfqlittlefan.fhraise.buildsrc.projectBuildNumber
 import xyz.xfqlittlefan.fhraise.buildsrc.projectVersion
@@ -50,7 +50,7 @@ kotlin {
     jvm("desktop")
 
     @OptIn(ExperimentalWasmDsl::class) wasmJs {
-        moduleName = "fhraise"
+        outputModuleName = "fhraise"
         browser {
             commonWebpackConfig {
                 outputFileName = "fhraise.js"
@@ -242,7 +242,7 @@ compose.desktop {
         buildTypes {
             release {
                 proguard {
-                    version = "7.4.2"
+                    version = "7.7"
                     configurationFiles.from("compose-desktop.pro")
                     optimize = false
                 }
