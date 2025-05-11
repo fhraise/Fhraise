@@ -242,7 +242,7 @@ compose.desktop {
         buildTypes {
             release {
                 proguard {
-                    version = "7.4.2"
+                    version = "7.7"
                     configurationFiles.from("compose-desktop.pro")
                     optimize = false
                 }
